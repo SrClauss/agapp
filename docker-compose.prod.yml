@@ -68,8 +68,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: agiliza_backend_prod
-    env_file:
-      - ./backend/.env
     environment:
       - MONGODB_URL=mongodb://admin:AG@ar1401al2312@mongodb:27017/agiliza_database?authSource=admin
       - DATABASE_NAME=agiliza_database
