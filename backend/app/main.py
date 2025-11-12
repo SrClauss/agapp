@@ -11,12 +11,107 @@ from app.api.endpoints import auth, users, projects, contacts, subscriptions, up
 from app.api.admin import router as admin_router
 from app.api.websockets.routes import router as websocket_router
 
+# Tags metadata para organizar a documentação
+tags_metadata = [
+    {
+        "name": "authentication",
+        "description": "Operações de autenticação e registro de usuários. Utilize JWT Bearer tokens para autenticação.",
+    },
+    {
+        "name": "users",
+        "description": "Gerenciamento de usuários, perfis e busca de profissionais próximos com geolocalização.",
+    },
+    {
+        "name": "projects",
+        "description": "Criação, listagem e gerenciamento de projetos. Suporta busca por filtros, categoria, skills e geolocalização.",
+    },
+    {
+        "name": "contacts",
+        "description": "Sistema de contatos entre clientes e profissionais. Gerencia solicitações e status de conexões.",
+    },
+    {
+        "name": "documents",
+        "description": "Upload e gerenciamento de documentos PDF com validação de assinaturas digitais.",
+    },
+    {
+        "name": "uploads",
+        "description": "Upload de mídia (imagens, vídeos e áudio) para a plataforma.",
+    },
+    {
+        "name": "payments",
+        "description": "Sistema de pagamentos integrado com Asaas. Gerencia assinaturas, pacotes de créditos e projetos destacados.",
+    },
+    {
+        "name": "webhooks",
+        "description": "Webhooks para integração com serviços externos (Asaas, etc).",
+    },
+    {
+        "name": "admin",
+        "description": "Painel administrativo HTML com interface web para gerenciamento da plataforma.",
+    },
+    {
+        "name": "admin-api",
+        "description": "API JSON administrativa para gerenciamento de usuários, projetos, contatos, assinaturas e configurações.",
+    },
+    {
+        "name": "websockets",
+        "description": "Conexões WebSocket para comunicação em tempo real, notificações e chat.",
+    },
+]
+
 app = FastAPI(
-    title="Professional Platform API",
-    description="API for connecting clients and professionals",
+    title="Agiliza Platform API",
+    description="""
+# Plataforma Profissional Agiliza
+
+API completa para conectar clientes e profissionais de forma eficiente e segura.
+
+## 🚀 Funcionalidades Principais
+
+* **🔐 Autenticação JWT** - Sistema seguro com access e refresh tokens
+* **📍 Geolocalização** - Integração com Google Maps para busca por proximidade
+* **💬 WebSockets** - Comunicação em tempo real para chat e notificações
+* **💳 Pagamentos Asaas** - Processamento de pagamentos (PIX e cartão)
+* **📄 Documentos** - Upload de PDFs com validação de assinaturas digitais
+* **🗄️ MongoDB** - Banco de dados NoSQL otimizado com índices geoespaciais
+* **📊 Sistema de Créditos** - Controle de uso da plataforma por créditos
+* **👨‍💼 Painel Admin** - Interface administrativa completa
+
+## 🔑 Autenticação
+
+A maioria dos endpoints requer autenticação via JWT. Para obter um token:
+
+1. Faça login via `POST /auth/login`
+2. Use o `access_token` retornado no header: `Authorization: Bearer <token>`
+3. Renove o token quando necessário via `POST /auth/refresh`
+
+## 📡 WebSocket
+
+Conecte-se via WebSocket para comunicação em tempo real:
+```
+ws://<host>/ws/{user_id}?token=<JWT>
+```
+
+Tipos de mensagens suportadas:
+- `subscribe_projects` - Inscrever-se em atualizações
+- `new_message` - Enviar mensagens
+- `contact_update` - Atualizar status de contatos
+
+## 🌐 Base URL
+
+**Produção:** https://agilizapro.cloud
+""",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    openapi_tags=tags_metadata,
+    contact={
+        "name": "Agiliza Platform Support",
+        "url": "https://agilizapro.cloud",
+    },
+    license_info={
+        "name": "Proprietary",
+    },
 )
 
 # Configurar rate limiting
@@ -49,17 +144,6 @@ app.include_router(webhooks.router, tags=["webhooks"])
 app.include_router(admin_router, prefix="/system-admin", tags=["admin"])
 app.include_router(admin_api.router, tags=["admin-api"])
 app.include_router(websocket_router, tags=["websockets"])
-
-# Endpoint para documentação customizada
-@app.get("/custom-docs", response_class=HTMLResponse, tags=["documentation"])
-async def custom_swagger_docs(request: Request):
-    """Documentação customizada da API com informações adicionais"""
-    return templates.TemplateResponse("custom_swagger.html", {
-        "request": request,
-        "title": "Agiliza Platform API",
-        "description": "Plataforma que conecta clientes e profissionais",
-        "openapi_url": "/openapi.json"
-    })
 
 @app.on_event("startup")
 async def startup_event():
