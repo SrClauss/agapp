@@ -23,7 +23,7 @@ services:
     container_name: agiliza_mongodb_prod
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-AG@ar1401al2312}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-AGar1401al2312}
       MONGO_INITDB_DATABASE: agiliza_database
     volumes:
       - mongodb_data:/data/db
