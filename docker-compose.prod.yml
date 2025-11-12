@@ -1,35 +1,18 @@
 version: '3.8'
 
 services:
-  # Traefik Reverse Proxy
-  traefik:
-    image: traefik:v1.7
-    container_name: agiliza_traefik
-    command:
-      - "--docker"
-      - "--docker.domain=agilizapro.cloud"
-      - "--docker.watch"
-      - "--web"
-      - "--web.address=:8080"
-      - "--entrypoints=Name:http Address::80 Redirect.EntryPoint:https"
-      - "--entrypoints=Name:https Address::443 TLS"
-      - "--defaultentrypoints=http,https"
-      - "--acme"
-      - "--acme.email=admin@agilizapro.cloud"
-      - "--acme.storage=/letsencrypt/acme.json"
-      - "--acme.entryPoint=https"
-      - "--acme.httpChallenge.entryPoint=http"
-      - "--acme.onHostRule=true"
-      - "--acme.domains=agilizapro.cloud,agilizapro.net"
-      - "--logLevel=INFO"
-      - "--accessLog"
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: agiliza_nginx
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"  # Traefik dashboard
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/letsencrypt:/letsencrypt
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
     networks:
       - agiliza_network
     restart: unless-stopped
@@ -78,11 +61,6 @@ services:
     networks:
       - agiliza_network
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.frontend.rule=Host:agilizapro.cloud,agilizapro.net"
-      - "traefik.port=8000"
-      - "traefik.protocol=http"
 
 networks:
   agiliza_network:
