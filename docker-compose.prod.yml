@@ -3,31 +3,26 @@ version: '3.8'
 services:
   # Traefik Reverse Proxy
   traefik:
-    image: traefik:v2.5
+    image: traefik:v1.7
     container_name: agiliza_traefik
     command:
-      # Enable Docker provider
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-
-      # Entry points
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-
-      # HTTP to HTTPS redirect
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-
-      # File provider for certificates
-      - "--providers.file.filename=/srv/agapp/traefik.toml"
-
-      # Dashboard (disable in production)
-      - "--api.dashboard=true"
-      - "--api.insecure=true"
-
-      # Logs
-      - "--log.level=INFO"
-      - "--accesslog=true"
+      - "--docker"
+      - "--docker.domain=agilizapro.cloud"
+      - "--docker.watch"
+      - "--web"
+      - "--web.address=:8080"
+      - "--entrypoints=Name:http Address::80 Redirect.EntryPoint:https"
+      - "--entrypoints=Name:https Address::443 TLS"
+      - "--defaultentrypoints=http,https"
+      - "--acme"
+      - "--acme.email=admin@agilizapro.cloud"
+      - "--acme.storage=/letsencrypt/acme.json"
+      - "--acme.entryPoint=https"
+      - "--acme.httpChallenge.entryPoint=http"
+      - "--acme.onHostRule=true"
+      - "--acme.domains=agilizapro.cloud,agilizapro.net"
+      - "--logLevel=INFO"
+      - "--accessLog"
     ports:
       - "80:80"
       - "443:443"
@@ -35,7 +30,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/letsencrypt:/letsencrypt
-      - ./traefik.toml:/srv/agapp/traefik.toml:ro
     networks:
       - agiliza_network
     restart: unless-stopped
@@ -86,27 +80,9 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-
-      # API routes
-      - "traefik.http.routers.backend-api.rule=Host(`agilizapro.cloud`, `agilizapro.net`) && PathPrefix(`/api`, `/auth`, `/users`, `/projects`, `/contacts`, `/documents`, `/uploads`, `/webhooks`)"
-      - "traefik.http.routers.backend-api.entrypoints=websecure"
-      - "traefik.http.routers.backend-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.backend-api.loadbalancer.server.port=8000"
-
-      # Admin panel
-      - "traefik.http.routers.backend-admin.rule=Host(`agilizapro.cloud`, `agilizapro.net`) && PathPrefix(`/system-admin`)"
-      - "traefik.http.routers.backend-admin.entrypoints=websecure"
-      - "traefik.http.routers.backend-admin.tls.certresolver=letsencrypt"
-
-      # WebSocket
-      - "traefik.http.routers.backend-ws.rule=Host(`agilizapro.cloud`, `agilizapro.net`) && PathPrefix(`/ws`)"
-      - "traefik.http.routers.backend-ws.entrypoints=websecure"
-      - "traefik.http.routers.backend-ws.tls.certresolver=letsencrypt"
-
-      # API Documentation
-      - "traefik.http.routers.backend-docs.rule=Host(`agilizapro.cloud`, `agilizapro.net`) && PathPrefix(`/docs`, `/redoc`, `/openapi.json`)"
-      - "traefik.http.routers.backend-docs.entrypoints=websecure"
-      - "traefik.http.routers.backend-docs.tls.certresolver=letsencrypt"
+      - "traefik.frontend.rule=Host:agilizapro.cloud,agilizapro.net"
+      - "traefik.port=8000"
+      - "traefik.protocol=http"
 
 networks:
   agiliza_network:
