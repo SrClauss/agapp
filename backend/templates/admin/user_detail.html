@@ -1,0 +1,268 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Usuário: {{ user.full_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0">{{ user.full_name }}</h1>
+                <p class="text-muted">{{ user.email }}</p>
+            </div>
+            <div>
+                <a href="/system-admin/users/{{ user.id }}/edit" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <a href="/system-admin/users" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Info Card -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">Informações do Usuário</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th>CPF:</th>
+                        <td>{{ user.cpf }}</td>
+                    </tr>
+                    <tr>
+                        <th>Telefone:</th>
+                        <td>{{ user.phone or 'Não informado' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Status:</th>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inativo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Roles:</th>
+                        <td>
+                            {% for role in user.roles %}
+                                <span class="badge bg-secondary">{{ role }}</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Criado em:</th>
+                        <td>{{ user.created_at or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Atualizado em:</th>
+                        <td>{{ user.updated_at or '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="col-md-8">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card shadow border-left-primary">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Total de Projetos
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_projects }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <div class="card shadow border-left-success">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Contatos Enviados
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_contacts_sent }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-paper-plane fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <div class="card shadow border-left-info">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Contatos Recebidos
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_contacts_received }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-inbox fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <div class="card shadow border-left-warning">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Assinatura
+                                </div>
+                                <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                    {% if stats.active_subscription %}
+                                        {{ stats.active_subscription.plan_name }}
+                                    {% else %}
+                                        Nenhuma
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects by Status -->
+        {% if stats.projects_by_status %}
+        <div class="card shadow mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Projetos por Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for status, count in stats.projects_by_status.items() %}
+                    <div class="col-md-4">
+                        <span class="badge bg-primary">{{ status }}</span>: {{ count }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Contacts by Status -->
+        {% if stats.contacts_by_status %}
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="mb-0">Contatos por Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for status, count in stats.contacts_by_status.items() %}
+                    <div class="col-md-4">
+                        <span class="badge bg-success">{{ status }}</span>: {{ count }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Projects -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">Projetos Recentes</h5>
+            </div>
+            <div class="card-body">
+                {% if projects %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Status</th>
+                                <th>Orçamento</th>
+                                <th>Criado em</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in projects %}
+                            <tr>
+                                <td>{{ project.title }}</td>
+                                <td><span class="badge bg-primary">{{ project.status }}</span></td>
+                                <td>R$ {{ "%.2f"|format(project.budget_min or 0) }} - {{ "%.2f"|format(project.budget_max or 0) }}</td>
+                                <td>{{ project.created_at or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Nenhum projeto encontrado.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Contacts -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">Contatos Recentes</h5>
+            </div>
+            <div class="card-body">
+                {% if contacts %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Mensagem</th>
+                                <th>Status</th>
+                                <th>Criado em</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contact in contacts %}
+                            <tr>
+                                <td>{{ contact.message[:50] }}...</td>
+                                <td><span class="badge bg-info">{{ contact.status }}</span></td>
+                                <td>{{ contact.created_at or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Nenhum contato encontrado.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

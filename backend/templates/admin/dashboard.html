@@ -1,0 +1,245 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard - Painel Administrativo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0 text-gray-800">Dashboard Administrativo</h1>
+        <p class="text-muted">Visão geral do sistema Agiliza</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2 stats-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total de Usuários
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.users }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2 stats-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total de Projetos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.projects }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2 stats-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total de Contatos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.contacts }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-handshake fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2 stats-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Total de Assinaturas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.subscriptions }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Items -->
+<div class="row">
+    <!-- Recent Users -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Usuários Recentes</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-borderless">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Roles</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>{{ user.full_name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% for role in user.roles %}
+                                    <span class="badge bg-secondary">{{ role }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="/system-admin/users" class="btn btn-primary btn-sm">Ver Todos</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Projects -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">Projetos Recentes</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-borderless">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Status</th>
+                                <th>Orçamento</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in recent_projects %}
+                            <tr>
+                                <td>{{ project.title[:30] }}{% if project.title|length > 30 %}...{% endif %}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if project.status == 'active' else 'warning' if project.status == 'pending' else 'secondary' }}">
+                                        {{ project.status }}
+                                    </span>
+                                </td>
+                                <td>R$ {{ "%.2f"|format(project.budget_min or 0) }} - {{ "%.2f"|format(project.budget_max or 0) }}</td>
+                                <td>{{ project.created_at.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="/system-admin/projects" class="btn btn-success btn-sm">Ver Todos</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Contacts and Subscriptions -->
+<div class="row">
+    <!-- Recent Contacts -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-info">Contatos Recentes</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-borderless">
+                        <thead>
+                            <tr>
+                                <th>Profissional</th>
+                                <th>Cliente</th>
+                                <th>Status</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contact in recent_contacts %}
+                            <tr>
+                                <td>{{ contact.professional_name }}</td>
+                                <td>{{ contact.client_name }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if contact.status == 'completed' else 'primary' }}">
+                                        {{ contact.status }}
+                                    </span>
+                                </td>
+                                <td>{{ contact.created_at.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="/system-admin/contacts" class="btn btn-info btn-sm">Ver Todos</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Subscriptions -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-warning">Assinaturas Recentes</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-borderless">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Plano</th>
+                                <th>Créditos</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subscription in recent_subscriptions %}
+                            <tr>
+                                <td>{{ subscription.user_id }}</td>
+                                <td>{{ subscription.plan_name }}</td>
+                                <td>{{ subscription.credits }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if subscription.status == 'active' else 'danger' }}">
+                                        {{ subscription.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="/system-admin/subscriptions" class="btn btn-warning btn-sm">Ver Todos</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

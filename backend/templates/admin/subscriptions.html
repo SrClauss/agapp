@@ -1,0 +1,158 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Assinaturas - Painel Administrativo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Gerenciar Assinaturas</h1>
+            <p class="text-muted">Administre todas as assinaturas e créditos dos usuários</p>
+        </div>
+        <a href="/system-admin/subscriptions/new" class="btn btn-warning">
+            <i class="fas fa-plus"></i> Nova Assinatura
+        </a>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Buscar</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search }}" placeholder="Nome do usuário, plano...">
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Todos</option>
+                    <option value="active" {{ 'selected' if status == 'active' else '' }}>Ativa</option>
+                    <option value="inactive" {{ 'selected' if status == 'inactive' else '' }}>Inativa</option>
+                    <option value="expired" {{ 'selected' if status == 'expired' else '' }}>Expirada</option>
+                    <option value="cancelled" {{ 'selected' if status == 'cancelled' else '' }}>Cancelada</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="plan_name" class="form-label">Plano</label>
+                <select class="form-select" id="plan_name" name="plan_name">
+                    <option value="">Todos</option>
+                    <option value="basic" {{ 'selected' if plan_name == 'basic' else '' }}>Básico</option>
+                    <option value="premium" {{ 'selected' if plan_name == 'premium' else '' }}>Premium</option>
+                    <option value="enterprise" {{ 'selected' if plan_name == 'enterprise' else '' }}>Enterprise</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-warning me-2">
+                    <i class="fas fa-search"></i> Filtrar
+                </button>
+                <a href="/system-admin/subscriptions" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Subscriptions Table -->
+<div class="card shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Plano</th>
+                        <th>Créditos</th>
+                        <th>Status</th>
+                        <th>Data de Início</th>
+                        <th>Data de Expiração</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subscription in subscriptions %}
+                    <tr>
+                        <td>
+                            <div>
+                                <strong>{{ subscription.user_name or subscription.user_id }}</strong>
+                                {% if subscription.user_email %}
+                                <br><small class="text-muted">{{ subscription.user_email }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ subscription.plan_name }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ subscription.credits }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if subscription.status == 'active' else 'danger' if subscription.status == 'expired' or subscription.status == 'cancelled' else 'warning' }}">
+                                {{ subscription.status }}
+                            </span>
+                        </td>
+                        <td>{{ subscription.start_date.strftime('%d/%m/%Y') if subscription.start_date else 'N/A' }}</td>
+                        <td>{{ subscription.end_date.strftime('%d/%m/%Y') if subscription.end_date else 'N/A' }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="/system-admin/subscriptions/{{ subscription.id }}" class="btn btn-sm btn-outline-primary" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="/system-admin/subscriptions/{{ subscription.id }}/edit" class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if subscription.status == 'active' %}
+                                <form method="POST" action="/admin/subscriptions/{{ subscription.id }}/cancel" class="d-inline" onsubmit="return confirm('Tem certeza que deseja cancelar esta assinatura?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <form method="POST" action="/admin/subscriptions/{{ subscription.id }}/delete" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta assinatura? Esta ação não pode ser desfeita.')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <nav aria-label="Navegação de páginas" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if plan_name %}&plan_name={{ plan_name }}{% endif %}">Anterior</a>
+                </li>
+                {% endif %}
+
+                {% for page_num in range(max(1, page - 2), min(total_pages + 1, page + 3)) %}
+                <li class="page-item {{ 'active' if page_num == page else '' }}">
+                    <a class="page-link" href="?page={{ page_num }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if plan_name %}&plan_name={{ plan_name }}{% endif %}">{{ page_num }}</a>
+                </li>
+                {% endfor %}
+
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if plan_name %}&plan_name={{ plan_name }}{% endif %}">Próximo</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- No subscriptions message -->
+{% if not subscriptions %}
+<div class="text-center mt-4">
+    <p class="text-muted">Nenhuma assinatura encontrada.</p>
+</div>
+{% endif %}
+{% endblock %}
