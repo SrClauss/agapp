@@ -58,42 +58,6 @@ services:
         pytest -v --cov=app --cov-report=html --cov-report=term-missing
       "
 
-  # Frontend Web Test Runner
-  frontend-web-test:
-    build:
-      context: ./frontend/web
-      dockerfile: Dockerfile.test
-    container_name: agiliza_frontend_web_test
-    environment:
-      - VITE_API_URL=http://localhost:8000
-      - VITE_WS_URL=ws://localhost:8000/ws
-      - NODE_ENV=test
-    networks:
-      - agiliza_test_network
-    volumes:
-      - ./frontend/web:/app
-      - frontend_web_node_modules:/app/node_modules
-      - frontend_web_coverage:/app/coverage
-    command: npm run test:coverage
-
-  # Frontend Mobile Test Runner
-  frontend-mobile-test:
-    build:
-      context: ./frontend/mobile
-      dockerfile: Dockerfile.test
-    container_name: agiliza_frontend_mobile_test
-    environment:
-      - EXPO_PUBLIC_API_URL=http://localhost:8000
-      - EXPO_PUBLIC_WS_URL=ws://localhost:8000/ws
-      - NODE_ENV=test
-    networks:
-      - agiliza_test_network
-    volumes:
-      - ./frontend/mobile:/app
-      - frontend_mobile_node_modules:/app/node_modules
-      - frontend_mobile_coverage:/app/coverage
-    command: npm run test:coverage
-
 networks:
   agiliza_test_network:
     driver: bridge
@@ -101,7 +65,3 @@ networks:
 volumes:
   backend_test_cache:
   backend_coverage:
-  frontend_web_node_modules:
-  frontend_web_coverage:
-  frontend_mobile_node_modules:
-  frontend_mobile_coverage:

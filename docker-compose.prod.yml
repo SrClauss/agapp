@@ -105,11 +105,6 @@ services:
       - "traefik.http.routers.backend-ws.entrypoints=websecure"
       # - "traefik.http.routers.backend-ws.tls.certresolver=letsencrypt"
 
-      # API Documentation
-      - "traefik.http.routers.backend-docs.rule=Host(`yourdomain.com`) && PathPrefix(`/docs`, `/redoc`, `/openapi.json`)"
-      - "traefik.http.routers.backend-docs.entrypoints=websecure"
-      # - "traefik.http.routers.backend-docs.tls.certresolver=letsencrypt"
-
   # Frontend Web
   frontend-web:
     build:
