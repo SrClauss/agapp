@@ -43,6 +43,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: agiliza_backend_prod
+    env_file:
+      - ./backend/.env
     environment:
       - MONGODB_URL=${MONGODB_URL}
       - DATABASE_NAME=agiliza_database
