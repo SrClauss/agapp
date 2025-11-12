@@ -105,25 +105,10 @@ services:
       - "traefik.http.routers.backend-ws.entrypoints=websecure"
       # - "traefik.http.routers.backend-ws.tls.certresolver=letsencrypt"
 
-  # Frontend Web
-  frontend-web:
-    build:
-      context: ./frontend/web
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=https://yourdomain.com
-        - VITE_WS_URL=wss://yourdomain.com/ws
-    container_name: agiliza_frontend_web_prod
-    networks:
-      - agiliza_network
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend-web.rule=Host(`yourdomain.com`)"
-      - "traefik.http.routers.frontend-web.entrypoints=websecure"
-      # - "traefik.http.routers.frontend-web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.frontend-web.loadbalancer.server.port=80"
-      - "traefik.http.routers.frontend-web.priority=1"  # Lower priority than API routes
+      # API Documentation
+      - "traefik.http.routers.backend-docs.rule=Host(`yourdomain.com`) && PathPrefix(`/docs`, `/redoc`, `/openapi.json`)"
+      - "traefik.http.routers.backend-docs.entrypoints=websecure"
+      # - "traefik.http.routers.backend-docs.tls.certresolver=letsencrypt"
 
 networks:
   agiliza_network:
