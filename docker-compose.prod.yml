@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Traefik Reverse Proxy
   traefik:
-    image: traefik:v2.11
+    image: traefik:v2.5
     container_name: agiliza_traefik
     command:
       # Enable Docker provider
@@ -18,11 +18,8 @@ services:
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
 
-      # Let's Encrypt (comment out for local development)
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=admin@agilizapro.cloud"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      # File provider for certificates
+      - "--providers.file.filename=/srv/agapp/traefik.toml"
 
       # Dashboard (disable in production)
       - "--api.dashboard=true"
@@ -38,6 +35,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/letsencrypt:/letsencrypt
+      - ./traefik.toml:/srv/agapp/traefik.toml:ro
     networks:
       - agiliza_network
     restart: unless-stopped
