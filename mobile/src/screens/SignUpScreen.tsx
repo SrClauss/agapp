@@ -82,6 +82,11 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
     return cleaned.length === 11;
   };
 
+  const validatePhone = (phone: string): boolean => {
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length === 0 || cleaned.length === 11;
+  };
+
   const handleSignUp = async (): Promise<void> => {
     // Validations
     if (!fullName.trim()) {
@@ -96,6 +101,11 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
 
     if (!validateCPF(cpf)) {
       Alert.alert('Erro', 'Por favor, informe um CPF válido (11 dígitos)');
+      return;
+    }
+
+    if (!validatePhone(phone)) {
+      Alert.alert('Erro', 'Por favor, informe um telefone válido (11 dígitos) ou deixe em branco');
       return;
     }
 
