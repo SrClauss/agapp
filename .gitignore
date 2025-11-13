@@ -28,3 +28,4 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/certs/privkey.pem
+certs/privkey.pem
