@@ -17,6 +17,6 @@ class Settings(BaseSettings):
     tunnel_url: str = "https://giftxz.top"  # Nova variável de ambiente adicionada
 
     class Config:
-        env_file = ".env"
+        # env_file = ".env"
 
 settings = Settings()
