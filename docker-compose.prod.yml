@@ -21,6 +21,8 @@ services:
   mongodb:
     image: mongo:7.0
     container_name: agiliza_mongodb_prod
+    env_file:
+      - .env
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
@@ -43,6 +45,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: agiliza_backend_prod
+    # Carregar variáveis do arquivo .env na raiz do projeto
+    env_file:
+      - .env
     environment:
       - MONGODB_URL=${MONGODB_URL}
       - DATABASE_NAME=agiliza
@@ -51,7 +56,6 @@ services:
       - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
       - JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - ASAAS_API_KEY=${ASAAS_API_KEY}
       - ASAAS_ENVIRONMENT=sandbox
       - ASAAS_WEBHOOK_TOKEN=${ASAAS_WEBHOOK_TOKEN}
