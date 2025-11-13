@@ -1,0 +1,330 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }} - API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.7.2/swagger-ui.css" />
+    <style>
+        body { margin: 0; padding: 0; }
+        .swagger-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .swagger-header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .swagger-header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        .swagger-container {
+            padding: 20px;
+        }
+        .api-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .api-info h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .feature-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+        .feature-item h4 {
+            margin: 0 0 8px 0;
+            color: #495057;
+        }
+        .feature-item p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="swagger-header">
+        <h1>{{ title }}</h1>
+        <p>{{ description }}</p>
+    </div>
+
+    <div class="swagger-container">
+        <div class="api-info">
+            <h3>🚀 Sobre esta API</h3>
+            <p>Plataforma profissional que conecta clientes e profissionais de forma eficiente e segura.</p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <h4>🔐 Autenticação JWT</h4>
+                    <p>Sistema seguro de autenticação com tokens JWT e refresh tokens</p>
+                </div>
+                <div class="feature-item">
+                    <h4>📍 Geolocalização</h4>
+                    <p>Integração com Google Maps para localização e geocoding</p>
+                </div>
+                <div class="feature-item">
+                    <h4>💬 WebSockets</h4>
+                    <p>Comunicação em tempo real para notificações e chat</p>
+                </div>
+                <div class="feature-item">
+                    <h4>💳 Pagamentos</h4>
+                    <p>Integração com Asaas para processamento de pagamentos</p>
+                </div>
+                <div class="feature-item">
+                    <h4>🗄️ MongoDB</h4>
+                    <p>Banco de dados NoSQL com índices otimizados</p>
+                </div>
+                <div class="feature-item">
+                    <h4>📊 Créditos</h4>
+                    <p>Sistema de créditos para controlar uso da plataforma</p>
+                </div>
+                <div class="feature-item">
+                    <h4>👨‍💼 Painel Admin</h4>
+                    <p>Interface administrativa completa com buscas e filtros</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-info">
+            <h3>👨‍💼 Endpoints do Painel Administrativo</h3>
+            <p>Rotas HTML para gerenciamento administrativo da plataforma (requer autenticação admin).</p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <h4>GET /system-admin/</h4>
+                    <p>Dashboard administrativo com estatísticas gerais</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /system-admin/login</h4>
+                    <p>Página de login do painel admin</p>
+                </div>
+                <div class="feature-item">
+                    <h4>POST /system-admin/login</h4>
+                    <p>Autenticação admin (AJAX com cookie)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /system-admin/logout</h4>
+                    <p>Logout do painel admin (limpa cookie)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /system-admin/users</h4>
+                    <p>Gerenciar usuários (com busca e filtros)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /system-admin/projects</h4>
+                    <p>Gerenciar projetos (com busca e filtros)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /system-admin/contacts</h4>
+                    <p>Gerenciar contatos (com busca e filtros)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /system-admin/subscriptions</h4>
+                    <p>Gerenciar assinaturas (com busca e filtros)</p>
+                </div>
+            </div>
+
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin-top: 15px; border-left: 4px solid #2196f3;">
+                <h5 style="margin: 0 0 10px 0; color: #1976d2;">🔍 Funcionalidades de Busca e Filtro</h5>
+                <p style="margin: 0; color: #424242;">Todas as páginas de listagem incluem campos de busca por texto e filtros específicos:</p>
+                <ul style="margin: 10px 0 0 20px; color: #424242;">
+                    <li><strong>Usuários:</strong> Busca por nome/email, filtro por role e status</li>
+                    <li><strong>Projetos:</strong> Busca por título/descrição, filtro por status e cliente</li>
+                    <li><strong>Contatos:</strong> Busca por mensagem, filtro por status, profissional e cliente</li>
+                    <li><strong>Assinaturas:</strong> Busca por user ID/plano, filtro por status e plano</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="api-info">
+            <h3>💳 Sistema de Pagamentos (Asaas)</h3>
+            <p>Integração completa com gateway de pagamento Asaas para assinaturas, créditos e projetos destacados.</p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <h4>GET /api/payments/plans</h4>
+                    <p>Listar planos de assinatura disponíveis</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /api/payments/credit-packages</h4>
+                    <p>Listar pacotes de créditos disponíveis</p>
+                </div>
+                <div class="feature-item">
+                    <h4>POST /api/payments/subscription</h4>
+                    <p>Criar pagamento de assinatura (PIX ou cartão)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /api/payments/subscription/status</h4>
+                    <p>Verificar status da assinatura do usuário</p>
+                </div>
+                <div class="feature-item">
+                    <h4>POST /api/payments/credits</h4>
+                    <p>Criar pagamento para pacote de créditos</p>
+                </div>
+                <div class="feature-item">
+                    <h4>POST /api/payments/featured-project</h4>
+                    <p>Destacar projeto com pagamento</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /api/payments/history</h4>
+                    <p>Histórico de pagamentos do usuário</p>
+                </div>
+                <div class="feature-item">
+                    <h4>POST /webhooks/asaas</h4>
+                    <p>Webhook para notificações do Asaas</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-info">
+            <h3>📄 Documentos e Uploads</h3>
+            <p>Gerenciamento de documentos PDF com validação de assinaturas e uploads de mídia.</p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <h4>POST /documents/upload/{project_id}</h4>
+                    <p>Upload de PDF com validação de assinaturas</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /documents/project/{project_id}</h4>
+                    <p>Listar documentos de um projeto</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /documents/{document_id}/download</h4>
+                    <p>Download de documento</p>
+                </div>
+                <div class="feature-item">
+                    <h4>POST /uploads/media</h4>
+                    <p>Upload de mídia (imagem/vídeo/áudio)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /projects/{project_id}/messages/download</h4>
+                    <p>Download de mensagens e documentos do projeto</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-info">
+            <h3>⭐ Avaliações</h3>
+            <p>Sistema de avaliação de profissionais após conclusão de projetos.</p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <h4>POST /projects/{project_id}/close</h4>
+                    <p>Fechar projeto definindo budget final (profissional autorizado)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>POST /projects/{project_id}/evaluate</h4>
+                    <p>Cliente avalia profissional após fechamento</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-info">
+            <h3>🔌 WebSocket - Comunicação em Tempo Real</h3>
+            <p>Conexão WebSocket para notificações, mensagens e atualizações em tempo real.</p>
+
+            <div style="background: #fff3e0; padding: 15px; border-radius: 6px; margin-top: 15px; border-left: 4px solid #ff9800;">
+                <h5 style="margin: 0 0 10px 0; color: #e65100;">📡 Endpoint WebSocket</h5>
+                <p style="margin: 0 0 10px 0; color: #424242;"><code>ws://&lt;host&gt;/ws/{user_id}?token=&lt;JWT&gt;</code></p>
+                <p style="margin: 0 0 10px 0; color: #424242;"><strong>Mensagens suportadas (JSON):</strong></p>
+                <ul style="margin: 10px 0 0 20px; color: #424242;">
+                    <li><code>{ type: 'subscribe_projects' }</code> - Inscrever-se em atualizações de projetos</li>
+                    <li><code>{ type: 'new_message', contact_id: '&lt;id&gt;', content: '...' }</code> - Enviar nova mensagem</li>
+                    <li><code>{ type: 'contact_update', contact_id: '&lt;id&gt;', status: '...' }</code> - Atualizar status de contato</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="api-info">
+            <h3>🔧 API Admin JSON</h3>
+            <p>Endpoints JSON para gerenciamento administrativo e configuração da plataforma (requer role admin).</p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <h4>GET /api/admin/dashboard</h4>
+                    <p>Estatísticas e métricas gerais da plataforma</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /api/admin/users</h4>
+                    <p>Listagem JSON de usuários com filtros</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /api/admin/projects</h4>
+                    <p>Listagem JSON de projetos com filtros</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /api/admin/contacts</h4>
+                    <p>Listagem JSON de contatos com filtros</p>
+                </div>
+                <div class="feature-item">
+                    <h4>GET /api/admin/subscriptions</h4>
+                    <p>Listagem JSON de assinaturas com filtros</p>
+                </div>
+            </div>
+
+            <div style="background: #f3e5f5; padding: 15px; border-radius: 6px; margin-top: 15px; border-left: 4px solid #9c27b0;">
+                <h5 style="margin: 0 0 10px 0; color: #6a1b9a;">⚙️ Configurações (CRUD Completo)</h5>
+                <p style="margin: 0; color: #424242;">Gerenciamento de planos, pacotes de créditos e preços de destaque:</p>
+                <ul style="margin: 10px 0 0 20px; color: #424242;">
+                    <li><strong>/api/admin/config/plans</strong> - Gerenciar planos de assinatura</li>
+                    <li><strong>/api/admin/config/credit-packages</strong> - Gerenciar pacotes de créditos</li>
+                    <li><strong>/api/admin/config/featured-pricing</strong> - Gerenciar preços de projetos destacados</li>
+                </ul>
+                <p style="margin: 10px 0 0 0; color: #424242; font-size: 0.9em;">Cada endpoint suporta operações GET, POST, PUT e DELETE.</p>
+            </div>
+        </div>
+
+        <div id="swagger-ui"></div>
+    </div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.7.2/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.7.2/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: '{{ openapi_url }}',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                validatorUrl: null,
+                tryItOutEnabled: true,
+                requestInterceptor: function(request) {
+                    // Adicionar token automaticamente se existir
+                    const token = localStorage.getItem('access_token');
+                    if (token) {
+                        request.headers.Authorization = 'Bearer ' + token;
+                    }
+                    return request;
+                }
+            });
+        };
+    </script>
+</body>
+</html>

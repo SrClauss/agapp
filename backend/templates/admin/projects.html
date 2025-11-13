@@ -1,0 +1,145 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Projetos - Painel Administrativo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Gerenciar Projetos</h1>
+            <p class="text-muted">Administre todos os projetos do sistema</p>
+        </div>
+        <a href="/system-admin/projects/new" class="btn btn-success">
+            <i class="fas fa-plus"></i> Novo Projeto
+        </a>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Buscar</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search }}" placeholder="Título, descrição...">
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Todos</option>
+                    <option value="pending" {{ 'selected' if status == 'pending' else '' }}>Pendente</option>
+                    <option value="active" {{ 'selected' if status == 'active' else '' }}>Ativo</option>
+                    <option value="completed" {{ 'selected' if status == 'completed' else '' }}>Concluído</option>
+                    <option value="cancelled" {{ 'selected' if status == 'cancelled' else '' }}>Cancelado</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="client_id" class="form-label">Cliente</label>
+                <select class="form-select" id="client_id" name="client_id">
+                    <option value="">Todos</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {{ 'selected' if client_id == client.id else '' }}>{{ client.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-success me-2">
+                    <i class="fas fa-search"></i> Filtrar
+                </button>
+                <a href="/system-admin/projects" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Projects Table -->
+<div class="card shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Título</th>
+                        <th>Cliente</th>
+                        <th>Status</th>
+                        <th>Orçamento</th>
+                        <th>Data de Criação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                    <tr>
+                        <td>
+                            <div>
+                                <strong>{{ project.title }}</strong>
+                                {% if project.description %}
+                                <br><small class="text-muted">{{ project.description[:50] }}{% if project.description|length > 50 %}...{% endif %}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ project.client_name or 'N/A' }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'warning' if project.status == 'pending' else 'success' if project.status == 'active' else 'secondary' if project.status == 'completed' else 'danger' }}">
+                                {{ project.status }}
+                            </span>
+                        </td>
+                        <td>R$ {{ "%.2f"|format(project.budget_min or 0) }} - {{ "%.2f"|format(project.budget_max or 0) }}</td>
+                        <td>{{ project.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="/system-admin/projects/{{ project.id }}" class="btn btn-sm btn-outline-primary" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="/system-admin/projects/{{ project.id }}/edit" class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="/admin/projects/{{ project.id }}/delete" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <nav aria-label="Navegação de páginas" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}">Anterior</a>
+                </li>
+                {% endif %}
+
+                {% for page_num in range(max(1, page - 2), min(total_pages + 1, page + 3)) %}
+                <li class="page-item {{ 'active' if page_num == page else '' }}">
+                    <a class="page-link" href="?page={{ page_num }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}">{{ page_num }}</a>
+                </li>
+                {% endfor %}
+
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}">Próximo</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- No projects message -->
+{% if not projects %}
+<div class="text-center mt-4">
+    <p class="text-muted">Nenhum projeto encontrado.</p>
+</div>
+{% endif %}
+{% endblock %}

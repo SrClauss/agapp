@@ -1,0 +1,31 @@
+# Rust
+target/
+Cargo.lock
+
+
+# Environment variables
+.env
+.env.local
+.env.test
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/certs/privkey.pem
+certs/privkey.pem

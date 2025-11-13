@@ -1,0 +1,534 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Configurações - Painel Administrativo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0 text-gray-800">Configurações do Sistema</h1>
+        <p class="text-muted">Gerencie planos, pacotes de créditos e preços de destaque</p>
+    </div>
+</div>
+
+<!-- Tabs Navigation -->
+<ul class="nav nav-tabs mb-4" id="configTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="plans-tab" data-bs-toggle="tab" data-bs-target="#plans" type="button" role="tab">
+            <i class="fas fa-box me-2"></i>Planos de Assinatura
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="packages-tab" data-bs-toggle="tab" data-bs-target="#packages" type="button" role="tab">
+            <i class="fas fa-coins me-2"></i>Pacotes de Créditos
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="featured-tab" data-bs-toggle="tab" data-bs-target="#featured" type="button" role="tab">
+            <i class="fas fa-star me-2"></i>Preços de Destaque
+        </button>
+    </li>
+</ul>
+
+<!-- Tabs Content -->
+<div class="tab-content" id="configTabsContent">
+    <!-- Planos de Assinatura -->
+    <div class="tab-pane fade show active" id="plans" role="tabpanel">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Planos de Assinatura</h6>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPlanModal">
+                    <i class="fas fa-plus me-1"></i>Novo Plano
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Créditos Semanais</th>
+                                <th>Preço Mensal</th>
+                                <th>Descontos</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plansTable">
+                            {% for plan in plans %}
+                            <tr data-id="{{ plan._id }}">
+                                <td>
+                                    <strong>{{ plan.name }}</strong><br>
+                                    <small class="text-muted">{{ plan.description }}</small>
+                                </td>
+                                <td>{{ plan.weekly_credits }}</td>
+                                <td>R$ {{ "%.2f"|format(plan.monthly_price) }}</td>
+                                <td>
+                                    <small>
+                                        3m: {{ plan.discount_3_months }}%<br>
+                                        6m: {{ plan.discount_6_months }}%<br>
+                                        12m: {{ plan.discount_12_months }}%
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if plan.is_active else 'secondary' }}">
+                                        {{ 'Ativo' if plan.is_active else 'Inativo' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="editPlan('{{ plan._id }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-{{ 'danger' if plan.is_active else 'success' }}"
+                                            onclick="togglePlan('{{ plan._id }}', {{ 'false' if plan.is_active else 'true' }})">
+                                        <i class="fas fa-{{ 'ban' if plan.is_active else 'check' }}"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Nenhum plano cadastrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pacotes de Créditos -->
+    <div class="tab-pane fade" id="packages" role="tabpanel">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-success">Pacotes de Créditos</h6>
+                <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPackageModal">
+                    <i class="fas fa-plus me-1"></i>Novo Pacote
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Créditos</th>
+                                <th>Bônus</th>
+                                <th>Preço</th>
+                                <th>Status</th>
+                                <th>Ordem</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="packagesTable">
+                            {% for pkg in packages %}
+                            <tr data-id="{{ pkg._id }}">
+                                <td>
+                                    <strong>{{ pkg.name }}</strong><br>
+                                    {% if pkg.description %}
+                                    <small class="text-muted">{{ pkg.description }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ pkg.credits }}</td>
+                                <td>
+                                    <span class="badge bg-warning">+{{ pkg.bonus_credits }}</span>
+                                </td>
+                                <td>R$ {{ "%.2f"|format(pkg.price) }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if pkg.is_active else 'secondary' }}">
+                                        {{ 'Ativo' if pkg.is_active else 'Inativo' }}
+                                    </span>
+                                </td>
+                                <td>{{ pkg.sort_order }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="editPackage('{{ pkg._id }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-{{ 'danger' if pkg.is_active else 'success' }}"
+                                            onclick="togglePackage('{{ pkg._id }}', {{ 'false' if pkg.is_active else 'true' }})">
+                                        <i class="fas fa-{{ 'ban' if pkg.is_active else 'check' }}"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">Nenhum pacote cadastrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preços de Destaque -->
+    <div class="tab-pane fade" id="featured" role="tabpanel">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-warning">Preços de Destaque</h6>
+                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#addFeaturedModal">
+                    <i class="fas fa-plus me-1"></i>Novo Preço
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Duração (dias)</th>
+                                <th>Preço</th>
+                                <th>Descrição</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="featuredTable">
+                            {% for pricing in featured_pricings %}
+                            <tr data-id="{{ pricing._id }}">
+                                <td><strong>{{ pricing.duration_days }} dias</strong></td>
+                                <td>R$ {{ "%.2f"|format(pricing.price) }}</td>
+                                <td>
+                                    {% if pricing.description %}
+                                    {{ pricing.description }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if pricing.is_active else 'secondary' }}">
+                                        {{ 'Ativo' if pricing.is_active else 'Inativo' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="editFeatured('{{ pricing._id }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-{{ 'danger' if pricing.is_active else 'success' }}"
+                                            onclick="toggleFeatured('{{ pricing._id }}', {{ 'false' if pricing.is_active else 'true' }})">
+                                        <i class="fas fa-{{ 'ban' if pricing.is_active else 'check' }}"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Nenhum preço cadastrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Plano -->
+<div class="modal fade" id="addPlanModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Plano de Assinatura</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addPlanForm" onsubmit="addPlan(event)">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nome do Plano *</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Créditos Semanais *</label>
+                            <input type="number" class="form-control" name="weekly_credits" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Preço Mensal (R$) *</label>
+                            <input type="number" class="form-control" name="monthly_price" min="0" step="0.01" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-control" name="is_active">
+                                <option value="true" selected>Ativo</option>
+                                <option value="false">Inativo</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Descrição *</label>
+                            <textarea class="form-control" name="description" rows="2" required></textarea>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Desconto 3 meses (%)</label>
+                            <input type="number" class="form-control" name="discount_3_months" min="0" max="100" step="0.01" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Desconto 6 meses (%)</label>
+                            <input type="number" class="form-control" name="discount_6_months" min="0" max="100" step="0.01" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Desconto 12 meses (%)</label>
+                            <input type="number" class="form-control" name="discount_12_months" min="0" max="100" step="0.01" value="0">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Features (uma por linha)</label>
+                            <textarea class="form-control" name="features" rows="4" placeholder="Ex:&#10;Acesso ilimitado&#10;Suporte prioritário"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Pacote -->
+<div class="modal fade" id="addPackageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Pacote de Créditos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addPackageForm" onsubmit="addPackage(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Pacote *</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Créditos *</label>
+                        <input type="number" class="form-control" name="credits" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Créditos Bônus</label>
+                        <input type="number" class="form-control" name="bonus_credits" min="0" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preço (R$) *</label>
+                        <input type="number" class="form-control" name="price" min="0" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ordem de Exibição</label>
+                        <input type="number" class="form-control" name="sort_order" min="0" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-control" name="is_active">
+                            <option value="true" selected>Ativo</option>
+                            <option value="false">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Preço de Destaque -->
+<div class="modal fade" id="addFeaturedModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Preço de Destaque</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addFeaturedForm" onsubmit="addFeatured(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Duração (dias) *</label>
+                        <input type="number" class="form-control" name="duration_days" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preço (R$) *</label>
+                        <input type="number" class="form-control" name="price" min="0" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-control" name="is_active">
+                            <option value="true" selected>Ativo</option>
+                            <option value="false">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Helper function to get auth token from cookie
+function getAuthToken() {
+    const token = document.cookie.split('; ').find(row => row.startsWith('access_token='));
+    if (token) {
+        return token.split('=')[1].replace(/['"]/g, '').replace('Bearer ', '');
+    }
+    return null;
+}
+
+// Helper function to make authenticated API calls
+async function apiCall(url, method = 'GET', data = null) {
+    const token = getAuthToken();
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    };
+
+    if (data && method !== 'GET') {
+        options.body = JSON.stringify(data);
+    }
+
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Erro na requisição');
+    }
+    return response.json();
+}
+
+// Planos de Assinatura
+async function addPlan(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    const features = formData.get('features').split('\n').filter(f => f.trim());
+
+    const data = {
+        name: formData.get('name'),
+        weekly_credits: parseInt(formData.get('weekly_credits')),
+        monthly_price: parseFloat(formData.get('monthly_price')),
+        description: formData.get('description'),
+        features: features,
+        discount_3_months: parseFloat(formData.get('discount_3_months')),
+        discount_6_months: parseFloat(formData.get('discount_6_months')),
+        discount_12_months: parseFloat(formData.get('discount_12_months')),
+        is_active: formData.get('is_active') === 'true'
+    };
+
+    try {
+        await apiCall('/api/admin/config/plans', 'POST', data);
+        alert('Plano criado com sucesso!');
+        window.location.reload();
+    } catch (error) {
+        alert('Erro ao criar plano: ' + error.message);
+    }
+}
+
+async function togglePlan(id, isActive) {
+    if (!confirm(`Deseja ${isActive ? 'ativar' : 'desativar'} este plano?`)) return;
+
+    try {
+        await apiCall(`/api/admin/config/plans/${id}`, 'PUT', { is_active: isActive });
+        window.location.reload();
+    } catch (error) {
+        alert('Erro: ' + error.message);
+    }
+}
+
+// Pacotes de Créditos
+async function addPackage(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    const data = {
+        name: formData.get('name'),
+        credits: parseInt(formData.get('credits')),
+        price: parseFloat(formData.get('price')),
+        bonus_credits: parseInt(formData.get('bonus_credits')),
+        description: formData.get('description') || null,
+        sort_order: parseInt(formData.get('sort_order')),
+        is_active: formData.get('is_active') === 'true'
+    };
+
+    try {
+        await apiCall('/api/admin/config/credit-packages', 'POST', data);
+        alert('Pacote criado com sucesso!');
+        window.location.reload();
+    } catch (error) {
+        alert('Erro ao criar pacote: ' + error.message);
+    }
+}
+
+async function togglePackage(id, isActive) {
+    if (!confirm(`Deseja ${isActive ? 'ativar' : 'desativar'} este pacote?`)) return;
+
+    try {
+        await apiCall(`/api/admin/config/credit-packages/${id}`, 'PUT', { is_active: isActive });
+        window.location.reload();
+    } catch (error) {
+        alert('Erro: ' + error.message);
+    }
+}
+
+// Preços de Destaque
+async function addFeatured(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    const data = {
+        duration_days: parseInt(formData.get('duration_days')),
+        price: parseFloat(formData.get('price')),
+        description: formData.get('description') || null,
+        is_active: formData.get('is_active') === 'true'
+    };
+
+    try {
+        await apiCall('/api/admin/config/featured-pricing', 'POST', data);
+        alert('Preço criado com sucesso!');
+        window.location.reload();
+    } catch (error) {
+        alert('Erro ao criar preço: ' + error.message);
+    }
+}
+
+async function toggleFeatured(id, isActive) {
+    if (!confirm(`Deseja ${isActive ? 'ativar' : 'desativar'} este preço?`)) return;
+
+    try {
+        await apiCall(`/api/admin/config/featured-pricing/${id}`, 'PUT', { is_active: isActive });
+        window.location.reload();
+    } catch (error) {
+        alert('Erro: ' + error.message);
+    }
+}
+
+// Funções de edição (placeholder - implementar modais de edição se necessário)
+function editPlan(id) {
+    alert('Função de edição em desenvolvimento. ID: ' + id);
+}
+
+function editPackage(id) {
+    alert('Função de edição em desenvolvimento. ID: ' + id);
+}
+
+function editFeatured(id) {
+    alert('Função de edição em desenvolvimento. ID: ' + id);
+}
+</script>
+{% endblock %}
