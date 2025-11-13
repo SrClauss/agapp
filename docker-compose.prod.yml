@@ -23,7 +23,7 @@ services:
       - .env
     environment:
       # O valor desta variável é carregado do .env
-      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD} 
       MONGO_INITDB_DATABASE: agiliza
     volumes:
