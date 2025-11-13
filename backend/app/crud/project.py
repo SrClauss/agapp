@@ -69,3 +69,43 @@ async def update_project(db: AsyncIOMotorDatabase, project_id: str, project_upda
 async def delete_project(db: AsyncIOMotorDatabase, project_id: str) -> bool:
     result = await db.projects.delete_one({"_id": project_id})
     return result.deleted_count > 0
+
+async def get_more_frequent_categories(db: AsyncIOMotorDatabase) -> List[str]:
+    pipeline = [
+        {"$group": {"_id": "$category", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]
+    categories = []
+    async for doc in db.projects.aggregate(pipeline):
+        categories.append(doc["_id"])
+    return categories
+
+
+async def get_last_projects_category_by_client(db: AsyncIOMotorDatabase, client_id: str, limit: int = 5) -> List[str]:
+    pipeline = [
+        {"$match": {"client_id": client_id}},
+        {"$sort": {"created_at": -1}},
+        {"$group": {"_id": "$category"}},
+        {"$limit": 5}
+    ]
+    categories = []
+    async for doc in db.projects.aggregate(pipeline):
+        categories.append(doc["_id"])
+    return categories
+
+#uma função que combine as mais frequentes caterorias de projetos de
+#um cliente com as categorias mais frequentes em geral ordenando as 
+#categorias do cliente primeiro e se for menor que 5 categorias
+#completando com as categorias mais frequentes em geral
+async def get_recommended_categories_for_client(db: AsyncIOMotorDatabase, client_id: str) -> List[str]:
+    client_categories = await get_last_projects_category_by_client(db, client_id)
+    general_categories = await get_more_frequent_categories(db)
+    
+    recommended = client_categories.copy()
+    for category in general_categories:
+        if category not in recommended:
+            recommended.append(category)
+        if len(recommended) >= 5:
+            break
+    return recommended

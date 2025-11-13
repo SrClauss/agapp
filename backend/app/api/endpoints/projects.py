@@ -290,3 +290,15 @@ async def download_project_messages(
         "messages": all_messages,
         "documents": documents
     }
+
+@router.get("/projects/recomended-categories", response_model=List[str])
+async def get_recomended_categories(
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Get recommended project categories based on user's last projects.
+    """
+    from app.crud.project import get_last_projects_category_by_client
+    categories = await get_last_projects_category_by_client(db, str(current_user.id))
+    return categories
