@@ -60,16 +60,22 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
   const formatPhone = (text: string): string => {
     // Remove non-digits
     const cleaned = text.replace(/\D/g, '');
-    // Format as (XX) XXXXX-XXXX or (XX) XXXX-XXXX
+    // Format as (XX) XXXXX-XXXX for 11 digits or (XX) XXXX-XXXX for 10 digits
     if (cleaned.length <= 11) {
-      return cleaned
-        .replace(/(\d{2})(\d)/, '($1) $2')
-        .replace(/(\d{5})(\d)/, '$1-$2')
-        .replace(/(\d{4})(\d)/, '$1-$2');
+      if (cleaned.length === 11) {
+        // 11 digits: (XX) XXXXX-XXXX
+        return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      } else if (cleaned.length === 10) {
+        // 10 digits: (XX) XXXX-XXXX
+        return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+      } else {
+        // Partial input
+        return cleaned
+          .replace(/(\d{2})(\d)/, '($1) $2')
+          .replace(/(\d{4})(\d)/, '$1-$2');
+      }
     }
-    return cleaned.slice(0, 11)
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2');
+    return cleaned.slice(0, 11).replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
   };
 
   const validateEmail = (email: string): boolean => {
