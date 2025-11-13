@@ -23,11 +23,11 @@ services:
     container_name: agiliza_mongodb_prod
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-AGar1401al2312}
-      MONGO_INITDB_DATABASE: agiliza_database
+      MONGO_INITDB_ROOT_PASSWORD: AG@ar1401al2312
+      MONGO_INITDB_DATABASE: agiliza
     volumes:
       - mongodb_data:/data/db
-      - ./backend/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./backend/mongo-init:/docker-entrypoint-initdb.d:ro
     networks:
       - agiliza_network
     restart: unless-stopped
@@ -43,19 +43,17 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: agiliza_backend_prod
-    env_file:
-      - ./backend/.env
     environment:
-      - MONGODB_URL=${MONGODB_URL}
-      - DATABASE_NAME=agiliza_database
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - MONGODB_URL=mongodb://admin:AG%40ar1401al2312@agiliza_mongodb_prod:27017/agiliza?authSource=admin
+      - DATABASE_NAME=agiliza
+      - JWT_SECRET_KEY=01K9DTGHKJPFXRJTJQKF5870DX
       - JWT_ALGORITHM=HS256
       - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
       - JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
-      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-      - ASAAS_API_KEY=${ASAAS_API_KEY}
-      - ASAAS_ENVIRONMENT=${ASAAS_ENVIRONMENT:-sandbox}
-      - ASAAS_WEBHOOK_TOKEN=${ASAAS_WEBHOOK_TOKEN}
+      - GOOGLE_MAPS_API_KEY=AIzaSyAcVV1cgCDjCdyM8anEG-4GcBEkOZsFFYw
+      - ASAAS_API_KEY=$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjQ4OGNmZmJhLTM5MGQtNDJmZi05N2M1LTM4YmJiZWNkNGQxNzo6JGFhY2hfYzIwYjgxN2UtNTYyZS00ZGEyLTk0NmMtYjIzZmNlNzI1MDJk
+      - ASAAS_ENVIRONMENT=sandbox
+      - ASAAS_WEBHOOK_TOKEN=2666cacb-f02d-4208-b96f-3ac8580bf76d
       - CORS_ORIGINS=["https://agilizapro.cloud", "https://agilizapro.net"]
     depends_on:
       mongodb:
