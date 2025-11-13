@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
 
 type SignUpScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignUp'>;
@@ -129,18 +130,39 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
         roles: ['client'], // Default role
       };
 
-      await apiService.register(userData);
+      const user = await apiService.register(userData);
 
-      Alert.alert(
-        'Sucesso!',
-        'Sua conta foi criada com sucesso. Faça login para continuar.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Login'),
-          },
-        ]
-      );
+      // Auto login after successful registration
+      try {
+        const loginResponse = await apiService.login({
+          username: email.toLowerCase().trim(),
+          password,
+        });
+
+        // Store tokens
+        await AsyncStorage.setItem('access_token', loginResponse.access_token);
+        if (loginResponse.refresh_token) {
+          await AsyncStorage.setItem('refresh_token', loginResponse.refresh_token);
+        }
+
+        // Store initial role from registration
+        await AsyncStorage.setItem('user_roles', JSON.stringify(userData.roles));
+
+        // Navigate to role selection
+        navigation.replace('RoleSelection');
+      } catch (loginError) {
+        // If auto-login fails, just go to login screen
+        Alert.alert(
+          'Sucesso!',
+          'Sua conta foi criada com sucesso. Faça login para continuar.',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Login'),
+            },
+          ]
+        );
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conta. Tente novamente.';
       Alert.alert('Erro', errorMessage);

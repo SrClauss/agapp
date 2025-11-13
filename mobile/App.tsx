@@ -10,11 +10,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
+import RoleChoiceScreen from './src/screens/RoleChoiceScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Home: undefined;
+  RoleSelection: undefined;
+  RoleChoice: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -78,6 +82,8 @@ export default function App(): React.JSX.Element {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="SignUp" component={SignUpScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
+            <Stack.Screen name="RoleChoice" component={RoleChoiceScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>

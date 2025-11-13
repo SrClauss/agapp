@@ -64,8 +64,40 @@ export default function LoginScreen({ navigation }: LoginScreenProps): React.JSX
         await AsyncStorage.setItem('refresh_token', response.refresh_token);
       }
 
-      // Navigate to Home
-      navigation.replace('Home');
+      // Get user data to check roles
+      try {
+        const userData = await apiService.getCurrentUser(response.access_token);
+
+        console.log('Login - userData.roles from backend:', userData.roles);
+
+        // Store roles from backend
+        await AsyncStorage.setItem('user_roles', JSON.stringify(userData.roles));
+
+        // Check if user needs to select roles
+        // User needs selection if: only has default 'client' role OR no roles
+        const needsRoleSelection = !userData.roles ||
+          userData.roles.length === 0 ||
+          (userData.roles.length === 1 && userData.roles[0] === 'client');
+
+        if (needsRoleSelection) {
+          // User hasn't customized their roles yet - go to selection
+          console.log('Login - Going to RoleSelection (needs to choose roles)');
+          navigation.replace('RoleSelection');
+        } else if (userData.roles.length > 1) {
+          // User has multiple roles - ask which one to use this session
+          console.log('Login - Going to RoleChoice (has multiple roles)');
+          navigation.replace('RoleChoice');
+        } else {
+          // User has single custom role - go directly to home
+          console.log('Login - Going to Home (has single role:', userData.roles[0], ')');
+          await AsyncStorage.setItem('active_role', userData.roles[0]);
+          navigation.replace('Home');
+        }
+      } catch (userError) {
+        console.error('Error fetching user data:', userError);
+        // If we can't fetch user data, just go to home
+        navigation.replace('Home');
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao fazer login. Verifique suas credenciais.';
       Alert.alert('Erro', errorMessage);
@@ -77,6 +109,31 @@ export default function LoginScreen({ navigation }: LoginScreenProps): React.JSX
   const handleGoogleLogin = (): void => {
     // TODO: Implementar login com Google
     console.log('Google Login');
+  };
+
+  const debugAsyncStorage = async (): Promise<void> => {
+    const hasSelectedRoles = await AsyncStorage.getItem('has_selected_roles');
+    const userRoles = await AsyncStorage.getItem('user_roles');
+    const activeRole = await AsyncStorage.getItem('active_role');
+    const accessToken = await AsyncStorage.getItem('access_token');
+
+    console.log('=== DEBUG AsyncStorage ===');
+    console.log('has_selected_roles:', hasSelectedRoles);
+    console.log('user_roles:', userRoles);
+    console.log('active_role:', activeRole);
+    console.log('access_token exists:', !!accessToken);
+    console.log('========================');
+
+    Alert.alert(
+      'Debug AsyncStorage',
+      `has_selected_roles: ${hasSelectedRoles}\nuser_roles: ${userRoles}\nactive_role: ${activeRole}\ntoken exists: ${!!accessToken}`
+    );
+  };
+
+  const clearAsyncStorage = async (): Promise<void> => {
+    await AsyncStorage.clear();
+    Alert.alert('Sucesso', 'AsyncStorage limpo!');
+    console.log('AsyncStorage cleared');
   };
 
   return (
@@ -184,6 +241,26 @@ export default function LoginScreen({ navigation }: LoginScreenProps): React.JSX
               >
                 <Text style={styles.signUpLinkText}>Cadastre-se</Text>
               </TouchableRipple>
+            </View>
+
+            {/* Debug Buttons - TEMPORARY */}
+            <View style={styles.debugContainer}>
+              <Button
+                mode="outlined"
+                onPress={debugAsyncStorage}
+                style={styles.debugButton}
+                compact
+              >
+                Debug Storage
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={clearAsyncStorage}
+                style={styles.debugButton}
+                compact
+              >
+                Limpar Storage
+              </Button>
             </View>
           </View>
         </ScrollView>
@@ -310,5 +387,15 @@ const styles = StyleSheet.create({
     color: '#3471b9',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  debugContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 24,
+    gap: 8,
+  },
+  debugButton: {
+    flex: 1,
+    borderColor: '#999',
   },
 });

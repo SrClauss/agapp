@@ -26,6 +26,7 @@ interface HomeScreenProps {
 export default function HomeScreen({ navigation }: HomeScreenProps): React.JSX.Element {
   const [user, setUser] = useState<UserResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [activeRole, setActiveRole] = useState<string>('client');
 
   useEffect(() => {
     loadUserData();
@@ -37,6 +38,12 @@ export default function HomeScreen({ navigation }: HomeScreenProps): React.JSX.E
       if (!token) {
         navigation.replace('Login');
         return;
+      }
+
+      // Load active role
+      const role = await AsyncStorage.getItem('active_role');
+      if (role) {
+        setActiveRole(role);
       }
 
       const userData = await apiService.getCurrentUser(token);
@@ -51,8 +58,26 @@ export default function HomeScreen({ navigation }: HomeScreenProps): React.JSX.E
   };
 
   const handleLogout = async (): Promise<void> => {
-    await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
+    // Remove session data (roles will be fetched from backend on next login)
+    await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'active_role', 'user_roles']);
     navigation.replace('Login');
+  };
+
+  const handleSwitchRole = async (): Promise<void> => {
+    const rolesStr = await AsyncStorage.getItem('user_roles');
+    if (rolesStr) {
+      const roles = JSON.parse(rolesStr);
+      if (roles.length > 1) {
+        navigation.navigate('RoleChoice');
+      }
+    }
+  };
+
+  const getRoleLabel = (role: string): string => {
+    if (role === 'client') return 'Cliente';
+    if (role === 'professional') return 'Profissional';
+    if (role === 'admin') return 'Administrador';
+    return role;
   };
 
   if (isLoading) {
@@ -81,16 +106,33 @@ export default function HomeScreen({ navigation }: HomeScreenProps): React.JSX.E
               <Text style={styles.welcomeText}>Bem-vindo!</Text>
               <Text style={styles.userName}>{user?.full_name}</Text>
               <Text style={styles.userEmail}>{user?.email}</Text>
+              <Text style={styles.rolebadge}>
+                {activeRole === 'client' ? '👤' : '🔧'} {getRoleLabel(activeRole)}
+              </Text>
             </View>
           </View>
-          <Button
-            mode="text"
-            onPress={handleLogout}
-            textColor="#3471b9"
-            icon="logout"
-          >
-            Sair
-          </Button>
+          <View style={styles.headerButtons}>
+            {user?.roles && user.roles.length > 1 && (
+              <Button
+                mode="text"
+                onPress={handleSwitchRole}
+                textColor="#3471b9"
+                icon="swap-horizontal"
+                compact
+              >
+                Trocar
+              </Button>
+            )}
+            <Button
+              mode="text"
+              onPress={handleLogout}
+              textColor="#3471b9"
+              icon="logout"
+              compact
+            >
+              Sair
+            </Button>
+          </View>
         </View>
 
         {/* Success Card */}
@@ -226,6 +268,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 2,
+  },
+  rolebadge: {
+    fontSize: 12,
+    color: '#3471b9',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
   },
   successCard: {
     marginBottom: 16,

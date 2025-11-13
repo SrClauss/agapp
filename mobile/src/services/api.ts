@@ -99,6 +99,31 @@ class ApiService {
 
     return response.json();
   }
+
+  async updateUserRoles(token: string, roles: string[]): Promise<UserResponse> {
+    console.log('API - Sending PUT /users/me with roles:', roles);
+
+    const response = await fetch(`${this.baseUrl}/users/me`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ roles }),
+    });
+
+    console.log('API - Response status:', response.status);
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      console.log('API - Error response:', error);
+      throw new Error(error.detail || 'Erro ao atualizar roles');
+    }
+
+    const userData = await response.json();
+    console.log('API - Updated user roles:', userData.roles);
+    return userData;
+  }
 }
 
 export const apiService = new ApiService();

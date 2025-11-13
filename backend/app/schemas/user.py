@@ -17,6 +17,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[Dict[str, Any]] = None
     professional_info: Optional[Dict[str, Any]] = None
+    roles: Optional[List[str]] = None
 
 class UserInDBBase(UserBase):
     id: str = Field(alias="_id")
