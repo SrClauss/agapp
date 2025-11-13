@@ -44,7 +44,7 @@ services:
       dockerfile: Dockerfile
     container_name: agiliza_backend_prod
     environment:
-      - MONGODB_URL=mongodb://admin:AG%40ar1401al2312@agiliza_mongodb_prod:27017/agiliza?authSource=admin
+      - MONGODB_URL=mongodb://admin:AG%40ar1401al2312@mongodb:27017/agiliza?authSource=admin
       - DATABASE_NAME=agiliza
       - JWT_SECRET_KEY=01K9DTGHKJPFXRJTJQKF5870DX
       - JWT_ALGORITHM=HS256
