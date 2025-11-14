@@ -13,7 +13,7 @@ from app.crud.user import get_users, get_user_by_email, get_user_in_db_by_email,
 from app.crud.project import get_projects
 from app.crud.contact import get_contacts
 from app.crud.subscription import get_subscriptions
-from app.crud.category import get_categories, get_category, create_category, update_category, delete_category
+from app.crud.category import get_categories, get_category, create_category, update_category, delete_category, delete_category_permanent
 from app.models.category import CategoryCreate, CategoryUpdate
 from app.schemas.user import User, Token
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -585,6 +585,20 @@ async def admin_delete_category(
 ):
     """Deletar uma categoria"""
     deleted = await delete_category(db, category_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+
+    return RedirectResponse(url="/system-admin/categories", status_code=303)
+
+
+@router.post("/categories/{category_id}/delete-permanent")
+async def admin_delete_category_permanent(
+    category_id: str,
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Deletar uma categoria permanentemente (apenas admin)."""
+    deleted = await delete_category_permanent(db, category_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
 
