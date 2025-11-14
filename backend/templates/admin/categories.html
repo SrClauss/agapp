@@ -67,7 +67,7 @@
                         </td>
                         <td>{{ category.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                         <td>
-                            <button class="btn btn-sm btn-info" onclick="editCategory('{{ category.id }}', '{{ category.name }}', {{ category.subcategories|tojson }}, {{ category.default_remote_execution|tojson }})">
+                            <button class="btn btn-sm btn-info" onclick="editCategory({{ category.id|tojson }}, {{ category.name|tojson }}, {{ category.subcategories|tojson }}, {{ category.default_remote_execution|tojson }})">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <form method="POST" action="/system-admin/categories/{{ category.id }}/delete" style="display: inline;">
