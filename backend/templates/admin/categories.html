@@ -68,19 +68,19 @@
                         <td>{{ category.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                         <td>
                             <button class="btn btn-sm btn-info js-category-edit"
-                                    data-id="{{ category.id|string }}"
-                                    data-name="{{ category.name|string }}"
-                                    data-subcategories="{{ category.subcategories|tojson }}"
-                                    data-default-remote="{{ category.default_remote_execution|tojson }}">
+                                    data-id={{ category.id|tojson }}
+                                    data-name={{ category.name|tojson }}
+                                    data-subcategories={{ category.subcategories|tojson }}
+                                    data-default-remote={{ category.default_remote_execution|tojson }}>
                                 <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-secondary ms-1 js-category-info"
-                                    data-id="{{ category.id|string }}"
-                                    data-name="{{ category.name|string }}"
-                                    data-subcategories="{{ category.subcategories|tojson }}"
-                                    data-default-remote="{{ category.default_remote_execution|tojson }}"
-                                    data-is-active="{{ category.is_active|tojson }}"
-                                    data-created-at="{{ category.created_at.strftime('%d/%m/%Y %H:%M')|string }}">
+                                    data-id={{ category.id|tojson }}
+                                    data-name={{ category.name|tojson }}
+                                    data-subcategories={{ category.subcategories|tojson }}
+                                    data-default-remote={{ category.default_remote_execution|tojson }}
+                                    data-is-active={{ category.is_active|tojson }}
+                                    data-created-at={{ category.created_at.strftime('%d/%m/%Y %H:%M')|tojson }}>
                                 <i class="fas fa-info-circle"></i>
                             </button>
                             <form method="POST" action="/system-admin/categories/{{ category.id }}/delete" style="display: inline;">
