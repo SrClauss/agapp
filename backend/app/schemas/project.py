@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 
 class ProjectBase(BaseModel):
     title: str
     description: str
-    category: str
+    category: Union[str, Dict[str, str]]  # Aceita string (legacy) ou dict {main, sub}
     skills_required: List[str] = []
     budget_min: Optional[float] = None
     budget_max: Optional[float] = None
@@ -19,7 +19,7 @@ class ProjectCreate(ProjectBase):
 class ProjectUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    category: Optional[str] = None
+    category: Optional[Union[str, Dict[str, str]]] = None  # Aceita string ou dict
     skills_required: Optional[List[str]] = None
     budget_min: Optional[float] = None
     budget_max: Optional[float] = None

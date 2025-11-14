@@ -14,6 +14,7 @@ import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
 import RoleChoiceScreen from './src/screens/RoleChoiceScreen';
 import ClientDashboardScreen from './src/screens/ClientDashboardScreen';
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
+import AddressSearchScreen from './src/screens/AddressSearchScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -23,6 +24,7 @@ export type RootStackParamList = {
   RoleChoice: undefined;
   ClientDashboard: undefined;
   CreateProject: undefined;
+  AddressSearch: { onSelect: (address: string) => void };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -96,6 +98,7 @@ export default function App(): React.JSX.Element {
             <Stack.Screen name="RoleChoice" component={RoleChoiceScreen} />
             <Stack.Screen name="ClientDashboard" component={ClientDashboardScreen} />
             <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
+            <Stack.Screen name="AddressSearch" component={AddressSearchScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>

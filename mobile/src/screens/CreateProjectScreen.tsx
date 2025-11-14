@@ -290,15 +290,35 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
             </View>
           </View>
 
-          <TextInput
-            label="Endereço *"
-            value={address}
-            onChangeText={setAddress}
-            mode="outlined"
-            error={!!errors.address}
-            style={styles.input}
-            placeholder="Cidade, Estado ou Endereço completo"
-          />
+          <View style={styles.addressContainer}>
+            <TextInput
+              label="Endereço *"
+              value={address}
+              onChangeText={setAddress}
+              mode="outlined"
+              error={!!errors.address}
+              style={styles.addressInput}
+              placeholder="Clique na lupa para buscar"
+              multiline
+              numberOfLines={2}
+            />
+            <Button
+              mode="contained"
+              onPress={() => {
+                navigation.navigate('AddressSearch', {
+                  onSelect: (selectedAddress: string) => {
+                    if (selectedAddress) {
+                      setAddress(selectedAddress);
+                    }
+                  },
+                });
+              }}
+              style={styles.addressButton}
+              icon="magnify"
+            >
+              Buscar
+            </Button>
+          </View>
           <HelperText type="error" visible={!!errors.address}>
             {errors.address}
           </HelperText>
@@ -390,6 +410,15 @@ const styles = StyleSheet.create({
   },
   budgetInput: {
     flex: 1,
+  },
+  addressContainer: {
+    gap: 12,
+  },
+  addressInput: {
+    backgroundColor: '#fff',
+  },
+  addressButton: {
+    paddingVertical: 4,
   },
   submitButton: {
     marginTop: 24,
