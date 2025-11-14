@@ -46,6 +46,7 @@ export interface Category {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  default_remote_execution?: boolean;
 }
 
 export interface ProjectCategory {
@@ -70,6 +71,7 @@ export interface Project {
   status: string;
   created_at: string;
   updated_at: string;
+  remote_execution?: boolean;
 }
 
 export interface ProjectCreateRequest {
@@ -83,6 +85,7 @@ export interface ProjectCreateRequest {
     address: string;
     coordinates: [number, number];
   };
+  remote_execution?: boolean;
 }
 
 class ApiService {

@@ -31,6 +31,7 @@
                     <tr>
                         <th>Categoria Principal</th>
                         <th>Subcategorias</th>
+                        <th>Execução Remota</th>
                         <th>Status</th>
                         <th>Criado em</th>
                         <th>Ações</th>
@@ -51,6 +52,13 @@
                             </div>
                         </td>
                         <td>
+                            {% if category.default_remote_execution %}
+                            <span class="badge bg-info">Remoto por padrão</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Presencial</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if category.is_active %}
                             <span class="badge bg-success">Ativa</span>
                             {% else %}
@@ -59,7 +67,7 @@
                         </td>
                         <td>{{ category.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                         <td>
-                            <button class="btn btn-sm btn-info" onclick="editCategory('{{ category.id }}', '{{ category.name }}', {{ category.subcategories|tojson }})">
+                            <button class="btn btn-sm btn-info" onclick="editCategory('{{ category.id }}', '{{ category.name }}', {{ category.subcategories|tojson }}, {{ category.default_remote_execution|tojson }})">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <form method="POST" action="/system-admin/categories/{{ category.id }}/delete" style="display: inline;">
@@ -72,7 +80,7 @@
                     {% endfor %}
                     {% if not categories %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-4">
+                        <td colspan="6" class="text-center text-muted py-4">
                             Nenhuma categoria encontrada.
                         </td>
                     </tr>
@@ -101,6 +109,13 @@
                         <label for="subcategories" class="form-label">Subcategorias (uma por linha)</label>
                         <textarea class="form-control" id="subcategories" name="subcategories" rows="5" placeholder="Ex:&#10;Desenvolvimento Web&#10;App Mobile&#10;Backend"></textarea>
                         <small class="text-muted">Digite cada subcategoria em uma nova linha</small>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="defaultRemoteExecution" name="default_remote_execution">
+                        <label class="form-check-label" for="defaultRemoteExecution">
+                            Projetos desta categoria permitem execução remota por padrão
+                        </label>
+                        <small class="form-text text-muted d-block">Categorias como Programação, Design, Tradução geralmente podem ser executadas remotamente</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -131,6 +146,13 @@
                         <textarea class="form-control" id="editSubcategories" name="subcategories" rows="5"></textarea>
                         <small class="text-muted">Digite cada subcategoria em uma nova linha</small>
                     </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="editDefaultRemoteExecution" name="default_remote_execution">
+                        <label class="form-check-label" for="editDefaultRemoteExecution">
+                            Projetos desta categoria permitem execução remota por padrão
+                        </label>
+                        <small class="form-text text-muted d-block">Categorias como Programação, Design, Tradução geralmente podem ser executadas remotamente</small>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -145,9 +167,10 @@
 
 {% block scripts %}
 <script>
-function editCategory(id, name, subcategories) {
+function editCategory(id, name, subcategories, defaultRemoteExecution) {
     document.getElementById('editCategoryName').value = name;
     document.getElementById('editSubcategories').value = subcategories.join('\n');
+    document.getElementById('editDefaultRemoteExecution').checked = defaultRemoteExecution || false;
     document.getElementById('editCategoryForm').action = '/system-admin/categories/' + id + '/edit';
 
     var modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
