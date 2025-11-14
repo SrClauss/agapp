@@ -83,7 +83,3 @@ class Evaluation(BaseModel):
 
     class Config:
         from_attributes = True
-    status: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    radius_km: Optional[float] = None
