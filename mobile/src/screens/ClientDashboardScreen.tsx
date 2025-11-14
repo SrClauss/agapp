@@ -12,7 +12,6 @@ import {
   Avatar,
   ActivityIndicator,
   Chip,
-  FAB,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -258,14 +257,6 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
           ))
         )}
       </ScrollView>
-
-      {/* FAB */}
-      <FAB
-        style={styles.fab}
-        icon="plus"
-        label="Novo Projeto"
-        onPress={() => navigation.navigate('CreateProject')}
-      />
     </SafeAreaView>
   );
 }
@@ -287,7 +278,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100,
   },
   header: {
     backgroundColor: '#fff',
@@ -423,12 +413,5 @@ const styles = StyleSheet.create({
   },
   metaChip: {
     backgroundColor: '#f5f5f5',
-  },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#3471b9',
   },
 });
