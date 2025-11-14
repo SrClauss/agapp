@@ -22,6 +22,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
+import TurnstileModal from '../components/TurnstileModal';
 
 type SignUpScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignUp'>;
 
@@ -40,6 +41,8 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showTurnstile, setShowTurnstile] = useState<boolean>(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const formatCPF = (text: string): string => {
     // Remove non-digits
@@ -130,6 +133,13 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
       return;
     }
 
+    // Mostrar modal do Turnstile
+    setShowTurnstile(true);
+  };
+
+  const handleTurnstileSuccess = async (token: string): Promise<void> => {
+    setTurnstileToken(token);
+    setShowTurnstile(false);
     setIsLoading(true);
 
     try {
@@ -144,6 +154,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
         phone: cleanPhone,
         password,
         roles: ['client'], // Default role
+        turnstile_token: token,
       };
 
       const user = await apiService.register(userData);
@@ -153,6 +164,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
         const loginResponse = await apiService.login({
           username: email.toLowerCase().trim(),
           password,
+          turnstile_token: token,
         });
 
         // Store tokens
@@ -184,7 +196,13 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
       Alert.alert('Erro', errorMessage);
     } finally {
       setIsLoading(false);
+      setTurnstileToken(null);
     }
+  };
+
+  const handleTurnstileCancel = (): void => {
+    setShowTurnstile(false);
+    setTurnstileToken(null);
   };
 
   const handleGoogleSignUp = (): void => {
@@ -331,7 +349,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
                 color="#3471b9"
               />
               <View style={styles.termsTextContainer}>
-                <Text style={styles.termsText}>Eu aceito os </Text>
+                <Text style={styles.termsText}>Eu aceito  </Text>
                 <TouchableRipple
                   onPress={() => console.log('Ver termos')}
                   style={styles.termsLink}
@@ -392,6 +410,13 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps): React.J
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Turnstile Modal */}
+      <TurnstileModal
+        visible={showTurnstile}
+        onSuccess={handleTurnstileSuccess}
+        onCancel={handleTurnstileCancel}
+      />
     </SafeAreaView>
   );
 }

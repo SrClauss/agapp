@@ -14,3 +14,6 @@ export const getApiUrl = (): string => {
   // For example, based on environment variables or user settings
   return DEFAULT_API_ENDPOINT;
 };
+
+// Export API_BASE_URL for use in other components
+export const API_BASE_URL = getApiUrl();

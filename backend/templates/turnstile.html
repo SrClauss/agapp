@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificação de Segurança</title>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .turnstile-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Verificação de Segurança</h1>
+        <p>Por favor, complete a verificação abaixo para continuar</p>
+
+        <div class="turnstile-wrapper">
+            <div class="cf-turnstile"
+                 data-sitekey="{{ site_key }}"
+                 data-callback="onTurnstileSuccess"
+                 data-error-callback="onTurnstileError"
+                 data-theme="light">
+            </div>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <div class="footer">
+        Protegido por Cloudflare Turnstile
+    </div>
+
+    <script>
+        function onTurnstileSuccess(token) {
+            console.log('Turnstile token recebido:', token);
+
+            const statusEl = document.getElementById('status');
+            statusEl.className = 'status success';
+            statusEl.innerHTML = '✓ Verificação bem-sucedida!<br><div class="loading"></div>';
+
+            // Enviar token para o app React Native via postMessage
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'turnstile_success',
+                    token: token
+                }));
+            } else {
+                // Para testes em navegador web
+                console.log('Token pronto para ser enviado:', token);
+                statusEl.innerHTML = '✓ Verificação bem-sucedida!<br><small>Token: ' + token.substring(0, 20) + '...</small>';
+            }
+        }
+
+        function onTurnstileError(error) {
+            console.error('Erro no Turnstile:', error);
+
+            const statusEl = document.getElementById('status');
+            statusEl.className = 'status error';
+            statusEl.innerHTML = '✗ Erro na verificação. Tente novamente.';
+
+            // Notificar o app sobre o erro
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'turnstile_error',
+                    error: error
+                }));
+            }
+        }
+
+        // Notificar que a página está pronta
+        window.addEventListener('load', function() {
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'turnstile_ready'
+                }));
+            }
+        });
+    </script>
+</body>
+</html>

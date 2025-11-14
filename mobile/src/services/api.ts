@@ -7,6 +7,7 @@ export interface UserCreateRequest {
   phone?: string;
   password: string;
   roles?: string[];
+  turnstile_token?: string;
 }
 
 export interface UserResponse {
@@ -25,6 +26,7 @@ export interface UserResponse {
 export interface LoginRequest {
   username: string; // email
   password: string;
+  turnstile_token?: string;
 }
 
 export interface TokenResponse {
@@ -62,7 +64,25 @@ class ApiService {
   }
 
   async login(credentials: LoginRequest): Promise<TokenResponse> {
-    // OAuth2 expects form-data
+    // Se tiver turnstile_token, usar endpoint JSON
+    if (credentials.turnstile_token) {
+      const response = await fetch(`${this.baseUrl}/auth/login-with-turnstile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Erro ao fazer login');
+      }
+
+      return response.json();
+    }
+
+    // OAuth2 expects form-data (backward compatibility)
     const formData = new URLSearchParams();
     formData.append('username', credentials.username);
     formData.append('password', credentials.password);
