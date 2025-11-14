@@ -11,6 +11,7 @@ import {
   Button,
   ActivityIndicator,
   HelperText,
+  Checkbox,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
@@ -38,6 +39,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
   const [budgetMin, setBudgetMin] = useState<string>('');
   const [budgetMax, setBudgetMax] = useState<string>('');
   const [address, setAddress] = useState<string>('');
+  const [remoteExecution, setRemoteExecution] = useState<boolean>(false);
 
   // Form errors
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -45,6 +47,16 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // Update remote execution when category changes
+  useEffect(() => {
+    if (selectedCategory) {
+      const category = categories.find(c => c.name === selectedCategory);
+      if (category && category.default_remote_execution !== undefined) {
+        setRemoteExecution(category.default_remote_execution);
+      }
+    }
+  }, [selectedCategory, categories]);
 
   const loadCategories = async (): Promise<void> => {
     try {
@@ -90,7 +102,8 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       newErrors.subcategory = 'Selecione uma subcategoria';
     }
 
-    if (!address.trim()) {
+    // Address is only required if not remote execution
+    if (!remoteExecution && !address.trim()) {
       newErrors.address = 'Endereço é obrigatório';
     }
 
@@ -132,10 +145,11 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
           sub: selectedSubcategory,
         },
         location: {
-          address: address.trim(),
+          address: address.trim() || 'Remoto',
           coordinates: [-46.6333, -23.5505], // Default to São Paulo (would use geocoding in production)
         },
         skills_required: [],
+        remote_execution: remoteExecution,
       };
 
       if (budgetMin) {
@@ -292,7 +306,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
           <View style={styles.addressContainer}>
             <TextInput
-              label="Endereço *"
+              label={remoteExecution ? "Endereço (opcional para projetos remotos)" : "Endereço *"}
               value={address}
               onChangeText={setAddress}
               mode="outlined"
@@ -331,6 +345,24 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
           </View>
           <HelperText type="error" visible={!!errors.address}>
             {errors.address}
+          </HelperText>
+
+          <View style={styles.checkboxContainer}>
+            <Checkbox
+              status={remoteExecution ? 'checked' : 'unchecked'}
+              onPress={() => setRemoteExecution(!remoteExecution)}
+            />
+            <Text 
+              style={styles.checkboxLabel}
+              onPress={() => setRemoteExecution(!remoteExecution)}
+            >
+              Permite execução remota
+            </Text>
+          </View>
+          <HelperText type="info" visible={true}>
+            {remoteExecution 
+              ? 'Este projeto pode ser executado remotamente. O endereço é opcional.'
+              : 'Este projeto requer presença física no local especificado.'}
           </HelperText>
 
           <Button
@@ -429,6 +461,17 @@ const styles = StyleSheet.create({
   },
   addressButton: {
     paddingVertical: 4,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    marginLeft: 8,
+    color: '#333',
   },
   submitButton: {
     marginTop: 24,

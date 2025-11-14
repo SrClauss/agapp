@@ -12,6 +12,7 @@ class ProjectBase(BaseModel):
     location: Dict[str, Any]
     attachments: List[str] = []
     deadline: Optional[datetime] = None
+    remote_execution: bool = False  # Permite execução remota do projeto
 
 class ProjectCreate(ProjectBase):
     pass
@@ -30,6 +31,7 @@ class ProjectUpdate(BaseModel):
     closed_at: Optional[datetime] = None
     final_budget: Optional[float] = None
     closed_by: Optional[str] = None
+    remote_execution: Optional[bool] = None
 
 class ProjectInDBBase(ProjectBase):
     id: str
@@ -81,7 +83,3 @@ class Evaluation(BaseModel):
 
     class Config:
         from_attributes = True
-    status: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    radius_km: Optional[float] = None

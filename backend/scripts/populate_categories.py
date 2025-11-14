@@ -26,7 +26,8 @@ SAMPLE_CATEGORIES = [
             "DevOps",
             "Data Science",
             "Machine Learning"
-        ]
+        ],
+        "default_remote_execution": True  # Programação pode ser remota
     },
     {
         "name": "Serviços Jurídicos",
@@ -38,7 +39,8 @@ SAMPLE_CATEGORIES = [
             "Direito Civil",
             "Direito Tributário",
             "Propriedade Intelectual"
-        ]
+        ],
+        "default_remote_execution": False
     },
     {
         "name": "Design",
@@ -50,7 +52,8 @@ SAMPLE_CATEGORIES = [
             "Motion Graphics",
             "Ilustração",
             "Design de Produto"
-        ]
+        ],
+        "default_remote_execution": True  # Design pode ser remoto
     },
     {
         "name": "Marketing",
@@ -63,7 +66,8 @@ SAMPLE_CATEGORIES = [
             "Email Marketing",
             "Content Marketing",
             "Copywriting"
-        ]
+        ],
+        "default_remote_execution": True  # Marketing pode ser remoto
     },
     {
         "name": "Arquitetura e Engenharia",
@@ -75,7 +79,8 @@ SAMPLE_CATEGORIES = [
             "Laudo Técnico",
             "Regularização de Imóveis",
             "Acompanhamento de Obras"
-        ]
+        ],
+        "default_remote_execution": False
     },
     {
         "name": "Contabilidade",
@@ -86,7 +91,8 @@ SAMPLE_CATEGORIES = [
             "Folha de Pagamento",
             "Abertura de Empresa",
             "Planejamento Tributário"
-        ]
+        ],
+        "default_remote_execution": True  # Contabilidade pode ser remota
     },
     {
         "name": "Tradução",
@@ -97,7 +103,8 @@ SAMPLE_CATEGORIES = [
             "Tradução Juramentada",
             "Revisão de Textos",
             "Interpretação"
-        ]
+        ],
+        "default_remote_execution": True  # Tradução pode ser remota
     },
     {
         "name": "Consultoria",
@@ -109,7 +116,8 @@ SAMPLE_CATEGORIES = [
             "Consultoria em Marketing",
             "Coaching",
             "Mentoria"
-        ]
+        ],
+        "default_remote_execution": True  # Consultoria pode ser remota
     },
     {
         "name": "Saúde e Bem-estar",
@@ -121,7 +129,8 @@ SAMPLE_CATEGORIES = [
             "Terapias Alternativas",
             "Yoga",
             "Pilates"
-        ]
+        ],
+        "default_remote_execution": False
     },
     {
         "name": "Educação",
@@ -132,7 +141,8 @@ SAMPLE_CATEGORIES = [
             "Cursos de Idiomas",
             "Cursos Técnicos",
             "Treinamentos Corporativos"
-        ]
+        ],
+        "default_remote_execution": True  # Educação pode ser remota (aulas online)
     }
 ]
 
@@ -168,11 +178,13 @@ async def populate_categories():
                 "subcategories": category["subcategories"],
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
-                "is_active": True
+                "is_active": True,
+                "default_remote_execution": category.get("default_remote_execution", False)
             }
 
             result = await db.categories.insert_one(category_doc)
-            print(f"✅ {category['name']} - {len(category['subcategories'])} subcategorias")
+            remote_status = "✓ Remoto" if category.get("default_remote_execution", False) else ""
+            print(f"✅ {category['name']} - {len(category['subcategories'])} subcategorias {remote_status}")
 
         # Create indexes
         print("\n📊 Criando índices...")
