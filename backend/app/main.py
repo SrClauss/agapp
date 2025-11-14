@@ -7,7 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
-from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks
+from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile
 from app.api.admin import router as admin_router
 from app.api.websockets.routes import router as websocket_router
 
@@ -141,6 +141,7 @@ app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 app.include_router(payments.router, tags=["payments"])
 app.include_router(webhooks.router, tags=["webhooks"])
+app.include_router(turnstile.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin_router, prefix="/system-admin", tags=["admin"])
 app.include_router(admin_api.router, tags=["admin-api"])
 app.include_router(websocket_router, tags=["websockets"])
@@ -181,3 +182,19 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {"message": "Professional Platform API"}
+
+@app.get("/turnstile", response_class=HTMLResponse)
+async def turnstile_page(request: Request):
+    """
+    Página HTML com o widget Cloudflare Turnstile.
+
+    Esta página é carregada em um WebView no app mobile para obter
+    o token de verificação do usuário.
+    """
+    return templates.TemplateResponse(
+        "turnstile.html",
+        {
+            "request": request,
+            "site_key": settings.turnstile_site_key
+        }
+    )

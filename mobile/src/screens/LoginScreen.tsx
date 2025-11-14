@@ -20,6 +20,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
+import TurnstileModal from '../components/TurnstileModal';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -32,6 +33,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps): React.JSX
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showTurnstile, setShowTurnstile] = useState<boolean>(false);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,12 +52,19 @@ export default function LoginScreen({ navigation }: LoginScreenProps): React.JSX
       return;
     }
 
+    // Mostrar modal do Turnstile
+    setShowTurnstile(true);
+  };
+
+  const handleTurnstileSuccess = async (token: string): Promise<void> => {
+    setShowTurnstile(false);
     setIsLoading(true);
 
     try {
       const response = await apiService.login({
         username: email.toLowerCase().trim(),
         password,
+        turnstile_token: token,
       });
 
       // Store tokens
@@ -104,6 +113,10 @@ export default function LoginScreen({ navigation }: LoginScreenProps): React.JSX
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleTurnstileCancel = (): void => {
+    setShowTurnstile(false);
   };
 
   const handleGoogleLogin = (): void => {
@@ -265,6 +278,13 @@ export default function LoginScreen({ navigation }: LoginScreenProps): React.JSX
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Turnstile Modal */}
+      <TurnstileModal
+        visible={showTurnstile}
+        onSuccess={handleTurnstileSuccess}
+        onCancel={handleTurnstileCancel}
+      />
     </SafeAreaView>
   );
 }

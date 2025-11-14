@@ -11,6 +11,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    turnstile_token: Optional[str] = None
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -50,3 +51,8 @@ class TokenData(BaseModel):
 
 class AddressGeocode(BaseModel):
     address: str
+
+class LoginRequest(BaseModel):
+    username: str  # Email
+    password: str
+    turnstile_token: Optional[str] = None
