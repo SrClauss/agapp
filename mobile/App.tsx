@@ -12,6 +12,8 @@ import SignUpScreen from './src/screens/SignUpScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
 import RoleChoiceScreen from './src/screens/RoleChoiceScreen';
+import ClientDashboardScreen from './src/screens/ClientDashboardScreen';
+import CreateProjectScreen from './src/screens/CreateProjectScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -19,6 +21,8 @@ export type RootStackParamList = {
   Home: undefined;
   RoleSelection: undefined;
   RoleChoice: undefined;
+  ClientDashboard: undefined;
+  CreateProject: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -50,7 +54,13 @@ export default function App(): React.JSX.Element {
       try {
         const token = await AsyncStorage.getItem('access_token');
         if (token) {
-          setInitialRoute('Home');
+          // Check if user has client role and redirect to dashboard
+          const activeRole = await AsyncStorage.getItem('active_role');
+          if (activeRole === 'client') {
+            setInitialRoute('ClientDashboard');
+          } else {
+            setInitialRoute('Home');
+          }
         } else {
           setInitialRoute('Login');
         }
@@ -84,6 +94,8 @@ export default function App(): React.JSX.Element {
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
             <Stack.Screen name="RoleChoice" component={RoleChoiceScreen} />
+            <Stack.Screen name="ClientDashboard" component={ClientDashboardScreen} />
+            <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>

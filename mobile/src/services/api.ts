@@ -39,6 +39,52 @@ export interface ApiError {
   detail: string;
 }
 
+export interface Category {
+  _id: string;
+  name: string;
+  subcategories: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectCategory {
+  main: string;
+  sub: string;
+}
+
+export interface Project {
+  _id: string;
+  client_id: string;
+  client_name?: string;
+  title: string;
+  description: string;
+  category: ProjectCategory;
+  skills_required: string[];
+  budget_min?: number;
+  budget_max?: number;
+  location: {
+    address: string;
+    coordinates: [number, number];
+  };
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectCreateRequest {
+  title: string;
+  description: string;
+  category: ProjectCategory;
+  skills_required?: string[];
+  budget_min?: number;
+  budget_max?: number;
+  location: {
+    address: string;
+    coordinates: [number, number];
+  };
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -143,6 +189,77 @@ class ApiService {
     const userData = await response.json();
     console.log('API - Updated user roles:', userData.roles);
     return userData;
+  }
+
+  // Categories
+  async getCategories(token: string): Promise<Category[]> {
+    const response = await fetch(`${this.baseUrl}/categories?active_only=true`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar categorias');
+    }
+
+    return response.json();
+  }
+
+  // Projects
+  async createProject(token: string, projectData: ProjectCreateRequest): Promise<Project> {
+    const response = await fetch(`${this.baseUrl}/projects`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(projectData),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao criar projeto');
+    }
+
+    return response.json();
+  }
+
+  async getMyProjects(token: string): Promise<Project[]> {
+    const response = await fetch(`${this.baseUrl}/projects/my-projects`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar projetos');
+    }
+
+    return response.json();
+  }
+
+  async getProjectById(token: string, projectId: string): Promise<Project> {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar projeto');
+    }
+
+    return response.json();
   }
 }
 

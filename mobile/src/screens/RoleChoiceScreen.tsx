@@ -58,7 +58,13 @@ export default function RoleChoiceScreen({ navigation }: RoleChoiceScreenProps):
     try {
       // Store active role
       await AsyncStorage.setItem('active_role', selectedRole);
-      navigation.replace('Home');
+
+      // Navigate to appropriate screen based on role
+      if (selectedRole === 'client') {
+        navigation.replace('ClientDashboard');
+      } else {
+        navigation.replace('Home');
+      }
     } catch (error) {
       console.error('Error storing active role:', error);
       Alert.alert('Erro', 'Erro ao salvar preferência');
