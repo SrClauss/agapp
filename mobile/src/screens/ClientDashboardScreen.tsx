@@ -44,16 +44,25 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
         return;
       }
 
-      const [userData, projectsData] = await Promise.all([
-        apiService.getCurrentUser(token),
-        apiService.getMyProjects(token),
-      ]);
-
+      // Load user data
+      const userData = await apiService.getCurrentUser(token);
       setUser(userData);
-      setProjects(projectsData);
+
+      // Try to load projects, but don't fail if there are none
+      try {
+        const projectsData = await apiService.getMyProjects(token);
+        setProjects(projectsData || []);
+      } catch (projectError) {
+        console.log('No projects found or error loading projects:', projectError);
+        setProjects([]);
+      }
     } catch (error) {
-      console.error('Error loading data:', error);
-      await handleLogout();
+      console.error('Error loading user data:', error);
+      // Only logout if it's an authentication error
+      const errorMessage = (error as Error).message || '';
+      if (errorMessage.includes('credentials') || errorMessage.includes('unauthorized')) {
+        await handleLogout();
+      }
     } finally {
       setIsLoading(false);
     }
