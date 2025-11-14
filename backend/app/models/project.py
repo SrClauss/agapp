@@ -2,6 +2,11 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
+class ProjectCategory(BaseModel):
+    """Categoria do projeto com categoria principal e subcategoria"""
+    main: str  # Categoria principal (ex: "Programação")
+    sub: str   # Subcategoria (ex: "Desenvolvimento Web")
+
 class Project(BaseModel):
     id: str = Field(alias="_id")
     client_id: str
@@ -10,7 +15,7 @@ class Project(BaseModel):
     professional_name: Optional[str] = None
     title: str
     description: str
-    category: str
+    category: Dict[str, str]  # {"main": "Programação", "sub": "Desenvolvimento Web"}
     skills_required: List[str] = []
     budget_min: Optional[float] = None
     budget_max: Optional[float] = None

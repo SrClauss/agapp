@@ -1,0 +1,157 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Categorias - Painel Administrativo{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-tags me-2"></i>Categorias</h1>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+        <i class="fas fa-plus me-2"></i>Nova Categoria
+    </button>
+</div>
+
+<!-- Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Total de Categorias</h5>
+                <h2>{{ total }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Categorias -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Categoria Principal</th>
+                        <th>Subcategorias</th>
+                        <th>Status</th>
+                        <th>Criado em</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td><strong>{{ category.name }}</strong></td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for sub in category.subcategories %}
+                                <span class="badge bg-secondary">{{ sub }}</span>
+                                {% endfor %}
+                                {% if not category.subcategories %}
+                                <span class="text-muted">Nenhuma subcategoria</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if category.is_active %}
+                            <span class="badge bg-success">Ativa</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inativa</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ category.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="editCategory('{{ category.id }}', '{{ category.name }}', {{ category.subcategories|tojson }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form method="POST" action="/system-admin/categories/{{ category.id }}/delete" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir esta categoria?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not categories %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            Nenhuma categoria encontrada.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Categoria -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nova Categoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="/system-admin/categories/create">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Nome da Categoria Principal</label>
+                        <input type="text" class="form-control" id="categoryName" name="name" required placeholder="Ex: Programação">
+                    </div>
+                    <div class="mb-3">
+                        <label for="subcategories" class="form-label">Subcategorias (uma por linha)</label>
+                        <textarea class="form-control" id="subcategories" name="subcategories" rows="5" placeholder="Ex:&#10;Desenvolvimento Web&#10;App Mobile&#10;Backend"></textarea>
+                        <small class="text-muted">Digite cada subcategoria em uma nova linha</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar Categoria</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Categoria -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Categoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editCategoryForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editCategoryName" class="form-label">Nome da Categoria Principal</label>
+                        <input type="text" class="form-control" id="editCategoryName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editSubcategories" class="form-label">Subcategorias (uma por linha)</label>
+                        <textarea class="form-control" id="editSubcategories" name="subcategories" rows="5"></textarea>
+                        <small class="text-muted">Digite cada subcategoria em uma nova linha</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function editCategory(id, name, subcategories) {
+    document.getElementById('editCategoryName').value = name;
+    document.getElementById('editSubcategories').value = subcategories.join('\n');
+    document.getElementById('editCategoryForm').action = '/system-admin/categories/' + id + '/edit';
+
+    var modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

@@ -13,6 +13,8 @@ from app.crud.user import get_users, get_user_by_email, get_user_in_db_by_email,
 from app.crud.project import get_projects
 from app.crud.contact import get_contacts
 from app.crud.subscription import get_subscriptions
+from app.crud.category import get_categories, get_category, create_category, update_category, delete_category
+from app.models.category import CategoryCreate, CategoryUpdate
 from app.schemas.user import User, Token
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
@@ -502,3 +504,80 @@ async def admin_config(
         "packages": packages,
         "featured_pricings": featured_pricings
     })
+
+@router.get("/categories", response_class=HTMLResponse)
+async def admin_categories(
+    request: Request,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Página de gerenciamento de categorias"""
+    categories = await get_categories(db, skip=skip, limit=limit, active_only=False)
+    total_categories = await db.categories.count_documents({})
+
+    return templates.TemplateResponse("admin/categories.html", {
+        "request": request,
+        "current_user": current_user,
+        "categories": categories,
+        "total": total_categories,
+        "skip": skip,
+        "limit": limit
+    })
+
+@router.post("/categories/create")
+async def admin_create_category(
+    request: Request,
+    name: str = Form(...),
+    subcategories: str = Form(""),
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Criar uma nova categoria via formulário"""
+    # Processar subcategorias (uma por linha)
+    subcategories_list = [s.strip() for s in subcategories.split('\n') if s.strip()]
+
+    category_data = CategoryCreate(
+        name=name,
+        subcategories=subcategories_list
+    )
+
+    await create_category(db, category_data)
+
+    return RedirectResponse(url="/system-admin/categories", status_code=303)
+
+@router.post("/categories/{category_id}/edit")
+async def admin_edit_category(
+    request: Request,
+    category_id: str,
+    name: str = Form(...),
+    subcategories: str = Form(""),
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Editar uma categoria existente via formulário"""
+    # Processar subcategorias (uma por linha)
+    subcategories_list = [s.strip() for s in subcategories.split('\n') if s.strip()]
+
+    category_data = CategoryUpdate(
+        name=name,
+        subcategories=subcategories_list
+    )
+
+    await update_category(db, category_id, category_data)
+
+    return RedirectResponse(url="/system-admin/categories", status_code=303)
+
+@router.post("/categories/{category_id}/delete")
+async def admin_delete_category(
+    category_id: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Deletar uma categoria"""
+    deleted = await delete_category(db, category_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+
+    return RedirectResponse(url="/system-admin/categories", status_code=303)
