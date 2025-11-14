@@ -27,5 +27,8 @@ Thumbs.db
 __pycache__/
 *.pyc
 *.pyo
-.pytest_cache/certs/privkey.pem
+.pytest_cache/
+venv/
+env/
+*.egg-info/certs/privkey.pem
 certs/privkey.pem
