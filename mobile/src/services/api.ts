@@ -211,7 +211,8 @@ class ApiService {
 
   // Projects
   async createProject(token: string, projectData: ProjectCreateRequest): Promise<Project> {
-    const response = await fetch(`${this.baseUrl}/projects`, {
+    console.log('Creating project:', projectData);
+    const response = await fetch(`${this.baseUrl}/projects/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -220,12 +221,17 @@ class ApiService {
       body: JSON.stringify(projectData),
     });
 
+    console.log('Create project response status:', response.status);
+
     if (!response.ok) {
       const error: ApiError = await response.json();
+      console.error('Create project error:', error);
       throw new Error(error.detail || 'Erro ao criar projeto');
     }
 
-    return response.json();
+    const project = await response.json();
+    console.log('Project created successfully:', project);
+    return project;
   }
 
   async getMyProjects(token: string): Promise<Project[]> {
