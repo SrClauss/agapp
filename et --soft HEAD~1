@@ -1,0 +1,20 @@
+[33m99ac2eb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m HEAD@{0}: commit: botão info
+[33mdb034d7[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: commit: feat(admin): modal de info + exclusão permanente de categoria; rota /system-admin/categories/{id}/delete-permanent
+[33m85024f4[m HEAD@{2}: commit: fix(admin): usar tojson e delimitar onclick com aspas simples para evitar quebra de atributo
+[33mb8f320c[m HEAD@{3}: commit: fix(admin): escapar id/name em admin/categories (usar tojson)
+[33m71b3b17[m HEAD@{4}: pull: Fast-forward
+[33ma6cf03f[m HEAD@{5}: pull --ff-only origin master: Fast-forward
+[33mb59626b[m HEAD@{6}: checkout: moving from copilot/update-project-remote-execution to master
+[33m93d099e[m[33m ([m[1;31morigin/copilot/update-project-remote-execution[m[33m, [m[1;32mcopilot/update-project-remote-execution[m[33m)[m HEAD@{7}: checkout: moving from master to copilot/update-project-remote-execution
+[33mb59626b[m HEAD@{8}: commit: refactor: remover FAB e manter apenas botão discreto no topo
+[33me282b04[m HEAD@{9}: commit: fix: corrigir endpoint de criação de projeto com trailing slash
+[33mefaf497[m HEAD@{10}: commit: fix: adicionar tratamento robusto de erros para prevenir crashes
+[33m34d41f4[m HEAD@{11}: commit: fix: aceitar categoria como objeto e adicionar busca de endereço via CEP
+[33m7a92b25[m HEAD@{12}: commit: fix(mobile): melhorar tratamento de erros no dashboard do cliente
+[33m52e0f72[m HEAD@{13}: commit: fix(mobile): remover plugin do Google Sign-In não utilizado
+[33m93c165f[m HEAD@{14}: commit: feat(mobile): adicionar dashboard do cliente e cadastro de projetos
+[33medb0a4d[m HEAD@{15}: commit: feat: adicionar sistema completo de categorias e subcategorias
+[33m16ab2bf[m HEAD@{16}: commit: feat(turnstile): backend verification endpoint, widget page, and mobile integration; update config and env example
+[33m5695048[m HEAD@{17}: commit: fix: corrigir função formatPhone para aceitar corretamente 11 dígitos
+[33m6823c86[m HEAD@{18}: commit: fix: adicionar validação de telefone para aceitar apenas 11 dígitos
+[33mdb967ac[m HEAD@{19}: commit: feat: adicionar script de deploy do backend
