@@ -30,6 +30,8 @@ class Project(BaseModel):
     final_budget: Optional[float] = None
     closed_by: Optional[str] = None
     closed_by_name: Optional[str] = None
+    # Projeto Rascunho (Draft)
+    is_draft: bool = False  # Se verdadeiro, projeto não é visível publicamente
     # Projeto Destacado
     is_featured: bool = False
     featured_until: Optional[datetime] = None

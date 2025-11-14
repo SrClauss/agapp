@@ -14,7 +14,7 @@ class ProjectBase(BaseModel):
     deadline: Optional[datetime] = None
 
 class ProjectCreate(ProjectBase):
-    pass
+    is_draft: bool = False  # Permite criar projeto como rascunho
 
 class ProjectUpdate(BaseModel):
     title: Optional[str] = None
@@ -30,6 +30,7 @@ class ProjectUpdate(BaseModel):
     closed_at: Optional[datetime] = None
     final_budget: Optional[float] = None
     closed_by: Optional[str] = None
+    is_draft: Optional[bool] = None  # Permite publicar/despublicar projeto
 
 class ProjectInDBBase(ProjectBase):
     id: str
@@ -44,6 +45,7 @@ class ProjectInDBBase(ProjectBase):
     final_budget: Optional[float] = None  # Final agreed budget
     closed_by: Optional[str] = None  # Professional ID who closed the project
     closed_by_name: Optional[str] = None  # Added professional name
+    is_draft: bool = False  # Se verdadeiro, projeto não é visível publicamente
 
     class Config:
         from_attributes = True
@@ -81,7 +83,3 @@ class Evaluation(BaseModel):
 
     class Config:
         from_attributes = True
-    status: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    radius_km: Optional[float] = None

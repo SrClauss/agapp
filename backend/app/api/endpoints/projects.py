@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List, Any
+from typing import List, Any, Optional
 from datetime import datetime, timezone
 from app.core.database import get_database
-from app.core.security import get_current_user, get_current_admin_user
+from app.core.security import get_current_user, get_current_admin_user, get_optional_current_user
 from app.crud.document import get_documents_by_project
-from app.crud.project import get_projects, create_project, update_project, delete_project, get_project
+from app.crud.project import get_projects, create_project, update_project, delete_project, get_project, get_user_draft_projects
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectFilter, ProjectClose, EvaluationCreate
 from app.schemas.user import User
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -39,6 +39,7 @@ async def read_projects(
     latitude: float = None,
     longitude: float = None,
     radius_km: float = None,
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     filters = ProjectFilter(
@@ -51,7 +52,8 @@ async def read_projects(
         longitude=longitude,
         radius_km=radius_km
     )
-    projects = await get_projects(db, skip=skip, limit=limit, filters=filters)
+    user_id = str(current_user.id) if current_user else None
+    projects = await get_projects(db, skip=skip, limit=limit, filters=filters, user_id=user_id)
     return projects
 
 @router.get("/nearby", response_model=List[Project])
@@ -302,3 +304,47 @@ async def get_recomended_categories(
     from app.crud.project import get_last_projects_category_by_client
     categories = await get_last_projects_category_by_client(db, str(current_user.id))
     return categories
+
+
+@router.get("/drafts", response_model=List[Project])
+async def get_my_draft_projects(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Get current user's draft projects.
+    """
+    drafts = await get_user_draft_projects(db, str(current_user.id), skip=skip, limit=limit)
+    return drafts
+
+
+@router.post("/{project_id}/publish", response_model=Project)
+async def publish_draft_project(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Publish a draft project (change is_draft from True to False).
+    Only the project owner can publish.
+    """
+    # Get project
+    project = await get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Check if current user is the owner
+    if str(current_user.id) != project.client_id:
+        raise HTTPException(status_code=403, detail="Only project owner can publish")
+    
+    # Check if it's actually a draft
+    if not project.is_draft:
+        raise HTTPException(status_code=400, detail="Project is already published")
+    
+    # Publish the project
+    project_update = ProjectUpdate(is_draft=False)
+    updated_project = await update_project(db, project_id, project_update)
+    
+    return updated_project

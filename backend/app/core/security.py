@@ -107,3 +107,27 @@ async def get_current_admin_user(current_user = Depends(get_current_user_from_re
             detail="Not enough permissions. Admin access required.",
         )
     return current_user
+
+
+async def get_optional_current_user(request: Request, db: AsyncIOMotorDatabase = Depends(get_database)):
+    """Get current user if authenticated, otherwise return None"""
+    try:
+        # Tenta primeiro via Authorization header
+        authorization = request.headers.get("Authorization")
+        token = None
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.split(" ", 1)[1]
+        else:
+            # Tenta via cookie
+            token = request.cookies.get("access_token")
+            if token:
+                token = token.strip().strip('"').strip("'")
+                if token.lower().startswith("bearer "):
+                    token = token.split(" ", 1)[1]
+        
+        if not token:
+            return None
+        
+        return await get_current_user_from_token(token, db)
+    except Exception:
+        return None

@@ -10,7 +10,7 @@ async def get_project(db: AsyncIOMotorDatabase, project_id: str) -> Optional[Pro
     project = await db.projects.find_one({"_id": project_id})
     return Project(**project) if project else None
 
-async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100, filters: ProjectFilter = None, query_filter: dict = None) -> List[Project]:
+async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100, filters: ProjectFilter = None, query_filter: dict = None, include_drafts: bool = False, user_id: Optional[str] = None) -> List[Project]:
     query = {}
     if query_filter:
         query.update(query_filter)
@@ -35,6 +35,18 @@ async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100
                     "$maxDistance": filters.radius_km * 1000
                 }
             }
+    
+    # Excluir rascunhos por padrão, a menos que seja solicitado ou seja o dono
+    if not include_drafts:
+        if user_id:
+            # Mostrar rascunhos apenas do próprio usuário
+            query["$or"] = [
+                {"is_draft": {"$ne": True}},
+                {"$and": [{"is_draft": True}, {"client_id": user_id}]}
+            ]
+        else:
+            # Não mostrar nenhum rascunho
+            query["is_draft"] = {"$ne": True}
 
     projects = []
     async for project in db.projects.find(query).skip(skip).limit(limit):
@@ -50,7 +62,12 @@ async def create_project(db: AsyncIOMotorDatabase, project: ProjectCreate, clien
     client = await db.users.find_one({"_id": client_id})
     project_dict["client_name"] = client.get("name") if client else None
     
-    project_dict["status"] = "open"
+    # Se é rascunho, manter status como 'draft', senão 'open'
+    if project_dict.get("is_draft", False):
+        project_dict["status"] = "draft"
+    else:
+        project_dict["status"] = "open"
+    
     project_dict["created_at"] = datetime.now(timezone.utc)
     project_dict["updated_at"] = datetime.now(timezone.utc)
     project_dict["liberado_por"] = []
@@ -61,6 +78,16 @@ async def create_project(db: AsyncIOMotorDatabase, project: ProjectCreate, clien
 async def update_project(db: AsyncIOMotorDatabase, project_id: str, project_update: ProjectUpdate) -> Optional[Project]:
     update_data = {k: v for k, v in project_update.dict().items() if v is not None}
     if update_data:
+        # Se está mudando o status de rascunho para publicado
+        if "is_draft" in update_data and not update_data["is_draft"]:
+            # Atualizar status para 'open' se estiver como 'draft'
+            current_project = await get_project(db, project_id)
+            if current_project and current_project.status == "draft":
+                update_data["status"] = "open"
+        # Se está mudando para rascunho
+        elif "is_draft" in update_data and update_data["is_draft"]:
+            update_data["status"] = "draft"
+        
         update_data["updated_at"] = datetime.now(timezone.utc)
         await db.projects.update_one({"_id": project_id}, {"$set": update_data})
     project = await get_project(db, project_id)
@@ -109,3 +136,15 @@ async def get_recommended_categories_for_client(db: AsyncIOMotorDatabase, client
         if len(recommended) >= 5:
             break
     return recommended
+
+
+async def get_user_draft_projects(db: AsyncIOMotorDatabase, client_id: str, skip: int = 0, limit: int = 100) -> List[Project]:
+    """Obter apenas os projetos rascunho de um usuário específico"""
+    query = {
+        "client_id": client_id,
+        "is_draft": True
+    }
+    projects = []
+    async for project in db.projects.find(query).skip(skip).limit(limit):
+        projects.append(Project(**project))
+    return projects
