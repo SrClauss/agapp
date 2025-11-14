@@ -67,8 +67,21 @@
                         </td>
                         <td>{{ category.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                         <td>
-                            <button class="btn btn-sm btn-info" onclick='editCategory({{ category.id|tojson }}, {{ category.name|tojson }}, {{ category.subcategories|tojson }}, {{ category.default_remote_execution|tojson }})'>
+                            <button class="btn btn-sm btn-info js-category-edit"
+                                    data-id={{ category.id|tojson }}
+                                    data-name={{ category.name|tojson }}
+                                    data-subcategories={{ category.subcategories|tojson }}
+                                    data-default-remote={{ category.default_remote_execution|tojson }}>
                                 <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary ms-1 js-category-info"
+                                    data-id={{ category.id|tojson }}
+                                    data-name={{ category.name|tojson }}
+                                    data-subcategories={{ category.subcategories|tojson }}
+                                    data-default-remote={{ category.default_remote_execution|tojson }}
+                                    data-is-active={{ category.is_active|tojson }}
+                                    data-created-at={{ category.created_at.strftime('%d/%m/%Y %H:%M')|tojson }}>
+                                <i class="fas fa-info-circle"></i>
                             </button>
                             <form method="POST" action="/system-admin/categories/{{ category.id }}/delete" style="display: inline;">
                                 <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir esta categoria?')">
@@ -176,5 +189,70 @@ function editCategory(id, name, subcategories, defaultRemoteExecution) {
     var modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
     modal.show();
 }
+
+// Show category info modal
+document.addEventListener('click', (event) => {
+        const btn = event.target.closest('.js-category-info');
+        if (!btn) return;
+
+        const id = JSON.parse(btn.dataset.id);
+        const name = JSON.parse(btn.dataset.name);
+        const subcategories = JSON.parse(btn.dataset.subcategories);
+        const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
+        const isActive = JSON.parse(btn.dataset.isActive);
+        const createdAt = JSON.parse(btn.dataset.createdAt);
+
+        document.getElementById('infoCategoryName').textContent = name;
+        document.getElementById('infoCategorySubcategories').textContent = subcategories.join(', ');
+        document.getElementById('infoCategoryDefaultRemote').textContent = defaultRemote ? 'Sim' : 'Não';
+        document.getElementById('infoCategoryStatus').textContent = isActive ? 'Ativa' : 'Inativa';
+        document.getElementById('infoCategoryCreatedAt').textContent = createdAt || '-';
+
+        const deleteForm = document.getElementById('deletePermanentForm');
+        if (deleteForm) deleteForm.action = '/system-admin/categories/' + id + '/delete-permanent';
+
+        var modal = new bootstrap.Modal(document.getElementById('categoryInfoModal'));
+        modal.show();
+});
+
+    // Edit category: use data attributes instead of inline onclick
+    document.addEventListener('click', (event) => {
+        const btn = event.target.closest('.js-category-edit');
+        if (!btn) return;
+
+        const id = JSON.parse(btn.dataset.id);
+        const name = JSON.parse(btn.dataset.name);
+        const subcategories = JSON.parse(btn.dataset.subcategories);
+        const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
+
+        editCategory(id, name, subcategories, defaultRemote);
+    });
 </script>
 {% endblock %}
+
+<!-- Modal: Category Info -->
+<div class="modal fade" id="categoryInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Informações da Categoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Nome:</strong> <span id="infoCategoryName"></span></p>
+                <p><strong>Subcategorias:</strong> <span id="infoCategorySubcategories"></span></p>
+                <p><strong>Execução remota:</strong> <span id="infoCategoryDefaultRemote"></span></p>
+                <p><strong>Status:</strong> <span id="infoCategoryStatus"></span></p>
+                <p><strong>Criado em:</strong> <span id="infoCategoryCreatedAt"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                {% if 'admin' in current_user.roles %}
+                <form id="deletePermanentForm" method="POST" onsubmit="return confirm('Excluir permanentemente? Esta ação é irreversível.')">
+                    <button type="submit" class="btn btn-danger">Excluir permanentemente</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
