@@ -3,81 +3,80 @@
 {% block title %}Dashboard - Painel Administrativo{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="h3 mb-0 text-gray-800">Dashboard Administrativo</h1>
-        <p class="text-muted">Visão geral do sistema Agiliza</p>
-    </div>
+<!-- Page Header -->
+<div class="mb-4">
+    <h1 class="h3 mb-1 text-gray-800 fw-bold">Dashboard Administrativo</h1>
+    <p class="text-muted mb-0">Visão geral do sistema Agiliza</p>
 </div>
 
 <!-- Statistics Cards -->
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2 stats-card">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-left-primary h-100 stats-card">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-uppercase text-primary fw-bold mb-1" style="font-size: 0.7rem;">
                             Total de Usuários
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.users }}</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800">{{ stats.users }}</div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                    <div class="ms-3">
+                        <i class="fas fa-users fa-2x" style="color: #cbd5e1;"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2 stats-card">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-left-success h-100 stats-card">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-uppercase text-success fw-bold mb-1" style="font-size: 0.7rem;">
                             Total de Projetos
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.projects }}</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800">{{ stats.projects }}</div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                    <div class="ms-3">
+                        <i class="fas fa-project-diagram fa-2x" style="color: #cbd5e1;"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2 stats-card">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-left-info h-100 stats-card">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-uppercase text-info fw-bold mb-1" style="font-size: 0.7rem;">
                             Total de Contatos
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.contacts }}</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800">{{ stats.contacts }}</div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-handshake fa-2x text-gray-300"></i>
+                    <div class="ms-3">
+                        <i class="fas fa-handshake fa-2x" style="color: #cbd5e1;"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2 stats-card">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-left-warning h-100 stats-card">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-uppercase text-warning fw-bold mb-1" style="font-size: 0.7rem;">
                             Total de Assinaturas
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.subscriptions }}</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800">{{ stats.subscriptions }}</div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                    <div class="ms-3">
+                        <i class="fas fa-credit-card fa-2x" style="color: #cbd5e1;"></i>
                     </div>
                 </div>
             </div>
@@ -86,149 +85,191 @@
 </div>
 
 <!-- Recent Items -->
-<div class="row">
+<div class="row g-3">
     <!-- Recent Users -->
-    <div class="col-lg-6 mb-4">
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Usuários Recentes</h6>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-primary">Usuários Recentes</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-borderless">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
                             <tr>
-                                <th>Nome</th>
-                                <th>Email</th>
-                                <th>Roles</th>
-                                <th>Data</th>
+                                <th class="border-0 px-3 py-2">Nome</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Email</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Roles</th>
+                                <th class="border-0 px-3 py-2">Data</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for user in recent_users %}
                             <tr>
-                                <td>{{ user.full_name }}</td>
-                                <td>{{ user.email }}</td>
-                                <td>
+                                <td class="px-3 py-2">
+                                    <div class="fw-semibold">{{ user.full_name }}</div>
+                                    <small class="text-muted d-md-none">{{ user.email }}</small>
+                                </td>
+                                <td class="px-3 py-2 hide-mobile">
+                                    <small>{{ user.email }}</small>
+                                </td>
+                                <td class="px-3 py-2 hide-mobile">
                                     {% for role in user.roles %}
-                                    <span class="badge bg-secondary">{{ role }}</span>
+                                    <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ role }}</span>
                                     {% endfor %}
                                 </td>
-                                <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                                <td class="px-3 py-2">
+                                    <small>{{ user.created_at.strftime('%d/%m') }}</small>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                <a href="/system-admin/users" class="btn btn-primary btn-sm">Ver Todos</a>
+            </div>
+            <div class="card-footer bg-white border-top">
+                <a href="/system-admin/users" class="btn btn-primary btn-sm">
+                    <i class="fas fa-arrow-right me-1"></i>Ver Todos
+                </a>
             </div>
         </div>
     </div>
 
     <!-- Recent Projects -->
-    <div class="col-lg-6 mb-4">
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-success">Projetos Recentes</h6>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-success">Projetos Recentes</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-borderless">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
                             <tr>
-                                <th>Título</th>
-                                <th>Status</th>
-                                <th>Orçamento</th>
-                                <th>Data</th>
+                                <th class="border-0 px-3 py-2">Título</th>
+                                <th class="border-0 px-3 py-2">Status</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Orçamento</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Data</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for project in recent_projects %}
                             <tr>
-                                <td>{{ project.title[:30] }}{% if project.title|length > 30 %}...{% endif %}</td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if project.status == 'active' else 'warning' if project.status == 'pending' else 'secondary' }}">
+                                <td class="px-3 py-2">
+                                    <div class="fw-semibold" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        {{ project.title }}
+                                    </div>
+                                    <small class="text-muted d-md-none">{{ project.created_at.strftime('%d/%m/%Y') }}</small>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <span class="badge bg-{{ 'success' if project.status == 'active' else 'warning' if project.status == 'pending' else 'secondary' }}" style="font-size: 0.7rem;">
                                         {{ project.status }}
                                     </span>
                                 </td>
-                                <td>R$ {{ "%.2f"|format(project.budget_min or 0) }} - {{ "%.2f"|format(project.budget_max or 0) }}</td>
-                                <td>{{ project.created_at.strftime('%d/%m/%Y') }}</td>
+                                <td class="px-3 py-2 hide-mobile">
+                                    <small>R$ {{ "%.0f"|format(project.budget_min or 0) }} - {{ "%.0f"|format(project.budget_max or 0) }}</small>
+                                </td>
+                                <td class="px-3 py-2 hide-mobile">
+                                    <small>{{ project.created_at.strftime('%d/%m') }}</small>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                <a href="/system-admin/projects" class="btn btn-success btn-sm">Ver Todos</a>
+            </div>
+            <div class="card-footer bg-white border-top">
+                <a href="/system-admin/projects" class="btn btn-success btn-sm">
+                    <i class="fas fa-arrow-right me-1"></i>Ver Todos
+                </a>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Recent Contacts and Subscriptions -->
-<div class="row">
+<div class="row g-3 mt-3">
     <!-- Recent Contacts -->
-    <div class="col-lg-6 mb-4">
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-info">Contatos Recentes</h6>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-info">Contatos Recentes</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-borderless">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
                             <tr>
-                                <th>Profissional</th>
-                                <th>Cliente</th>
-                                <th>Status</th>
-                                <th>Data</th>
+                                <th class="border-0 px-3 py-2">Profissional</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Cliente</th>
+                                <th class="border-0 px-3 py-2">Status</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Data</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for contact in recent_contacts %}
                             <tr>
-                                <td>{{ contact.professional_name }}</td>
-                                <td>{{ contact.client_name }}</td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if contact.status == 'completed' else 'primary' }}">
+                                <td class="px-3 py-2">
+                                    <div class="fw-semibold">{{ contact.professional_name }}</div>
+                                    <small class="text-muted d-md-none">{{ contact.client_name }}</small>
+                                </td>
+                                <td class="px-3 py-2 hide-mobile">
+                                    <small>{{ contact.client_name }}</small>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <span class="badge bg-{{ 'success' if contact.status == 'completed' else 'primary' }}" style="font-size: 0.7rem;">
                                         {{ contact.status }}
                                     </span>
                                 </td>
-                                <td>{{ contact.created_at.strftime('%d/%m/%Y') }}</td>
+                                <td class="px-3 py-2 hide-mobile">
+                                    <small>{{ contact.created_at.strftime('%d/%m') }}</small>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                <a href="/system-admin/contacts" class="btn btn-info btn-sm">Ver Todos</a>
+            </div>
+            <div class="card-footer bg-white border-top">
+                <a href="/system-admin/contacts" class="btn btn-info btn-sm">
+                    <i class="fas fa-arrow-right me-1"></i>Ver Todos
+                </a>
             </div>
         </div>
     </div>
 
     <!-- Recent Subscriptions -->
-    <div class="col-lg-6 mb-4">
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-warning">Assinaturas Recentes</h6>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-warning">Assinaturas Recentes</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-borderless">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
                             <tr>
-                                <th>Usuário</th>
-                                <th>Plano</th>
-                                <th>Créditos</th>
-                                <th>Status</th>
+                                <th class="border-0 px-3 py-2">Usuário</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Plano</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Créditos</th>
+                                <th class="border-0 px-3 py-2">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for subscription in recent_subscriptions %}
                             <tr>
-                                <td>{{ subscription.user_id }}</td>
-                                <td>{{ subscription.plan_name }}</td>
-                                <td>{{ subscription.credits }}</td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if subscription.status == 'active' else 'danger' }}">
+                                <td class="px-3 py-2">
+                                    <div class="fw-semibold">ID: {{ subscription.user_id }}</div>
+                                    <small class="text-muted d-md-none">{{ subscription.plan_name }} - {{ subscription.credits }} créditos</small>
+                                </td>
+                                <td class="px-3 py-2 hide-mobile">
+                                    <small>{{ subscription.plan_name }}</small>
+                                </td>
+                                <td class="px-3 py-2 hide-mobile">
+                                    <small>{{ subscription.credits }}</small>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <span class="badge bg-{{ 'success' if subscription.status == 'active' else 'danger' }}" style="font-size: 0.7rem;">
                                         {{ subscription.status }}
                                     </span>
                                 </td>
@@ -237,7 +278,11 @@
                         </tbody>
                     </table>
                 </div>
-                <a href="/system-admin/subscriptions" class="btn btn-warning btn-sm">Ver Todos</a>
+            </div>
+            <div class="card-footer bg-white border-top">
+                <a href="/system-admin/subscriptions" class="btn btn-warning btn-sm text-dark">
+                    <i class="fas fa-arrow-right me-1"></i>Ver Todos
+                </a>
             </div>
         </div>
     </div>

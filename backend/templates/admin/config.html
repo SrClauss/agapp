@@ -3,28 +3,27 @@
 {% block title %}Configurações - Painel Administrativo{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="h3 mb-0 text-gray-800">Configurações do Sistema</h1>
-        <p class="text-muted">Gerencie planos, pacotes de créditos e preços de destaque</p>
-    </div>
+<!-- Page Header -->
+<div class="mb-4">
+    <h1 class="h3 mb-1 text-gray-800 fw-bold">Configurações do Sistema</h1>
+    <p class="text-muted mb-0">Gerencie planos, pacotes de créditos e preços de destaque</p>
 </div>
 
 <!-- Tabs Navigation -->
 <ul class="nav nav-tabs mb-4" id="configTabs" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="plans-tab" data-bs-toggle="tab" data-bs-target="#plans" type="button" role="tab">
-            <i class="fas fa-box me-2"></i>Planos de Assinatura
+            <i class="fas fa-box me-1 d-none d-sm-inline"></i><span class="d-none d-sm-inline">Planos</span><span class="d-sm-none">Planos</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="packages-tab" data-bs-toggle="tab" data-bs-target="#packages" type="button" role="tab">
-            <i class="fas fa-coins me-2"></i>Pacotes de Créditos
+            <i class="fas fa-coins me-1 d-none d-sm-inline"></i><span class="d-none d-sm-inline">Pacotes</span><span class="d-sm-none">Créditos</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="featured-tab" data-bs-toggle="tab" data-bs-target="#featured" type="button" role="tab">
-            <i class="fas fa-star me-2"></i>Preços de Destaque
+            <i class="fas fa-star me-1 d-none d-sm-inline"></i><span class="d-none d-sm-inline">Destaque</span><span class="d-sm-none">Destaque</span>
         </button>
     </li>
 </ul>
@@ -33,60 +32,62 @@
 <div class="tab-content" id="configTabsContent">
     <!-- Planos de Assinatura -->
     <div class="tab-pane fade show active" id="plans" role="tabpanel">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary">Planos de Assinatura</h6>
+        <div class="card mb-4">
+            <div class="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                <h6 class="m-0 fw-bold text-primary">Planos de Assinatura</h6>
                 <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPlanModal">
-                    <i class="fas fa-plus me-1"></i>Novo Plano
+                    <i class="fas fa-plus me-1"></i>Novo
                 </button>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
                             <tr>
-                                <th>Nome</th>
-                                <th>Créditos Semanais</th>
-                                <th>Preço Mensal</th>
-                                <th>Descontos</th>
-                                <th>Status</th>
-                                <th>Ações</th>
+                                <th class="border-0 px-3 py-2">Nome</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Créditos</th>
+                                <th class="border-0 px-3 py-2">Preço</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Descontos</th>
+                                <th class="border-0 px-3 py-2">Status</th>
+                                <th class="border-0 px-3 py-2">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="plansTable">
                             {% for plan in plans %}
                             <tr data-id="{{ plan._id }}">
-                                <td>
-                                    <strong>{{ plan.name }}</strong><br>
-                                    <small class="text-muted">{{ plan.description }}</small>
+                                <td class="px-3 py-2">
+                                    <div class="fw-semibold">{{ plan.name }}</div>
+                                    <small class="text-muted d-block d-md-none">{{ plan.weekly_credits }} créditos/semana</small>
+                                    <small class="text-muted">{{ plan.description[:40] }}{% if plan.description|length > 40 %}...{% endif %}</small>
                                 </td>
-                                <td>{{ plan.weekly_credits }}</td>
-                                <td>R$ {{ "%.2f"|format(plan.monthly_price) }}</td>
-                                <td>
-                                    <small>
-                                        3m: {{ plan.discount_3_months }}%<br>
-                                        6m: {{ plan.discount_6_months }}%<br>
-                                        12m: {{ plan.discount_12_months }}%
-                                    </small>
+                                <td class="px-3 py-2 hide-mobile">{{ plan.weekly_credits }}/sem</td>
+                                <td class="px-3 py-2">
+                                    <strong>R$ {{ "%.0f"|format(plan.monthly_price) }}</strong>
                                 </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if plan.is_active else 'secondary' }}">
+                                <td class="px-3 py-2 hide-mobile">
+                                    <small>3m: {{ plan.discount_3_months }}% | 6m: {{ plan.discount_6_months }}% | 12m: {{ plan.discount_12_months }}%</small>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <span class="badge bg-{{ 'success' if plan.is_active else 'secondary' }}" style="font-size: 0.7rem;">
                                         {{ 'Ativo' if plan.is_active else 'Inativo' }}
                                     </span>
                                 </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="editPlan('{{ plan._id }}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-{{ 'danger' if plan.is_active else 'success' }}"
-                                            onclick="togglePlan('{{ plan._id }}', {{ 'false' if plan.is_active else 'true' }})">
-                                        <i class="fas fa-{{ 'ban' if plan.is_active else 'check' }}"></i>
-                                    </button>
+                                <td class="px-3 py-2">
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-info" onclick="editPlan('{{ plan._id }}')" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-{{ 'danger' if plan.is_active else 'success' }}"
+                                                onclick="togglePlan('{{ plan._id }}', {{ 'false' if plan.is_active else 'true' }})"
+                                                title="{{ 'Desativar' if plan.is_active else 'Ativar' }}">
+                                            <i class="fas fa-{{ 'ban' if plan.is_active else 'check' }}"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted">Nenhum plano cadastrado</td>
+                                <td colspan="6" class="text-center text-muted py-4">Nenhum plano cadastrado</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -98,60 +99,71 @@
 
     <!-- Pacotes de Créditos -->
     <div class="tab-pane fade" id="packages" role="tabpanel">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-success">Pacotes de Créditos</h6>
+        <div class="card mb-4">
+            <div class="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                <h6 class="m-0 fw-bold text-success">Pacotes de Créditos</h6>
                 <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPackageModal">
-                    <i class="fas fa-plus me-1"></i>Novo Pacote
+                    <i class="fas fa-plus me-1"></i>Novo
                 </button>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
                             <tr>
-                                <th>Nome</th>
-                                <th>Créditos</th>
-                                <th>Bônus</th>
-                                <th>Preço</th>
-                                <th>Status</th>
-                                <th>Ordem</th>
-                                <th>Ações</th>
+                                <th class="border-0 px-3 py-2">Nome</th>
+                                <th class="border-0 px-3 py-2">Créditos</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Bônus</th>
+                                <th class="border-0 px-3 py-2">Preço</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Status</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Ordem</th>
+                                <th class="border-0 px-3 py-2">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="packagesTable">
                             {% for pkg in packages %}
                             <tr data-id="{{ pkg._id }}">
-                                <td>
-                                    <strong>{{ pkg.name }}</strong><br>
+                                <td class="px-3 py-2">
+                                    <div class="fw-semibold">{{ pkg.name }}</div>
                                     {% if pkg.description %}
-                                    <small class="text-muted">{{ pkg.description }}</small>
+                                    <small class="text-muted">{{ pkg.description[:30] }}{% if pkg.description|length > 30 %}...{% endif %}</small>
                                     {% endif %}
+                                    <div class="d-md-none mt-1">
+                                        <span class="badge bg-warning text-dark">+{{ pkg.bonus_credits }} bônus</span>
+                                        <span class="badge bg-{{ 'success' if pkg.is_active else 'secondary' }}">{{ 'Ativo' if pkg.is_active else 'Inativo' }}</span>
+                                    </div>
                                 </td>
-                                <td>{{ pkg.credits }}</td>
-                                <td>
-                                    <span class="badge bg-warning">+{{ pkg.bonus_credits }}</span>
+                                <td class="px-3 py-2">
+                                    <strong>{{ pkg.credits }}</strong>
                                 </td>
-                                <td>R$ {{ "%.2f"|format(pkg.price) }}</td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if pkg.is_active else 'secondary' }}">
+                                <td class="px-3 py-2 hide-mobile">
+                                    <span class="badge bg-warning text-dark">+{{ pkg.bonus_credits }}</span>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <strong>R$ {{ "%.0f"|format(pkg.price) }}</strong>
+                                </td>
+                                <td class="px-3 py-2 hide-mobile">
+                                    <span class="badge bg-{{ 'success' if pkg.is_active else 'secondary' }}" style="font-size: 0.7rem;">
                                         {{ 'Ativo' if pkg.is_active else 'Inativo' }}
                                     </span>
                                 </td>
-                                <td>{{ pkg.sort_order }}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="editPackage('{{ pkg._id }}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-{{ 'danger' if pkg.is_active else 'success' }}"
-                                            onclick="togglePackage('{{ pkg._id }}', {{ 'false' if pkg.is_active else 'true' }})">
-                                        <i class="fas fa-{{ 'ban' if pkg.is_active else 'check' }}"></i>
-                                    </button>
+                                <td class="px-3 py-2 hide-mobile">{{ pkg.sort_order }}</td>
+                                <td class="px-3 py-2">
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-info" onclick="editPackage('{{ pkg._id }}')" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-{{ 'danger' if pkg.is_active else 'success' }}"
+                                                onclick="togglePackage('{{ pkg._id }}', {{ 'false' if pkg.is_active else 'true' }})"
+                                                title="{{ 'Desativar' if pkg.is_active else 'Ativar' }}">
+                                            <i class="fas fa-{{ 'ban' if pkg.is_active else 'check' }}"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center text-muted">Nenhum pacote cadastrado</td>
+                                <td colspan="7" class="text-center text-muted py-4">Nenhum pacote cadastrado</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -163,55 +175,62 @@
 
     <!-- Preços de Destaque -->
     <div class="tab-pane fade" id="featured" role="tabpanel">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-warning">Preços de Destaque</h6>
-                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#addFeaturedModal">
-                    <i class="fas fa-plus me-1"></i>Novo Preço
+        <div class="card mb-4">
+            <div class="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                <h6 class="m-0 fw-bold text-warning">Preços de Destaque</h6>
+                <button class="btn btn-warning btn-sm text-dark" data-bs-toggle="modal" data-bs-target="#addFeaturedModal">
+                    <i class="fas fa-plus me-1"></i>Novo
                 </button>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
                             <tr>
-                                <th>Duração (dias)</th>
-                                <th>Preço</th>
-                                <th>Descrição</th>
-                                <th>Status</th>
-                                <th>Ações</th>
+                                <th class="border-0 px-3 py-2">Duração</th>
+                                <th class="border-0 px-3 py-2">Preço</th>
+                                <th class="border-0 px-3 py-2 hide-mobile">Descrição</th>
+                                <th class="border-0 px-3 py-2">Status</th>
+                                <th class="border-0 px-3 py-2">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="featuredTable">
                             {% for pricing in featured_pricings %}
                             <tr data-id="{{ pricing._id }}">
-                                <td><strong>{{ pricing.duration_days }} dias</strong></td>
-                                <td>R$ {{ "%.2f"|format(pricing.price) }}</td>
-                                <td>
+                                <td class="px-3 py-2">
+                                    <strong>{{ pricing.duration_days }} dias</strong>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <strong>R$ {{ "%.0f"|format(pricing.price) }}</strong>
+                                </td>
+                                <td class="px-3 py-2 hide-mobile">
                                     {% if pricing.description %}
-                                    {{ pricing.description }}
+                                    <small>{{ pricing.description[:50] }}{% if pricing.description|length > 50 %}...{% endif %}</small>
                                     {% else %}
                                     <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if pricing.is_active else 'secondary' }}">
+                                <td class="px-3 py-2">
+                                    <span class="badge bg-{{ 'success' if pricing.is_active else 'secondary' }}" style="font-size: 0.7rem;">
                                         {{ 'Ativo' if pricing.is_active else 'Inativo' }}
                                     </span>
                                 </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="editFeatured('{{ pricing._id }}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-{{ 'danger' if pricing.is_active else 'success' }}"
-                                            onclick="toggleFeatured('{{ pricing._id }}', {{ 'false' if pricing.is_active else 'true' }})">
-                                        <i class="fas fa-{{ 'ban' if pricing.is_active else 'check' }}"></i>
-                                    </button>
+                                <td class="px-3 py-2">
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-info" onclick="editFeatured('{{ pricing._id }}')" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-{{ 'danger' if pricing.is_active else 'success' }}"
+                                                onclick="toggleFeatured('{{ pricing._id }}', {{ 'false' if pricing.is_active else 'true' }})"
+                                                title="{{ 'Desativar' if pricing.is_active else 'Ativar' }}">
+                                            <i class="fas fa-{{ 'ban' if pricing.is_active else 'check' }}"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="5" class="text-center text-muted">Nenhum preço cadastrado</td>
+                                <td colspan="5" class="text-center text-muted py-4">Nenhum preço cadastrado</td>
                             </tr>
                             {% endfor %}
                         </tbody>
