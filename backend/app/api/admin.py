@@ -531,6 +531,7 @@ async def admin_create_category(
     request: Request,
     name: str = Form(...),
     subcategories: str = Form(""),
+    default_remote_execution: bool = Form(False),
     current_user: User = Depends(get_current_user_from_request),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
@@ -543,7 +544,12 @@ async def admin_create_category(
         subcategories=subcategories_list
     )
 
-    await create_category(db, category_data)
+    # Create category
+    category = await create_category(db, category_data)
+    
+    # Update with default_remote_execution if set
+    if default_remote_execution:
+        await update_category(db, category.id, CategoryUpdate(default_remote_execution=True))
 
     return RedirectResponse(url="/system-admin/categories", status_code=303)
 
@@ -553,6 +559,7 @@ async def admin_edit_category(
     category_id: str,
     name: str = Form(...),
     subcategories: str = Form(""),
+    default_remote_execution: bool = Form(False),
     current_user: User = Depends(get_current_user_from_request),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
@@ -562,7 +569,8 @@ async def admin_edit_category(
 
     category_data = CategoryUpdate(
         name=name,
-        subcategories=subcategories_list
+        subcategories=subcategories_list,
+        default_remote_execution=default_remote_execution
     )
 
     await update_category(db, category_id, category_data)
