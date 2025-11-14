@@ -229,7 +229,12 @@ class ApiService {
   }
 
   async getMyProjects(token: string): Promise<Project[]> {
-    const response = await fetch(`${this.baseUrl}/projects/my-projects`, {
+    // First get current user to get their ID
+    const user = await this.getCurrentUser(token);
+
+    // Then fetch all projects and filter by client_id on frontend
+    // (API doesn't have a my-projects endpoint, so we need to filter all projects)
+    const response = await fetch(`${this.baseUrl}/projects?limit=100`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -242,7 +247,9 @@ class ApiService {
       throw new Error(error.detail || 'Erro ao buscar projetos');
     }
 
-    return response.json();
+    const allProjects: Project[] = await response.json();
+    // Filter to only return projects created by this user
+    return allProjects.filter(project => project.client_id === user._id);
   }
 
   async getProjectById(token: string, projectId: string): Promise<Project> {
