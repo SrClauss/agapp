@@ -35,10 +35,15 @@ class AddressService {
         throw new Error('CEP deve ter 8 dígitos');
       }
 
-      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
 
       if (!response.ok) {
-        throw new Error('Erro ao buscar CEP');
+        throw new Error('Erro ao buscar CEP. Verifique sua conexão.');
       }
 
       const data: ViaCEPResponse = await response.json();
@@ -56,8 +61,11 @@ class AddressService {
         uf: data.uf,
         formattedAddress: this.formatAddress(data),
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao buscar CEP:', error);
+      if (error.message === 'Network request failed') {
+        throw new Error('Sem conexão com a internet');
+      }
       throw error;
     }
   }
@@ -76,11 +84,17 @@ class AddressService {
       }
 
       const response = await fetch(
-        `https://viacep.com.br/ws/${uf}/${encodeURIComponent(city)}/${encodeURIComponent(street)}/json/`
+        `https://viacep.com.br/ws/${uf}/${encodeURIComponent(city)}/${encodeURIComponent(street)}/json/`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        }
       );
 
       if (!response.ok) {
-        throw new Error('Erro ao buscar endereço');
+        throw new Error('Erro ao buscar endereço. Verifique sua conexão.');
       }
 
       const data: ViaCEPResponse[] = await response.json();
@@ -98,8 +112,11 @@ class AddressService {
         uf: item.uf,
         formattedAddress: this.formatAddress(item),
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao buscar endereço:', error);
+      if (error.message === 'Network request failed') {
+        throw new Error('Sem conexão com a internet');
+      }
       throw error;
     }
   }

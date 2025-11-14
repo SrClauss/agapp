@@ -305,13 +305,23 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
             <Button
               mode="contained"
               onPress={() => {
-                navigation.navigate('AddressSearch', {
-                  onSelect: (selectedAddress: string) => {
-                    if (selectedAddress) {
-                      setAddress(selectedAddress);
-                    }
-                  },
-                });
+                try {
+                  navigation.navigate('AddressSearch', {
+                    onSelect: (selectedAddress: string) => {
+                      try {
+                        if (selectedAddress) {
+                          setAddress(selectedAddress);
+                        }
+                      } catch (err) {
+                        console.error('Error setting address:', err);
+                        Alert.alert('Erro', 'Erro ao definir endereço. Tente novamente.');
+                      }
+                    },
+                  });
+                } catch (err) {
+                  console.error('Error navigating to address search:', err);
+                  Alert.alert('Erro', 'Erro ao abrir busca de endereço.');
+                }
               }}
               style={styles.addressButton}
               icon="magnify"

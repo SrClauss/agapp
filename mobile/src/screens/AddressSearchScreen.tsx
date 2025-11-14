@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import {
   Text,
@@ -40,6 +41,16 @@ export default function AddressSearchScreen({ navigation, route }: AddressSearch
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
+  // Validate that we have the callback
+  useEffect(() => {
+    if (!route.params?.onSelect) {
+      console.error('AddressSearchScreen: onSelect callback is missing');
+      Alert.alert('Erro', 'Configuração inválida da tela de busca', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    }
+  }, []);
+
   const handleSearchByCEP = async (): Promise<void> => {
     if (!cep.trim()) {
       setError('Digite um CEP');
@@ -58,7 +69,8 @@ export default function AddressSearchScreen({ navigation, route }: AddressSearch
         setError('CEP não encontrado');
       }
     } catch (err: any) {
-      setError(err.message || 'Erro ao buscar CEP');
+      console.error('Error searching by CEP:', err);
+      setError(err.message || 'Erro ao buscar CEP. Verifique sua conexão.');
     } finally {
       setIsSearching(false);
     }
@@ -82,18 +94,24 @@ export default function AddressSearchScreen({ navigation, route }: AddressSearch
         setError('Nenhum endereço encontrado');
       }
     } catch (err: any) {
-      setError(err.message || 'Erro ao buscar endereço');
+      console.error('Error searching by address:', err);
+      setError(err.message || 'Erro ao buscar endereço. Verifique sua conexão.');
     } finally {
       setIsSearching(false);
     }
   };
 
   const handleSelectAddress = (address: Address): void => {
-    // Retorna o endereço selecionado para a tela anterior
-    if (route.params?.onSelect) {
-      route.params.onSelect(address.formattedAddress);
+    try {
+      // Retorna o endereço selecionado para a tela anterior
+      if (route.params?.onSelect) {
+        route.params.onSelect(address.formattedAddress);
+      }
+      navigation.goBack();
+    } catch (err: any) {
+      console.error('Error selecting address:', err);
+      setError('Erro ao selecionar endereço. Tente novamente.');
     }
-    navigation.goBack();
   };
 
   const formatCEPInput = (text: string): void => {
