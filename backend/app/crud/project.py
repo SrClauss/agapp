@@ -25,16 +25,22 @@ async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100
             query["budget_max"] = {"$lte": filters.budget_max}
         if filters.status:
             query["status"] = filters.status
+        # Only filter by location if not a remote project
         if filters.latitude and filters.longitude and filters.radius_km:
-            query["location.coordinates"] = {
-                "$near": {
-                    "$geometry": {
-                        "type": "Point",
-                        "coordinates": [filters.longitude, filters.latitude]
-                    },
-                    "$maxDistance": filters.radius_km * 1000
+            query["$or"] = [
+                {"remote_execution": True},  # Include remote projects regardless of location
+                {
+                    "location.coordinates": {
+                        "$near": {
+                            "$geometry": {
+                                "type": "Point",
+                                "coordinates": [filters.longitude, filters.latitude]
+                            },
+                            "$maxDistance": filters.radius_km * 1000
+                        }
+                    }
                 }
-            }
+            ]
 
     projects = []
     async for project in db.projects.find(query).skip(skip).limit(limit):
@@ -49,6 +55,23 @@ async def create_project(db: AsyncIOMotorDatabase, project: ProjectCreate, clien
     # Fetch client name and add to document
     client = await db.users.find_one({"_id": client_id})
     project_dict["client_name"] = client.get("name") if client else None
+    
+    # Set default remote_execution based on category if not explicitly set
+    if "remote_execution" not in project_dict or project_dict["remote_execution"] is None:
+        category_name = None
+        if isinstance(project_dict.get("category"), dict):
+            category_name = project_dict["category"].get("main")
+        elif isinstance(project_dict.get("category"), str):
+            category_name = project_dict["category"]
+        
+        if category_name:
+            category = await db.categories.find_one({"name": category_name, "is_active": True})
+            if category and category.get("default_remote_execution", False):
+                project_dict["remote_execution"] = True
+            else:
+                project_dict["remote_execution"] = False
+        else:
+            project_dict["remote_execution"] = False
     
     project_dict["status"] = "open"
     project_dict["created_at"] = datetime.now(timezone.utc)

@@ -37,6 +37,8 @@ class Project(BaseModel):
     featured_purchased_at: Optional[datetime] = None
     featured_payment_id: Optional[str] = None  # ID do pagamento Asaas
     chat: List[Dict[str, Any]] = []  # Array of chats, each {professional_id, messages: []}
+    # Execução Remota
+    remote_execution: bool = False  # Permite execução remota do projeto
 
     class Config:
         validate_by_name = True

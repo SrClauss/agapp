@@ -52,7 +52,8 @@ async def create_category(db: AsyncIOMotorDatabase, category_data: CategoryCreat
         "subcategories": category_data.subcategories,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
-        "is_active": True
+        "is_active": True,
+        "default_remote_execution": False
     }
 
     result = await db.categories.insert_one(category_dict)
