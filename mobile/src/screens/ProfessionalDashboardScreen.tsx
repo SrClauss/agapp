@@ -397,7 +397,11 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
           </Card>
         ) : (
           projects.map((project) => (
-            <Card key={project._id} style={styles.projectCard}>
+            <Card
+              key={project._id}
+              style={styles.projectCard}
+              onPress={() => navigation.navigate('ProjectDetails', { projectId: project._id })}
+            >
               <Card.Content>
                 <View style={styles.projectHeader}>
                   <View style={styles.projectTitleRow}>

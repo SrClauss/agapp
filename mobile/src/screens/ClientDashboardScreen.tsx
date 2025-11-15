@@ -230,7 +230,11 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
           </Card>
         ) : (
           projects.map((project) => (
-            <Card key={project._id} style={styles.projectCard}>
+            <Card
+              key={project._id}
+              style={styles.projectCard}
+              onPress={() => navigation.navigate('ProjectDetails', { projectId: project._id })}
+            >
               <Card.Content>
                 <View style={styles.projectHeader}>
                   <Text style={styles.projectTitle}>{project.title}</Text>
