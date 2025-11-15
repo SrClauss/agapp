@@ -5,13 +5,15 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
-import { Text, TextInput, IconButton, ActivityIndicator, Card } from 'react-native-paper';
+import { Text, TextInput, IconButton, ActivityIndicator, Card, Chip } from 'react-native-paper';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { colors, spacing, typography, shadows } from '../theme';
 import apiService from '../services/api';
 import websocketService from '../services/websocket';
+import AppHeader from '../components/AppHeader';
+import StatusBadge from '../components/StatusBadge';
+import { useSnackbar } from '../hooks/useSnackbar';
 
 type RouteParams = {
   TicketDetails: {
@@ -50,6 +52,7 @@ interface Ticket {
 const TicketDetailsScreen = () => {
   const route = useRoute<TicketDetailsScreenRouteProp>();
   const { ticketId } = route.params;
+  const { showSnackbar } = useSnackbar();
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +80,7 @@ const TicketDetailsScreen = () => {
       setTicket(data);
     } catch (error: any) {
       console.error('Erro ao carregar ticket:', error);
-      Alert.alert('Erro', 'Não foi possível carregar o ticket');
+      showSnackbar('Não foi possível carregar o ticket', 'error');
     } finally {
       setLoading(false);
     }
@@ -147,9 +150,9 @@ const TicketDetailsScreen = () => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     } catch (error: any) {
       console.error('Erro ao enviar mensagem:', error);
-      Alert.alert('Erro', 'Não foi possível enviar a mensagem');
+      showSnackbar('Não foi possível enviar a mensagem', 'error');
       setMessageText(text);
-    } finally {
+    } finally{
       setSending(false);
     }
   };
@@ -172,26 +175,6 @@ const TicketDetailsScreen = () => {
     });
   };
 
-  const getStatusLabel = (status: string) => {
-    const statusMap: Record<string, string> = {
-      open: 'Aberto',
-      in_progress: 'Em Progresso',
-      waiting_user: 'Aguardando Resposta',
-      resolved: 'Resolvido',
-      closed: 'Fechado',
-    };
-    return statusMap[status] || status;
-  };
-
-  const getCategoryLabel = (category: string) => {
-    const categoryMap: Record<string, string> = {
-      technical: 'Técnico',
-      payment: 'Pagamento',
-      general: 'Geral',
-      complaint: 'Reclamação',
-    };
-    return categoryMap[category] || category;
-  };
 
   if (loading) {
     return (
@@ -216,12 +199,12 @@ const TicketDetailsScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <View style={styles.header}>
-        <Text style={styles.subject}>{ticket.subject}</Text>
-        <View style={styles.meta}>
-          <Text style={styles.metaText}>
-            {getCategoryLabel(ticket.category)} • {getStatusLabel(ticket.status)}
-          </Text>
+      <AppHeader title={ticket.subject} showBack />
+
+      <View style={styles.ticketInfo}>
+        <View style={styles.badges}>
+          <StatusBadge status={ticket.category} type="category" />
+          <StatusBadge status={ticket.status} type="status" />
         </View>
         {ticket.attendant_name && (
           <Text style={styles.attendantText}>
@@ -359,24 +342,16 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     color: colors.error,
   },
-  header: {
+  ticketInfo: {
     backgroundColor: colors.surface,
     padding: spacing.base,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  subject: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  meta: {
-    marginBottom: spacing.xs,
-  },
-  metaText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
+  badges: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
   },
   attendantText: {
     fontSize: typography.fontSize.sm,
@@ -439,7 +414,8 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xs,
   },
   messageTimeUser: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.white,
+    opacity: 0.7,
   },
   messageTimeAttendant: {
     color: colors.textSecondary,
