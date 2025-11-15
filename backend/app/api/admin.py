@@ -517,10 +517,6 @@ async def admin_categories(
     categories = await get_categories(db, skip=skip, limit=limit, active_only=False)
     total_categories = await db.categories.count_documents({})
 
-    # Convert ObjectId to string for template
-    for category in categories:
-        category['id'] = str(category['_id'])
-
     return templates.TemplateResponse("admin/categories.html", {
         "request": request,
         "current_user": current_user,
