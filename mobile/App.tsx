@@ -17,6 +17,7 @@ import ProfessionalDashboardScreen from './src/screens/ProfessionalDashboardScre
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
 import AddressSearchScreen from './src/screens/AddressSearchScreen';
 import ProjectDetailsScreen from './src/screens/ProjectDetailsScreen';
+import { NotificationProvider } from './src/contexts/NotificationContext';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -91,24 +92,26 @@ export default function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
-        <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName={initialRoute}
-            screenOptions={screenOptions}
-            id={"root-stack" as any}
-          >
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
-            <Stack.Screen name="RoleChoice" component={RoleChoiceScreen} />
-            <Stack.Screen name="ClientDashboard" component={ClientDashboardScreen} />
-            <Stack.Screen name="ProfessionalDashboard" component={ProfessionalDashboardScreen} />
-            <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
-            <Stack.Screen name="AddressSearch" component={AddressSearchScreen} />
-            <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <NotificationProvider>
+          <NavigationContainer>
+            <Stack.Navigator
+              initialRouteName={initialRoute}
+              screenOptions={screenOptions}
+              id={"root-stack" as any}
+            >
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="SignUp" component={SignUpScreen} />
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
+              <Stack.Screen name="RoleChoice" component={RoleChoiceScreen} />
+              <Stack.Screen name="ClientDashboard" component={ClientDashboardScreen} />
+              <Stack.Screen name="ProfessionalDashboard" component={ProfessionalDashboardScreen} />
+              <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
+              <Stack.Screen name="AddressSearch" component={AddressSearchScreen} />
+              <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </NotificationProvider>
       </PaperProvider>
     </SafeAreaProvider>
   );
