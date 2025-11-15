@@ -25,6 +25,15 @@ async def get_user(db: AsyncIOMotorDatabase, user_id: str) -> Optional[User]:
         return User(**user)
     return None
 
+
+async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> Optional[User]:
+    """Compatibilidade: alias para `get_user` usado por alguns módulos.
+
+    Mantém assinatura antiga `get_user_by_id(db, id)` para evitar ImportError
+    quando outros endpoints esperam essa função.
+    """
+    return await get_user(db, user_id)
+
 async def get_user_by_email(db: AsyncIOMotorDatabase, email: str) -> Optional[User]:
     user = await db.users.find_one({"email": email})
     if user:
