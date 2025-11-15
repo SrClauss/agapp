@@ -13,8 +13,21 @@ import HomeScreen from './src/screens/HomeScreen';
 import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
 import RoleChoiceScreen from './src/screens/RoleChoiceScreen';
 import ClientDashboardScreen from './src/screens/ClientDashboardScreen';
+import ProfessionalDashboardScreen from './src/screens/ProfessionalDashboardScreen';
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
 import AddressSearchScreen from './src/screens/AddressSearchScreen';
+import ProjectDetailsScreen from './src/screens/ProjectDetailsScreen';
+import ProfileSettingsScreen from './src/screens/ProfileSettingsScreen';
+import ContractManagementScreen from './src/screens/ContractManagementScreen';
+import BuyCreditsScreen from './src/screens/BuyCreditsScreen';
+import PaymentWebViewScreen from './src/screens/PaymentWebViewScreen';
+import SupportScreen from './src/screens/SupportScreen';
+import CreateTicketScreen from './src/screens/CreateTicketScreen';
+import TicketDetailsScreen from './src/screens/TicketDetailsScreen';
+import AnnouncementsScreen from './src/screens/AnnouncementsScreen';
+import { NotificationProvider } from './src/contexts/NotificationContext';
+import { SnackbarProvider } from './src/hooks/useSnackbar';
+import { colors } from './src/theme';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -23,8 +36,18 @@ export type RootStackParamList = {
   RoleSelection: undefined;
   RoleChoice: undefined;
   ClientDashboard: undefined;
+  ProfessionalDashboard: undefined;
   CreateProject: undefined;
   AddressSearch: { onSelect: (address: string) => void };
+  ProjectDetails: { projectId: string };
+  ProfileSettings: undefined;
+  ContractManagement: { projectId: string; professionalId: string };
+  BuyCredits: undefined;
+  PaymentWebView: { paymentUrl: string; paymentId: string; onSuccess?: () => void };
+  Support: undefined;
+  CreateTicket: { projectId?: string; paymentId?: string };
+  TicketDetails: { ticketId: string };
+  Announcements: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -33,14 +56,14 @@ const screenOptions: StackNavigationOptions = {
   headerShown: false,
 };
 
-const theme = {
+const paperTheme = {
   colors: {
-    primary: '#3471b9',
-    accent: '#5a8fd9',
-    background: '#ffffff',
-    surface: '#f5f5f5',
-    text: '#333333',
-    error: '#d32f2f',
+    primary: colors.primary,
+    accent: colors.primaryLight,
+    background: colors.background,
+    surface: colors.surface,
+    text: colors.textPrimary,
+    error: colors.error,
   },
 };
 
@@ -56,10 +79,12 @@ export default function App(): React.JSX.Element {
       try {
         const token = await AsyncStorage.getItem('access_token');
         if (token) {
-          // Check if user has client role and redirect to dashboard
+          // Check if user has role and redirect to appropriate dashboard
           const activeRole = await AsyncStorage.getItem('active_role');
           if (activeRole === 'client') {
             setInitialRoute('ClientDashboard');
+          } else if (activeRole === 'professional') {
+            setInitialRoute('ProfessionalDashboard');
           } else {
             setInitialRoute('Home');
           }
@@ -84,23 +109,37 @@ export default function App(): React.JSX.Element {
 
   return (
     <SafeAreaProvider>
-      <PaperProvider theme={theme}>
-        <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName={initialRoute}
-            screenOptions={screenOptions}
-            id={"root-stack" as any}
-          >
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
-            <Stack.Screen name="RoleChoice" component={RoleChoiceScreen} />
-            <Stack.Screen name="ClientDashboard" component={ClientDashboardScreen} />
-            <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
-            <Stack.Screen name="AddressSearch" component={AddressSearchScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
+      <PaperProvider theme={paperTheme}>
+        <SnackbarProvider>
+          <NotificationProvider>
+            <NavigationContainer>
+              <Stack.Navigator
+                initialRouteName={initialRoute}
+                screenOptions={screenOptions}
+                id={"root-stack" as any}
+              >
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="SignUp" component={SignUpScreen} />
+                <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
+                <Stack.Screen name="RoleChoice" component={RoleChoiceScreen} />
+                <Stack.Screen name="ClientDashboard" component={ClientDashboardScreen} />
+                <Stack.Screen name="ProfessionalDashboard" component={ProfessionalDashboardScreen} />
+                <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
+                <Stack.Screen name="AddressSearch" component={AddressSearchScreen} />
+                <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
+                <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
+                <Stack.Screen name="ContractManagement" component={ContractManagementScreen} />
+                <Stack.Screen name="BuyCredits" component={BuyCreditsScreen} />
+                <Stack.Screen name="PaymentWebView" component={PaymentWebViewScreen} />
+                <Stack.Screen name="Support" component={SupportScreen} />
+                <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
+                <Stack.Screen name="TicketDetails" component={TicketDetailsScreen} />
+                <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </NotificationProvider>
+        </SnackbarProvider>
       </PaperProvider>
     </SafeAreaProvider>
   );

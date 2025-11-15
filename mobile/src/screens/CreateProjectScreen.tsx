@@ -3,22 +3,24 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   Text,
   TextInput,
   Button,
-  ActivityIndicator,
-  HelperText,
   Checkbox,
 } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, Category, ProjectCreateRequest } from '../services/api';
+import { colors, spacing, typography } from '../theme';
+import AppHeader from '../components/AppHeader';
+import SelectInput, { SelectOption } from '../components/SelectInput';
+import LoadingOverlay from '../components/LoadingOverlay';
+import { useSnackbar } from '../hooks/useSnackbar';
 
 type CreateProjectScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateProject'>;
 
@@ -27,6 +29,7 @@ interface CreateProjectScreenProps {
 }
 
 export default function CreateProjectScreen({ navigation }: CreateProjectScreenProps): React.JSX.Element {
+  const { showSnackbar } = useSnackbar();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -70,15 +73,25 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       setCategories(categoriesData);
     } catch (error) {
       console.error('Error loading categories:', error);
-      Alert.alert('Erro', 'Não foi possível carregar as categorias. Tente novamente.');
+      showSnackbar('Não foi possível carregar as categorias', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getSubcategories = (): string[] => {
+  const getCategoryOptions = (): SelectOption[] => {
+    return categories.map(cat => ({
+      label: cat.name,
+      value: cat.name,
+    }));
+  };
+
+  const getSubcategoryOptions = (): SelectOption[] => {
     const category = categories.find(c => c.name === selectedCategory);
-    return category?.subcategories || [];
+    return category?.subcategories.map(sub => ({
+      label: sub,
+      value: sub,
+    })) || [];
   };
 
   const validate = (): boolean => {
@@ -125,6 +138,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
   const handleSubmit = async (): Promise<void> => {
     if (!validate()) {
+      showSnackbar('Preencha todos os campos obrigatórios', 'error');
       return;
     }
 
@@ -162,323 +176,263 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
       await apiService.createProject(token, projectData);
 
-      Alert.alert(
-        'Sucesso!',
-        'Projeto criado com sucesso!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('ClientDashboard'),
-          },
-        ]
-      );
+      showSnackbar('Projeto criado com sucesso!', 'success');
+      setTimeout(() => navigation.navigate('ClientDashboard'), 1000);
     } catch (error: any) {
       console.error('Error creating project:', error);
-      Alert.alert('Erro', error.message || 'Não foi possível criar o projeto. Tente novamente.');
+      showSnackbar(error.message || 'Não foi possível criar o projeto', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3471b9" />
-          <Text style={styles.loadingText}>Carregando...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Criar Novo Projeto</Text>
-          <Text style={styles.subtitle}>
-            Preencha as informações do seu projeto e conecte-se com profissionais qualificados
-          </Text>
-        </View>
+    <View style={styles.container}>
+      <AppHeader title="Criar Novo Projeto" showBack />
 
-        <View style={styles.form}>
-          <TextInput
-            label="Título do Projeto *"
-            value={title}
-            onChangeText={setTitle}
-            mode="outlined"
-            error={!!errors.title}
-            style={styles.input}
-          />
-          <HelperText type="error" visible={!!errors.title}>
-            {errors.title}
-          </HelperText>
-
-          <TextInput
-            label="Descrição *"
-            value={description}
-            onChangeText={setDescription}
-            mode="outlined"
-            multiline
-            numberOfLines={4}
-            error={!!errors.description}
-            style={styles.input}
-            placeholder="Descreva detalhadamente o que você precisa..."
-          />
-          <HelperText type="error" visible={!!errors.description}>
-            {errors.description}
-          </HelperText>
-
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerLabel}>Categoria Principal *</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={selectedCategory}
-                onValueChange={(value) => {
-                  setSelectedCategory(value);
-                  setSelectedSubcategory(''); // Reset subcategory
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Selecione uma categoria..." value="" />
-                {categories.map((cat) => (
-                  <Picker.Item key={cat._id} label={cat.name} value={cat.name} />
-                ))}
-              </Picker>
-            </View>
-            <HelperText type="error" visible={!!errors.category}>
-              {errors.category}
-            </HelperText>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Text style={styles.subtitle}>
+              Preencha as informações do seu projeto e conecte-se com profissionais qualificados
+            </Text>
           </View>
 
-          {selectedCategory && getSubcategories().length > 0 && (
-            <View style={styles.pickerContainer}>
-              <Text style={styles.pickerLabel}>Subcategoria *</Text>
-              <View style={styles.pickerWrapper}>
-                <Picker
-                  selectedValue={selectedSubcategory}
-                  onValueChange={setSelectedSubcategory}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Selecione uma subcategoria..." value="" />
-                  {getSubcategories().map((sub, index) => (
-                    <Picker.Item key={index} label={sub} value={sub} />
-                  ))}
-                </Picker>
-              </View>
-              <HelperText type="error" visible={!!errors.subcategory}>
-                {errors.subcategory}
-              </HelperText>
-            </View>
-          )}
-
-          <View style={styles.budgetRow}>
-            <View style={styles.budgetInput}>
-              <TextInput
-                label="Orçamento Mínimo (R$)"
-                value={budgetMin}
-                onChangeText={setBudgetMin}
-                mode="outlined"
-                keyboardType="numeric"
-                error={!!errors.budgetMin}
-                style={styles.input}
-              />
-              <HelperText type="error" visible={!!errors.budgetMin}>
-                {errors.budgetMin}
-              </HelperText>
-            </View>
-
-            <View style={styles.budgetInput}>
-              <TextInput
-                label="Orçamento Máximo (R$)"
-                value={budgetMax}
-                onChangeText={setBudgetMax}
-                mode="outlined"
-                keyboardType="numeric"
-                error={!!errors.budgetMax}
-                style={styles.input}
-              />
-              <HelperText type="error" visible={!!errors.budgetMax}>
-                {errors.budgetMax}
-              </HelperText>
-            </View>
-          </View>
-
-          <View style={styles.addressContainer}>
+          <View style={styles.form}>
             <TextInput
-              label={remoteExecution ? "Endereço (opcional para projetos remotos)" : "Endereço *"}
-              value={address}
-              onChangeText={setAddress}
+              label="Título do Projeto"
+              value={title}
+              onChangeText={setTitle}
               mode="outlined"
-              error={!!errors.address}
-              style={styles.addressInput}
-              placeholder="Clique na lupa para buscar"
-              multiline
-              numberOfLines={2}
+              error={!!errors.title}
+              style={styles.input}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
             />
-            <Button
-              mode="contained"
-              onPress={() => {
-                try {
+            {errors.title && (
+              <Text style={styles.errorText}>{errors.title}</Text>
+            )}
+
+            <TextInput
+              label="Descrição"
+              value={description}
+              onChangeText={setDescription}
+              mode="outlined"
+              multiline
+              numberOfLines={4}
+              error={!!errors.description}
+              style={styles.input}
+              placeholder="Descreva detalhadamente o que você precisa..."
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+            />
+            {errors.description && (
+              <Text style={styles.errorText}>{errors.description}</Text>
+            )}
+
+            <SelectInput
+              label="Categoria Principal"
+              value={selectedCategory}
+              options={getCategoryOptions()}
+              onValueChange={(value) => {
+                setSelectedCategory(value);
+                setSelectedSubcategory(''); // Reset subcategory
+              }}
+              error={!!errors.category}
+              helperText={errors.category}
+              required
+            />
+
+            {selectedCategory && getSubcategoryOptions().length > 0 && (
+              <SelectInput
+                label="Subcategoria"
+                value={selectedSubcategory}
+                options={getSubcategoryOptions()}
+                onValueChange={setSelectedSubcategory}
+                error={!!errors.subcategory}
+                helperText={errors.subcategory}
+                required
+              />
+            )}
+
+            <View style={styles.budgetRow}>
+              <View style={styles.budgetInput}>
+                <TextInput
+                  label="Orçamento Mínimo (R$)"
+                  value={budgetMin}
+                  onChangeText={setBudgetMin}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  error={!!errors.budgetMin}
+                  style={styles.input}
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                />
+                {errors.budgetMin && (
+                  <Text style={styles.errorText}>{errors.budgetMin}</Text>
+                )}
+              </View>
+
+              <View style={styles.budgetInput}>
+                <TextInput
+                  label="Orçamento Máximo (R$)"
+                  value={budgetMax}
+                  onChangeText={setBudgetMax}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  error={!!errors.budgetMax}
+                  style={styles.input}
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                />
+                {errors.budgetMax && (
+                  <Text style={styles.errorText}>{errors.budgetMax}</Text>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.addressContainer}>
+              <TextInput
+                label={remoteExecution ? "Endereço (opcional)" : "Endereço"}
+                value={address}
+                onChangeText={setAddress}
+                mode="outlined"
+                error={!!errors.address}
+                style={styles.input}
+                placeholder="Clique na lupa para buscar"
+                multiline
+                numberOfLines={2}
+                outlineColor={colors.border}
+                activeOutlineColor={colors.primary}
+              />
+              <Button
+                mode="contained"
+                onPress={() => {
                   navigation.navigate('AddressSearch', {
                     onSelect: (selectedAddress: string) => {
-                      try {
-                        if (selectedAddress) {
-                          setAddress(selectedAddress);
-                        }
-                      } catch (err) {
-                        console.error('Error setting address:', err);
-                        Alert.alert('Erro', 'Erro ao definir endereço. Tente novamente.');
+                      if (selectedAddress) {
+                        setAddress(selectedAddress);
                       }
                     },
                   });
-                } catch (err) {
-                  console.error('Error navigating to address search:', err);
-                  Alert.alert('Erro', 'Erro ao abrir busca de endereço.');
-                }
-              }}
-              style={styles.addressButton}
-              icon="magnify"
+                }}
+                style={styles.addressButton}
+                icon="magnify"
+              >
+                Buscar
+              </Button>
+            </View>
+            {errors.address && (
+              <Text style={styles.errorText}>{errors.address}</Text>
+            )}
+
+            <View style={styles.checkboxContainer}>
+              <Checkbox.Item
+                label="Permite execução remota"
+                status={remoteExecution ? 'checked' : 'unchecked'}
+                onPress={() => setRemoteExecution(!remoteExecution)}
+                labelStyle={styles.checkboxLabel}
+              />
+            </View>
+            <Text style={styles.infoText}>
+              {remoteExecution
+                ? 'Este projeto pode ser executado remotamente. O endereço é opcional.'
+                : 'Este projeto requer presença física no local especificado.'}
+            </Text>
+
+            <Button
+              mode="contained"
+              onPress={handleSubmit}
+              loading={isSubmitting}
+              disabled={isSubmitting}
+              style={styles.submitButton}
+              buttonColor={colors.primary}
             >
-              Buscar
+              {isSubmitting ? 'Criando...' : 'Criar Projeto'}
+            </Button>
+
+            <Button
+              mode="outlined"
+              onPress={() => navigation.goBack()}
+              disabled={isSubmitting}
+              style={styles.cancelButton}
+            >
+              Cancelar
             </Button>
           </View>
-          <HelperText type="error" visible={!!errors.address}>
-            {errors.address}
-          </HelperText>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-          <View style={styles.checkboxContainer}>
-            <Checkbox
-              status={remoteExecution ? 'checked' : 'unchecked'}
-              onPress={() => setRemoteExecution(!remoteExecution)}
-            />
-            <Text 
-              style={styles.checkboxLabel}
-              onPress={() => setRemoteExecution(!remoteExecution)}
-            >
-              Permite execução remota
-            </Text>
-          </View>
-          <HelperText type="info" visible={true}>
-            {remoteExecution 
-              ? 'Este projeto pode ser executado remotamente. O endereço é opcional.'
-              : 'Este projeto requer presença física no local especificado.'}
-          </HelperText>
-
-          <Button
-            mode="contained"
-            onPress={handleSubmit}
-            loading={isSubmitting}
-            disabled={isSubmitting}
-            style={styles.submitButton}
-          >
-            {isSubmitting ? 'Criando...' : 'Criar Projeto'}
-          </Button>
-
-          <Button
-            mode="outlined"
-            onPress={() => navigation.goBack()}
-            disabled={isSubmitting}
-            style={styles.cancelButton}
-          >
-            Cancelar
-          </Button>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <LoadingOverlay visible={isLoading} message="Carregando categorias..." />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
-  loadingContainer: {
+  flex: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.lg,
   },
   header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    marginBottom: spacing.xl,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    lineHeight: 22,
   },
   form: {
-    gap: 8,
+    gap: spacing.md,
   },
   input: {
-    backgroundColor: '#fff',
-  },
-  pickerContainer: {
-    marginBottom: 8,
-  },
-  pickerLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-    marginLeft: 4,
-  },
-  pickerWrapper: {
-    backgroundColor: '#fff',
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  picker: {
-    height: 56,
+    backgroundColor: colors.surface,
   },
   budgetRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: spacing.md,
   },
   budgetInput: {
     flex: 1,
   },
   addressContainer: {
-    gap: 12,
-  },
-  addressInput: {
-    backgroundColor: '#fff',
+    gap: spacing.sm,
   },
   addressButton: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 4,
+    marginTop: spacing.sm,
   },
   checkboxLabel: {
-    fontSize: 16,
-    marginLeft: 8,
-    color: '#333',
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
   },
   submitButton: {
-    marginTop: 24,
-    paddingVertical: 8,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.xs,
   },
   cancelButton: {
-    marginTop: 8,
-    paddingVertical: 8,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  errorText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.error,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  infoText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: -spacing.sm,
   },
 });
