@@ -7,7 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
-from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates
+from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support
 from app.api.admin import router as admin_router
 from app.api.websockets.routes import router as websocket_router
 
@@ -64,6 +64,14 @@ tags_metadata = [
     {
         "name": "websockets",
         "description": "Conexões WebSocket para comunicação em tempo real, notificações e chat.",
+    },
+    {
+        "name": "support",
+        "description": "Sistema de atendimento ao cliente (SAC). Permite criar tickets, enviar mensagens e acompanhar status.",
+    },
+    {
+        "name": "attendant",
+        "description": "Sistema de autenticação e gerenciamento de atendentes do SAC.",
     },
 ]
 
@@ -155,6 +163,8 @@ app.include_router(turnstile.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin_router, prefix="/system-admin", tags=["admin"])
 app.include_router(admin_api.router, tags=["admin-api"])
 app.include_router(websocket_router, tags=["websockets"])
+app.include_router(support.router, prefix="/support", tags=["support"])
+app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"])
 
 @app.on_event("startup")
 async def startup_event():
@@ -189,6 +199,14 @@ async def startup_event():
     await database.payment_webhooks.create_index("payment_id")
     await database.payment_webhooks.create_index("processed")
     await database.credit_transactions.create_index("user_id")
+    await database.attendants.create_index("email", unique=True)
+    await database.attendants.create_index("is_active")
+    await database.attendants.create_index("is_online")
+    await database.support_tickets.create_index("user_id")
+    await database.support_tickets.create_index("attendant_id")
+    await database.support_tickets.create_index("status")
+    await database.support_tickets.create_index("category")
+    await database.support_tickets.create_index("created_at")
     # A criação do admin é feita via script de inicialização do container (mongo-init)
 
 @app.get("/")

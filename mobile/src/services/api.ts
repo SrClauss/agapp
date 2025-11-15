@@ -921,6 +921,107 @@ class ApiService {
 
     return response.json();
   }
+
+  // Support (SAC) Methods
+  async createSupportTicket(token: string, ticketData: any): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/support/tickets`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(ticketData),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao criar ticket');
+    }
+
+    return response.json();
+  }
+
+  async getMyTickets(token: string): Promise<any[]> {
+    const response = await fetch(`${this.baseUrl}/support/tickets/my`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar tickets');
+    }
+
+    return response.json();
+  }
+
+  async getTicket(token: string, ticketId: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/support/tickets/${ticketId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar ticket');
+    }
+
+    return response.json();
+  }
+
+  async addMessageToTicket(
+    token: string,
+    ticketId: string,
+    messageData: { message: string; attachments: string[] }
+  ): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/support/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messageData),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao enviar mensagem');
+    }
+
+    return response.json();
+  }
+
+  async rateTicket(
+    token: string,
+    ticketId: string,
+    rating: number,
+    comment?: string
+  ): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/support/tickets/${ticketId}/rate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        rating,
+        comment: comment || null,
+      }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao avaliar ticket');
+    }
+
+    return response.json();
+  }
 }
 
 export const apiService = new ApiService();
