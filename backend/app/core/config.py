@@ -17,7 +17,11 @@ class Settings(BaseSettings):
     turnstile_site_key: str
     cors_origins: List[str] = ["http://localhost:3000"]
 
-    class Config:
-        env_file = ".env"
+        class Config:
+            env_file = ".env"
+
+        # Allow extra environment variables to exist in `.env` (e.g. docker/init vars)
+        # without raising validation errors. Pydantic v2 supports `model_config`.
+        model_config = {"extra": "ignore", "env_file": ".env"}
 
 settings = Settings()
