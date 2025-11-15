@@ -24,6 +24,7 @@ import PaymentWebViewScreen from './src/screens/PaymentWebViewScreen';
 import SupportScreen from './src/screens/SupportScreen';
 import CreateTicketScreen from './src/screens/CreateTicketScreen';
 import TicketDetailsScreen from './src/screens/TicketDetailsScreen';
+import AnnouncementsScreen from './src/screens/AnnouncementsScreen';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import { SnackbarProvider } from './src/hooks/useSnackbar';
 import { colors } from './src/theme';
@@ -46,6 +47,7 @@ export type RootStackParamList = {
   Support: undefined;
   CreateTicket: { projectId?: string; paymentId?: string };
   TicketDetails: { ticketId: string };
+  Announcements: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -133,6 +135,7 @@ export default function App(): React.JSX.Element {
                 <Stack.Screen name="Support" component={SupportScreen} />
                 <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
                 <Stack.Screen name="TicketDetails" component={TicketDetailsScreen} />
+                <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
               </Stack.Navigator>
             </NavigationContainer>
           </NotificationProvider>

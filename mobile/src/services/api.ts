@@ -1022,6 +1022,70 @@ class ApiService {
 
     return response.json();
   }
+
+  // Announcements Methods
+  async getAnnouncements(token: string): Promise<any[]> {
+    const response = await fetch(`${this.baseUrl}/announcements/active`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar anúncios');
+    }
+
+    return response.json();
+  }
+
+  async getAnnouncementsByType(
+    token: string,
+    type: string,
+    limit: number = 10
+  ): Promise<any[]> {
+    const response = await fetch(`${this.baseUrl}/announcements/type/${type}?limit=${limit}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar anúncios');
+    }
+
+    return response.json();
+  }
+
+  async registerAnnouncementInteraction(
+    token: string,
+    announcementId: string,
+    interactionType: 'view' | 'click'
+  ): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/announcements/interaction`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        announcement_id: announcementId,
+        interaction_type: interactionType,
+      }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao registrar interação');
+    }
+
+    return response.json();
+  }
 }
 
 export const apiService = new ApiService();
