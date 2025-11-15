@@ -334,6 +334,21 @@ export default function ProjectDetailsScreen({ navigation, route }: ProjectDetai
           </Card>
         )}
 
+        {/* Contract Management - Show for project participants */}
+        {(project?.client_id === user?._id || isProjectLiberated()) && (
+          <Button
+            mode="outlined"
+            onPress={() => navigation.navigate('ContractManagement', {
+              projectId: project._id,
+              professionalId: isProjectLiberated() ? user._id : (project.liberado_por?.[0] || ''),
+            })}
+            style={styles.contractButton}
+            icon="file-document"
+          >
+            Gerenciar Contratos
+          </Button>
+        )}
+
         {/* Actions */}
         {canLiberate() && (
           <Button
@@ -537,6 +552,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2e7d32',
     textAlign: 'center',
+  },
+  contractButton: {
+    marginTop: 8,
+    marginBottom: 12,
   },
   liberateButton: {
     marginTop: 8,

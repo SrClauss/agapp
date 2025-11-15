@@ -161,6 +161,55 @@ export interface EvaluationRequest {
   comment?: string;
 }
 
+// Document interfaces
+export interface Document {
+  _id: string;
+  id: string;
+  filename: string;
+  original_filename: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  project_id: string;
+  uploaded_by: string;
+  validation_status: string; // pending, valid, invalid, error
+  validation_result?: {
+    status: string;
+    documento?: any;
+    assinaturas?: any[];
+    total_assinaturas?: number;
+    error?: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+// Contract Template interfaces
+export interface ContractTemplate {
+  _id: string;
+  title: string;
+  description?: string;
+  template_text: string;
+  variables: string[];
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractTemplateImport {
+  title: string;
+  description?: string;
+  template_text: string;
+}
+
+export interface GeneratedContract {
+  template_id: string;
+  template_title: string;
+  contract_text: string;
+  variables_used: { [key: string]: any };
+  generated_at: string;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -485,6 +534,129 @@ class ApiService {
     }
 
     return response.json();
+  }
+
+  // Contract Templates
+  async getContractTemplates(token: string, myTemplates: boolean = false): Promise<ContractTemplate[]> {
+    const url = myTemplates
+      ? `${this.baseUrl}/contract-templates/?my_templates=true`
+      : `${this.baseUrl}/contract-templates/`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar templates');
+    }
+
+    return response.json();
+  }
+
+  async getContractTemplate(token: string, templateId: string): Promise<ContractTemplate> {
+    const response = await fetch(`${this.baseUrl}/contract-templates/${templateId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar template');
+    }
+
+    return response.json();
+  }
+
+  async generateContractForProject(
+    token: string,
+    projectId: string,
+    templateId: string,
+    professionalId: string
+  ): Promise<GeneratedContract> {
+    const response = await fetch(
+      `${this.baseUrl}/contract-templates/generate-for-project/${projectId}?template_id=${templateId}&professional_id=${professionalId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao gerar contrato');
+    }
+
+    return response.json();
+  }
+
+  // Documents
+  async uploadDocument(token: string, projectId: string, file: File): Promise<Document> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${this.baseUrl}/documents/upload/${projectId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao fazer upload do documento');
+    }
+
+    return response.json();
+  }
+
+  async getProjectDocuments(token: string, projectId: string): Promise<Document[]> {
+    const response = await fetch(`${this.baseUrl}/documents/project/${projectId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar documentos');
+    }
+
+    return response.json();
+  }
+
+  async getDocument(token: string, documentId: string): Promise<Document> {
+    const response = await fetch(`${this.baseUrl}/documents/${documentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar documento');
+    }
+
+    return response.json();
+  }
+
+  getDocumentDownloadUrl(token: string, documentId: string): string {
+    return `${this.baseUrl}/documents/${documentId}/download?token=${token}`;
   }
 }
 
