@@ -13,6 +13,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
 import RoleChoiceScreen from './src/screens/RoleChoiceScreen';
 import ClientDashboardScreen from './src/screens/ClientDashboardScreen';
+import ProfessionalDashboardScreen from './src/screens/ProfessionalDashboardScreen';
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
 import AddressSearchScreen from './src/screens/AddressSearchScreen';
 
@@ -23,6 +24,7 @@ export type RootStackParamList = {
   RoleSelection: undefined;
   RoleChoice: undefined;
   ClientDashboard: undefined;
+  ProfessionalDashboard: undefined;
   CreateProject: undefined;
   AddressSearch: { onSelect: (address: string) => void };
 };
@@ -56,10 +58,12 @@ export default function App(): React.JSX.Element {
       try {
         const token = await AsyncStorage.getItem('access_token');
         if (token) {
-          // Check if user has client role and redirect to dashboard
+          // Check if user has role and redirect to appropriate dashboard
           const activeRole = await AsyncStorage.getItem('active_role');
           if (activeRole === 'client') {
             setInitialRoute('ClientDashboard');
+          } else if (activeRole === 'professional') {
+            setInitialRoute('ProfessionalDashboard');
           } else {
             setInitialRoute('Home');
           }
@@ -97,6 +101,7 @@ export default function App(): React.JSX.Element {
             <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
             <Stack.Screen name="RoleChoice" component={RoleChoiceScreen} />
             <Stack.Screen name="ClientDashboard" component={ClientDashboardScreen} />
+            <Stack.Screen name="ProfessionalDashboard" component={ProfessionalDashboardScreen} />
             <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
             <Stack.Screen name="AddressSearch" component={AddressSearchScreen} />
           </Stack.Navigator>
