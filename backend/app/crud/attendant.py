@@ -4,23 +4,24 @@ CRUD operations para Atendentes do SAC
 from typing import Optional, List
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from passlib.context import CryptContext
+import bcrypt
 from ulid import ULID
 
 from app.models.attendant import Attendant
 from app.schemas.attendant import AttendantCreate, AttendantUpdate
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def get_password_hash(password: str) -> str:
     """Gera hash de senha"""
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifica senha"""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
 
 
 async def create_attendant(
