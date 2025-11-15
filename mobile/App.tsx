@@ -17,6 +17,7 @@ import ProfessionalDashboardScreen from './src/screens/ProfessionalDashboardScre
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
 import AddressSearchScreen from './src/screens/AddressSearchScreen';
 import ProjectDetailsScreen from './src/screens/ProjectDetailsScreen';
+import ProfileSettingsScreen from './src/screens/ProfileSettingsScreen';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 
 export type RootStackParamList = {
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   CreateProject: undefined;
   AddressSearch: { onSelect: (address: string) => void };
   ProjectDetails: { projectId: string };
+  ProfileSettings: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -109,6 +111,7 @@ export default function App(): React.JSX.Element {
               <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
               <Stack.Screen name="AddressSearch" component={AddressSearchScreen} />
               <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
+              <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </NotificationProvider>

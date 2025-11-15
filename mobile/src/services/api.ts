@@ -21,6 +21,21 @@ export interface UserResponse {
   credits: number;
   created_at: string;
   updated_at: string;
+  skills?: string[];
+  notification_preferences?: {
+    enabled: boolean;
+    radius_km: number;
+    match_skills: boolean;
+  };
+}
+
+export interface UserProfileUpdate {
+  skills?: string[];
+  notification_preferences?: {
+    enabled: boolean;
+    radius_km: number;
+    match_skills: boolean;
+  };
 }
 
 export interface LoginRequest {
@@ -250,6 +265,26 @@ class ApiService {
     const userData = await response.json();
     console.log('API - Updated user roles:', userData.roles);
     return userData;
+  }
+
+  async updateUserProfile(token: string, profileData: UserProfileUpdate): Promise<UserResponse> {
+    console.log('API - Updating user profile:', profileData);
+
+    const response = await fetch(`${this.baseUrl}/users/me`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao atualizar perfil');
+    }
+
+    return response.json();
   }
 
   // Categories
