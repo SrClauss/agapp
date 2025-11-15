@@ -5,13 +5,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
-import { Text, FAB, Card, Badge, ActivityIndicator } from 'react-native-paper';
+import { Text, FAB, Card, Badge, ActivityIndicator, List } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { colors, spacing, typography, shadows } from '../theme';
 import apiService from '../services/api';
+import AppHeader from '../components/AppHeader';
+import EmptyState from '../components/EmptyState';
+import StatusBadge from '../components/StatusBadge';
+import { useSnackbar } from '../hooks/useSnackbar';
 
 interface Ticket {
   id: string;
@@ -35,6 +38,7 @@ const SupportScreen = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { showSnackbar } = useSnackbar();
 
   const loadTickets = async () => {
     try {
@@ -47,7 +51,7 @@ const SupportScreen = () => {
       setTickets(data);
     } catch (error: any) {
       console.error('Erro ao carregar tickets:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os tickets');
+      showSnackbar('Não foi possível carregar os tickets', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -89,40 +93,6 @@ const SupportScreen = () => {
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; color: string }> = {
-      open: { label: 'Aberto', color: colors.success },
-      in_progress: { label: 'Em Progresso', color: colors.warning },
-      waiting_user: { label: 'Aguardando', color: colors.info },
-      resolved: { label: 'Resolvido', color: colors.textSecondary },
-      closed: { label: 'Fechado', color: colors.textSecondary },
-    };
-
-    return statusMap[status] || { label: status, color: colors.textSecondary };
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    const priorityMap: Record<string, { label: string; color: string }> = {
-      low: { label: 'Baixa', color: colors.info },
-      normal: { label: 'Normal', color: colors.primary },
-      high: { label: 'Alta', color: colors.warning },
-      urgent: { label: 'Urgente', color: colors.error },
-    };
-
-    return priorityMap[priority] || { label: priority, color: colors.textSecondary };
-  };
-
-  const getCategoryLabel = (category: string) => {
-    const categoryMap: Record<string, string> = {
-      technical: 'Técnico',
-      payment: 'Pagamento',
-      general: 'Geral',
-      complaint: 'Reclamação',
-    };
-
-    return categoryMap[category] || category;
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -134,35 +104,30 @@ const SupportScreen = () => {
 
   return (
     <View style={styles.container}>
+      <AppHeader
+        title="Suporte"
+        subtitle={
+          tickets.length === 0
+            ? 'Nenhum ticket criado'
+            : `${tickets.length} ticket${tickets.length > 1 ? 's' : ''}`
+        }
+        showBack
+      />
       <ScrollView
         style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Suporte</Text>
-          <Text style={styles.subtitle}>
-            {tickets.length === 0
-              ? 'Nenhum ticket criado'
-              : `${tickets.length} ticket${tickets.length > 1 ? 's' : ''}`}
-          </Text>
-        </View>
-
         {tickets.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📭</Text>
-            <Text style={styles.emptyTitle}>Nenhum ticket</Text>
-            <Text style={styles.emptyText}>
-              Você ainda não criou nenhum ticket de suporte.{'\n'}
-              Toque no botão + para criar um.
-            </Text>
-          </View>
+          <EmptyState
+            icon="inbox"
+            title="Nenhum ticket"
+            message="Você ainda não criou nenhum ticket de suporte. Toque no botão + para criar um."
+          />
         ) : (
           <View style={styles.ticketList}>
             {tickets.map((ticket) => {
-              const status = getStatusBadge(ticket.status);
-              const priority = getPriorityBadge(ticket.priority);
               const lastMessage =
                 ticket.messages[ticket.messages.length - 1]?.message || '';
 
@@ -173,47 +138,38 @@ const SupportScreen = () => {
                   activeOpacity={0.7}
                 >
                   <Card style={styles.ticketCard}>
-                    <View style={styles.ticketHeader}>
-                      <View style={styles.ticketHeaderLeft}>
-                        <Text style={styles.ticketSubject} numberOfLines={1}>
-                          {ticket.subject}
-                        </Text>
-                        <Text style={styles.ticketCategory}>
-                          {getCategoryLabel(ticket.category)}
+                    <Card.Content>
+                      <View style={styles.ticketHeader}>
+                        <View style={styles.ticketHeaderLeft}>
+                          <Text style={styles.ticketSubject} numberOfLines={1}>
+                            {ticket.subject}
+                          </Text>
+                          <View style={styles.badgesRow}>
+                            <StatusBadge status={ticket.category} type="category" />
+                          </View>
+                        </View>
+                        <Text style={styles.ticketTime}>
+                          {formatDate(ticket.updated_at)}
                         </Text>
                       </View>
-                      <Text style={styles.ticketTime}>
-                        {formatDate(ticket.updated_at)}
+
+                      <Text style={styles.ticketPreview} numberOfLines={2}>
+                        {lastMessage}
                       </Text>
-                    </View>
 
-                    <Text style={styles.ticketPreview} numberOfLines={2}>
-                      {lastMessage}
-                    </Text>
+                      <View style={styles.ticketFooter}>
+                        <View style={styles.badges}>
+                          <StatusBadge status={ticket.status} type="status" />
+                          <StatusBadge status={ticket.priority} type="priority" />
+                        </View>
 
-                    <View style={styles.ticketFooter}>
-                      <View style={styles.badges}>
-                        <Badge
-                          style={[styles.badge, { backgroundColor: status.color }]}
-                        >
-                          {status.label}
-                        </Badge>
-                        <Badge
-                          style={[
-                            styles.badge,
-                            { backgroundColor: priority.color },
-                          ]}
-                        >
-                          {priority.label}
-                        </Badge>
+                        {ticket.attendant_name && (
+                          <Text style={styles.attendantName}>
+                            {ticket.attendant_name}
+                          </Text>
+                        )}
                       </View>
-
-                      {ticket.attendant_name && (
-                        <Text style={styles.attendantName}>
-                          {ticket.attendant_name}
-                        </Text>
-                      )}
-                    </View>
+                    </Card.Content>
                   </Card>
                 </TouchableOpacity>
               );
@@ -251,53 +207,12 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     color: colors.textSecondary,
   },
-  header: {
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: {
-    fontSize: typography.fontSize['2xl'],
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing['5xl'],
-    paddingHorizontal: spacing.xl,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  emptyText: {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
   ticketList: {
     padding: spacing.base,
   },
   ticketCard: {
     marginBottom: spacing.md,
-    padding: spacing.base,
     backgroundColor: colors.surface,
-    borderRadius: spacing.sm,
     ...shadows.base,
   },
   ticketHeader: {
@@ -316,9 +231,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
-  ticketCategory: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textSecondary,
+  badgesRow: {
+    marginTop: spacing.xs,
   },
   ticketTime: {
     fontSize: typography.fontSize.xs,
@@ -338,10 +252,6 @@ const styles = StyleSheet.create({
   badges: {
     flexDirection: 'row',
     gap: spacing.xs,
-  },
-  badge: {
-    fontSize: typography.fontSize.xs,
-    paddingHorizontal: spacing.sm,
   },
   attendantName: {
     fontSize: typography.fontSize.xs,

@@ -4,7 +4,6 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Alert,
   Platform,
 } from 'react-native';
 import {
@@ -14,6 +13,8 @@ import {
   Avatar,
   ActivityIndicator,
   Chip,
+  SegmentedButtons,
+  Banner,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -24,6 +25,10 @@ import * as Location from 'expo-location';
 import { useNotifications } from '../contexts/NotificationContext';
 import { Badge } from 'react-native-paper';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import AppHeader from '../components/AppHeader';
+import EmptyState from '../components/EmptyState';
+import StatusBadge from '../components/StatusBadge';
+import { useSnackbar } from '../hooks/useSnackbar';
 
 type ProfessionalDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ProfessionalDashboard'>;
 
@@ -38,8 +43,9 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [radiusKm, setRadiusKm] = useState<number>(10);
+  const [radiusKm, setRadiusKm] = useState<string>('10');
   const { totalUnread, initializeNotifications } = useNotifications();
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     loadData();
@@ -113,7 +119,7 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
             token,
             location.latitude,
             location.longitude,
-            radiusKm
+            parseInt(radiusKm)
           );
           setProjects(nearbyProjects || []);
         } catch (projectError) {
@@ -129,6 +135,8 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
       const errorMessage = (error as Error).message || '';
       if (errorMessage.includes('credentials') || errorMessage.includes('unauthorized')) {
         await handleLogout();
+      } else {
+        showSnackbar('Erro ao carregar dados', 'error');
       }
     } finally {
       setIsLoading(false);
@@ -156,11 +164,11 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
     }
   };
 
-  const handleChangeRadius = (newRadius: number): void => {
+  const handleChangeRadius = (newRadius: string): void => {
     setRadiusKm(newRadius);
     // Reload projects with new radius
     if (currentLocation) {
-      loadProjectsWithRadius(newRadius);
+      loadProjectsWithRadius(parseInt(newRadius));
     }
   };
 
@@ -180,6 +188,7 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
       setProjects(nearbyProjects || []);
     } catch (error) {
       console.error('Error loading projects with new radius:', error);
+      showSnackbar('Erro ao carregar projetos', 'error');
     }
   };
 
@@ -189,17 +198,7 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
       case 'in_progress': return colors.secondary;
       case 'completed': return colors.info;
       case 'cancelled': return colors.error;
-      default: return '#9e9e9e';
-    }
-  };
-
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'open': return 'Aberto';
-      case 'in_progress': return 'Em Andamento';
-      case 'completed': return 'Concluído';
-      case 'cancelled': return 'Cancelado';
-      default: return status;
+      default: return colors.textDisabled;
     }
   };
 
@@ -327,22 +326,19 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
 
         {/* Location Status */}
         {locationError && (
-          <Card style={styles.errorCard}>
-            <Card.Content>
-              <View style={styles.errorContent}>
-                <Avatar.Icon size={40} icon="map-marker-off" color={colors.error} style={styles.errorIcon} />
-                <Text style={styles.errorText}>{locationError}</Text>
-                <Button
-                  mode="contained"
-                  onPress={loadData}
-                  style={styles.retryButton}
-                  compact
-                >
-                  Tentar Novamente
-                </Button>
-              </View>
-            </Card.Content>
-          </Card>
+          <Banner
+            visible={!!locationError}
+            actions={[
+              {
+                label: 'Tentar Novamente',
+                onPress: loadData,
+              },
+            ]}
+            icon="map-marker-off"
+            style={styles.errorBanner}
+          >
+            {locationError}
+          </Banner>
         )}
 
         {/* Radius Selection */}
@@ -350,21 +346,17 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
           <Card style={styles.radiusCard}>
             <Card.Content>
               <Text style={styles.radiusTitle}>Raio de busca:</Text>
-              <View style={styles.radiusButtons}>
-                {[5, 10, 25, 50].map((radius) => (
-                  <Chip
-                    key={radius}
-                    selected={radiusKm === radius}
-                    onPress={() => handleChangeRadius(radius)}
-                    style={[
-                      styles.radiusChip,
-                      radiusKm === radius && styles.radiusChipSelected,
-                    ]}
-                  >
-                    {radius}km
-                  </Chip>
-                ))}
-              </View>
+              <SegmentedButtons
+                value={radiusKm}
+                onValueChange={handleChangeRadius}
+                buttons={[
+                  { value: '5', label: '5km' },
+                  { value: '10', label: '10km' },
+                  { value: '25', label: '25km' },
+                  { value: '50', label: '50km' },
+                ]}
+                style={styles.segmentedButtons}
+              />
             </Card.Content>
           </Card>
         )}
@@ -404,33 +396,19 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
         </View>
 
         {projects.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Card.Content>
-              <Avatar.Icon
-                size={80}
-                icon="map-search"
-                style={styles.emptyIcon}
-                color={colors.textDisabled}
-              />
-              <Text style={styles.emptyTitle}>
-                {locationError ? 'Ative sua localização' : 'Nenhum projeto próximo'}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {locationError
-                  ? 'Para ver projetos na sua região, permita o acesso à localização.'
-                  : `Não há projetos disponíveis num raio de ${radiusKm}km. Tente aumentar o raio de busca.`}
-              </Text>
-              {locationError && (
-                <Button
-                  mode="contained"
-                  onPress={loadData}
-                  style={styles.createButton}
-                >
-                  Ativar Localização
-                </Button>
-              )}
-            </Card.Content>
-          </Card>
+          <EmptyState
+            icon={locationError ? "map-marker-off" : "map-search"}
+            title={locationError ? 'Ative sua localização' : 'Nenhum projeto próximo'}
+            message={
+              locationError
+                ? 'Para ver projetos na sua região, permita o acesso à localização.'
+                : `Não há projetos disponíveis num raio de ${radiusKm}km. Tente aumentar o raio de busca.`
+            }
+            action={locationError ? {
+              label: 'Ativar Localização',
+              onPress: loadData,
+            } : undefined}
+          />
         ) : (
           projects.map((project) => (
             <Card
@@ -442,13 +420,7 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
                 <View style={styles.projectHeader}>
                   <View style={styles.projectTitleRow}>
                     <Text style={styles.projectTitle}>{project.title}</Text>
-                    <Chip
-                      style={[styles.statusChip, { backgroundColor: getStatusColor(project.status) + '20' }]}
-                      textStyle={{ color: getStatusColor(project.status) }}
-                      compact
-                    >
-                      {getStatusLabel(project.status)}
-                    </Chip>
+                    <StatusBadge status={project.status} type="status" />
                   </View>
                 </View>
 
@@ -576,12 +548,12 @@ const styles = StyleSheet.create({
   roleChip: {
     alignSelf: 'flex-start',
     marginTop: spacing.sm,
-    backgroundColor: '#fff3e0',
+    backgroundColor: colors.warningLight,
   },
   creditsChip: {
     alignSelf: 'flex-start',
     marginTop: spacing.xs,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.infoLight,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -590,26 +562,11 @@ const styles = StyleSheet.create({
   buyCreditsButton: {
     backgroundColor: colors.success,
   },
-  errorCard: {
-    backgroundColor: '#ffebee',
+  errorBanner: {
     marginBottom: spacing.base,
-    ...shadows.base,
   },
-  errorContent: {
-    alignItems: 'center',
-  },
-  errorIcon: {
-    backgroundColor: 'transparent',
-    marginBottom: spacing.sm,
-  },
-  errorText: {
-    fontSize: typography.fontSize.base,
-    color: '#d32f2f',
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  retryButton: {
-    backgroundColor: '#d32f2f',
+  segmentedButtons: {
+    marginTop: spacing.sm,
   },
   radiusCard: {
     backgroundColor: colors.white,
@@ -620,17 +577,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.bold,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  radiusButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  radiusChip: {
-    backgroundColor: colors.backgroundDark,
-  },
-  radiusChipSelected: {
-    backgroundColor: colors.primary,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -666,33 +612,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   locationChip: {
-    backgroundColor: '#e3f2fd',
-  },
-  emptyCard: {
-    backgroundColor: colors.white,
-    ...shadows.base,
-    padding: spacing.xl,
-  },
-  emptyIcon: {
-    backgroundColor: 'transparent',
-    alignSelf: 'center',
-    marginBottom: spacing.base,
-  },
-  emptyTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  createButton: {
-    marginTop: spacing.sm,
+    backgroundColor: colors.infoLight,
   },
   projectCard: {
     marginBottom: spacing.base,
@@ -714,9 +634,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
-  statusChip: {
-    height: 28,
-  },
   projectDescription: {
     fontSize: typography.fontSize.base,
     color: colors.textSecondary,
@@ -729,7 +646,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   clientAvatar: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.infoLight,
     marginRight: 8,
   },
   clientName: {
@@ -743,7 +660,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   budgetIcon: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: colors.successLight,
     marginRight: 8,
   },
   budgetText: {
@@ -775,7 +692,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   distanceChip: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.infoLight,
     height: 24,
   },
   distanceText: {

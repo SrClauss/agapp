@@ -21,6 +21,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, UserResponse, Project } from '../services/api';
 import { useNotifications } from '../contexts/NotificationContext';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import EmptyState from '../components/EmptyState';
+import StatusBadge from '../components/StatusBadge';
+import { useSnackbar } from '../hooks/useSnackbar';
 
 type ClientDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ClientDashboard'>;
 
@@ -34,6 +37,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const { totalUnread, initializeNotifications } = useNotifications();
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     loadData();
@@ -66,6 +70,8 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
       const errorMessage = (error as Error).message || '';
       if (errorMessage.includes('credentials') || errorMessage.includes('unauthorized')) {
         await handleLogout();
+      } else {
+        showSnackbar('Erro ao carregar dados', 'error');
       }
     } finally {
       setIsLoading(false);
@@ -93,25 +99,6 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
     }
   };
 
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'open': return colors.success;
-      case 'in_progress': return colors.secondary;
-      case 'completed': return colors.info;
-      case 'cancelled': return colors.error;
-      default: return '#9e9e9e';
-    }
-  };
-
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'open': return 'Aberto';
-      case 'in_progress': return 'Em Andamento';
-      case 'completed': return 'Concluído';
-      case 'cancelled': return 'Cancelado';
-      default: return status;
-    }
-  };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -219,27 +206,15 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
         </View>
 
         {projects.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Card.Content>
-              <Avatar.Icon
-                size={80}
-                icon="folder-open"
-                style={styles.emptyIcon}
-                color={colors.textDisabled}
-              />
-              <Text style={styles.emptyTitle}>Nenhum projeto ainda</Text>
-              <Text style={styles.emptySubtitle}>
-                Crie seu primeiro projeto e conecte-se com profissionais qualificados!
-              </Text>
-              <Button
-                mode="contained"
-                onPress={() => navigation.navigate('CreateProject')}
-                style={styles.createButton}
-              >
-                Criar Primeiro Projeto
-              </Button>
-            </Card.Content>
-          </Card>
+          <EmptyState
+            icon="folder-open"
+            title="Nenhum projeto ainda"
+            message="Crie seu primeiro projeto e conecte-se com profissionais qualificados!"
+            action={{
+              label: 'Criar Primeiro Projeto',
+              onPress: () => navigation.navigate('CreateProject'),
+            }}
+          />
         ) : (
           projects.map((project) => (
             <Card
@@ -250,12 +225,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
               <Card.Content>
                 <View style={styles.projectHeader}>
                   <Text style={styles.projectTitle}>{project.title}</Text>
-                  <Chip
-                    style={[styles.statusChip, { backgroundColor: getStatusColor(project.status) + '20' }]}
-                    textStyle={{ color: getStatusColor(project.status) }}
-                  >
-                    {getStatusLabel(project.status)}
-                  </Chip>
+                  <StatusBadge status={project.status} type="status" />
                 </View>
                 <Text style={styles.projectDescription} numberOfLines={2}>
                   {project.description}
@@ -301,10 +271,6 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     marginBottom: spacing.base,
     ...shadows.base,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   headerContent: {
     flexDirection: 'row',
@@ -337,7 +303,7 @@ const styles = StyleSheet.create({
   roleChip: {
     alignSelf: 'flex-start',
     marginTop: spacing.sm,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.infoLight,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -376,32 +342,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.textPrimary,
   },
-  emptyCard: {
-    backgroundColor: colors.white,
-    ...shadows.base,
-    padding: spacing.xl,
-  },
-  emptyIcon: {
-    backgroundColor: 'transparent',
-    alignSelf: 'center',
-    marginBottom: spacing.base,
-  },
-  emptyTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  createButton: {
-    marginTop: spacing.sm,
-  },
   projectCard: {
     marginBottom: spacing.md,
     backgroundColor: colors.white,
@@ -419,9 +359,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flex: 1,
     marginRight: 8,
-  },
-  statusChip: {
-    height: 28,
   },
   projectDescription: {
     fontSize: typography.fontSize.base,
