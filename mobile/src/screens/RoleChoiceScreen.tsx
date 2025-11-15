@@ -62,6 +62,8 @@ export default function RoleChoiceScreen({ navigation }: RoleChoiceScreenProps):
       // Navigate to appropriate screen based on role
       if (selectedRole === 'client') {
         navigation.replace('ClientDashboard');
+      } else if (selectedRole === 'professional') {
+        navigation.replace('ProfessionalDashboard');
       } else {
         navigation.replace('Home');
       }

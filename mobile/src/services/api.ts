@@ -277,6 +277,31 @@ class ApiService {
 
     return response.json();
   }
+
+  async getNearbyProjects(
+    token: string,
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 10
+  ): Promise<Project[]> {
+    const response = await fetch(
+      `${this.baseUrl}/projects/nearby?latitude=${latitude}&longitude=${longitude}&radius_km=${radiusKm}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar projetos próximos');
+    }
+
+    return response.json();
+  }
 }
 
 export const apiService = new ApiService();
