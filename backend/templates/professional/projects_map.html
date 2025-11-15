@@ -1,0 +1,488 @@
+{% extends "professional/base.html" %}
+
+{% block title %}Mapa de Projetos - Agiliza{% endblock %}
+
+{% block extra_styles %}
+<style>
+    #map {
+        width: 100%;
+        height: 600px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .info-window {
+        max-width: 300px;
+    }
+
+    .info-window h6 {
+        margin: 0 0 0.5rem 0;
+        color: #059669;
+    }
+
+    .info-window p {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.875rem;
+    }
+
+    .filters-card {
+        position: sticky;
+        top: calc(var(--topbar-height) + 1rem);
+    }
+
+    .project-marker {
+        cursor: pointer;
+    }
+
+    .legend {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        font-size: 14px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+
+    .legend-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-4">
+    <h1 class="h3 mb-1 text-gray-800 fw-bold">
+        <i class="fas fa-map-marked-alt text-primary me-2"></i>Mapa de Projetos
+    </h1>
+    <p class="text-muted mb-0">Encontre projetos próximos à sua localização</p>
+</div>
+
+<div class="row g-3">
+    <!-- Filters Sidebar -->
+    <div class="col-12 col-lg-3">
+        <div class="card filters-card">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-filter me-2"></i>Filtros
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Location Controls -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Localização</label>
+                    <button class="btn btn-sm btn-primary w-100 mb-2" onclick="centerOnUserLocation()">
+                        <i class="fas fa-crosshairs me-2"></i>Minha Localização
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary w-100" onclick="searchLocation()">
+                        <i class="fas fa-search me-2"></i>Buscar Endereço
+                    </button>
+                </div>
+
+                <hr>
+
+                <!-- Radius Filter -->
+                <div class="mb-3">
+                    <label for="radiusFilter" class="form-label fw-bold">
+                        Raio de Busca: <span id="radiusValue">50</span> km
+                    </label>
+                    <input type="range" class="form-range" id="radiusFilter" min="5" max="200" value="50" step="5">
+                </div>
+
+                <hr>
+
+                <!-- Category Filter -->
+                <div class="mb-3">
+                    <label for="categoryFilterMap" class="form-label fw-bold">Categoria</label>
+                    <select class="form-select form-select-sm" id="categoryFilterMap">
+                        <option value="">Todas as categorias</option>
+                        {% for category in categories %}
+                        <option value="{{ category.name }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <hr>
+
+                <!-- Budget Filter -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Orçamento Mínimo</label>
+                    <input type="number" class="form-control form-control-sm" id="budgetMin" placeholder="R$ 0">
+                </div>
+
+                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="fas fa-filter me-2"></i>Aplicar Filtros
+                </button>
+                <button class="btn btn-outline-secondary w-100 mt-2" onclick="clearFilters()">
+                    <i class="fas fa-times me-2"></i>Limpar Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold">Legenda</h6>
+            </div>
+            <div class="card-body">
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #ef4444;"></div>
+                    <span>Projeto Normal</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #f59e0b;"></div>
+                    <span>Projeto em Destaque</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #3b82f6;"></div>
+                    <span>Sua Localização</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Count -->
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong id="projectCount">{{ projects|length }}</strong> projetos encontrados
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div class="col-12 col-lg-9">
+        <div class="card">
+            <div class="card-body p-0">
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <!-- Projects List Below Map -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-list me-2"></i>Lista de Projetos
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 px-3 py-2">Projeto</th>
+                                <th class="border-0 px-3 py-2">Categoria</th>
+                                <th class="border-0 px-3 py-2">Orçamento</th>
+                                <th class="border-0 px-3 py-2">Localização</th>
+                                <th class="border-0 px-3 py-2">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsList">
+                            {% for project in projects %}
+                            <tr data-project-id="{{ project._id }}">
+                                <td class="px-3 py-2">
+                                    <div class="fw-semibold">
+                                        {% if project.is_featured %}
+                                        <i class="fas fa-star text-warning me-1"></i>
+                                        {% endif %}
+                                        {{ project.title }}
+                                    </div>
+                                    <small class="text-muted">{{ project.description[:80] }}...</small>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <span class="badge bg-secondary">{{ project.category.main }}</span>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <small class="text-success fw-bold">
+                                        R$ {{ "%.0f"|format(project.budget_min or 0) }} - {{ "%.0f"|format(project.budget_max or 0) }}
+                                    </small>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <small>
+                                        <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                        {{ project.location.address[:40] if project.location.address else 'N/A' }}...
+                                    </small>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <a href="/projects/{{ project._id }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let map;
+    let markers = [];
+    let userMarker = null;
+    let infoWindow;
+
+    // Projects data from server
+    const projectsData = {{ projects|tojson }};
+    const userLocation = {{ user_location|tojson if user_location else 'null' }};
+
+    // Initialize map
+    function initMap() {
+        // Default center (São Paulo, Brazil)
+        let center = { lat: -23.5505, lng: -46.6333 };
+
+        // Use user location if available
+        if (userLocation) {
+            center = userLocation;
+        }
+
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 10,
+            center: center,
+            mapTypeControl: true,
+            streetViewControl: false,
+            fullscreenControl: true
+        });
+
+        infoWindow = new google.maps.InfoWindow();
+
+        // Add user location marker if available
+        if (userLocation) {
+            addUserMarker(userLocation);
+        }
+
+        // Add project markers
+        addProjectMarkers(projectsData);
+    }
+
+    function addUserMarker(location) {
+        if (userMarker) {
+            userMarker.setMap(null);
+        }
+
+        userMarker = new google.maps.Marker({
+            position: location,
+            map: map,
+            title: 'Sua Localização',
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: '#3b82f6',
+                fillOpacity: 0.8,
+                strokeColor: '#fff',
+                strokeWeight: 2
+            }
+        });
+
+        // Add circle to show radius
+        const circle = new google.maps.Circle({
+            map: map,
+            center: location,
+            radius: parseInt(document.getElementById('radiusFilter').value) * 1000,
+            fillColor: '#3b82f6',
+            fillOpacity: 0.1,
+            strokeColor: '#3b82f6',
+            strokeOpacity: 0.3,
+            strokeWeight: 1
+        });
+
+        // Update circle when radius changes
+        document.getElementById('radiusFilter').addEventListener('input', function() {
+            circle.setRadius(parseInt(this.value) * 1000);
+            document.getElementById('radiusValue').textContent = this.value;
+        });
+    }
+
+    function addProjectMarkers(projects) {
+        // Clear existing markers
+        markers.forEach(marker => marker.setMap(null));
+        markers = [];
+
+        projects.forEach(project => {
+            if (!project.location || !project.location.coordinates) {
+                return;
+            }
+
+            const position = {
+                lat: project.location.coordinates[1],
+                lng: project.location.coordinates[0]
+            };
+
+            // Choose marker color based on featured status
+            const markerColor = project.is_featured ? '#f59e0b' : '#ef4444';
+
+            const marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                title: project.title,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 8,
+                    fillColor: markerColor,
+                    fillOpacity: 0.9,
+                    strokeColor: '#fff',
+                    strokeWeight: 2
+                }
+            });
+
+            // Create info window content
+            const contentString = `
+                <div class="info-window">
+                    <h6>${project.is_featured ? '<i class="fas fa-star text-warning"></i> ' : ''}${project.title}</h6>
+                    <p><strong>Categoria:</strong> ${project.category.main} - ${project.category.sub}</p>
+                    <p><strong>Orçamento:</strong> R$ ${project.budget_min || 0} - ${project.budget_max || 0}</p>
+                    <p><strong>Localização:</strong> ${project.location.address || 'N/A'}</p>
+                    <a href="/projects/${project._id}" class="btn btn-sm btn-primary">Ver Detalhes</a>
+                </div>
+            `;
+
+            marker.addListener('click', () => {
+                infoWindow.setContent(contentString);
+                infoWindow.open(map, marker);
+
+                // Highlight row in table
+                document.querySelectorAll('#projectsList tr').forEach(row => {
+                    row.classList.remove('table-active');
+                });
+                const row = document.querySelector(`#projectsList tr[data-project-id="${project._id}"]`);
+                if (row) {
+                    row.classList.add('table-active');
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+
+            markers.push(marker);
+        });
+
+        // Update project count
+        document.getElementById('projectCount').textContent = projects.length;
+    }
+
+    function centerOnUserLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLoc = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    map.setCenter(userLoc);
+                    map.setZoom(12);
+                    addUserMarker(userLoc);
+                },
+                (error) => {
+                    alert('Erro ao obter localização: ' + error.message);
+                }
+            );
+        } else {
+            alert('Geolocalização não é suportada pelo seu navegador.');
+        }
+    }
+
+    function searchLocation() {
+        const address = prompt('Digite o endereço:');
+        if (!address) return;
+
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: address }, (results, status) => {
+            if (status === 'OK') {
+                const location = results[0].geometry.location;
+                map.setCenter(location);
+                map.setZoom(12);
+                addUserMarker({ lat: location.lat(), lng: location.lng() });
+            } else {
+                alert('Endereço não encontrado: ' + status);
+            }
+        });
+    }
+
+    function applyFilters() {
+        const category = document.getElementById('categoryFilterMap').value;
+        const budgetMin = parseFloat(document.getElementById('budgetMin').value) || 0;
+
+        let filteredProjects = projectsData;
+
+        // Filter by category
+        if (category) {
+            filteredProjects = filteredProjects.filter(p => p.category.main === category);
+        }
+
+        // Filter by budget
+        if (budgetMin > 0) {
+            filteredProjects = filteredProjects.filter(p =>
+                (p.budget_max || 0) >= budgetMin
+            );
+        }
+
+        // Update markers
+        addProjectMarkers(filteredProjects);
+
+        // Update table
+        updateProjectsList(filteredProjects);
+    }
+
+    function clearFilters() {
+        document.getElementById('categoryFilterMap').value = '';
+        document.getElementById('budgetMin').value = '';
+        document.getElementById('radiusFilter').value = '50';
+        document.getElementById('radiusValue').textContent = '50';
+
+        addProjectMarkers(projectsData);
+        updateProjectsList(projectsData);
+    }
+
+    function updateProjectsList(projects) {
+        const tbody = document.getElementById('projectsList');
+        tbody.innerHTML = '';
+
+        projects.forEach(project => {
+            const row = document.createElement('tr');
+            row.setAttribute('data-project-id', project._id);
+            row.innerHTML = `
+                <td class="px-3 py-2">
+                    <div class="fw-semibold">
+                        ${project.is_featured ? '<i class="fas fa-star text-warning me-1"></i>' : ''}
+                        ${project.title}
+                    </div>
+                    <small class="text-muted">${project.description.substring(0, 80)}...</small>
+                </td>
+                <td class="px-3 py-2">
+                    <span class="badge bg-secondary">${project.category.main}</span>
+                </td>
+                <td class="px-3 py-2">
+                    <small class="text-success fw-bold">
+                        R$ ${project.budget_min || 0} - ${project.budget_max || 0}
+                    </small>
+                </td>
+                <td class="px-3 py-2">
+                    <small>
+                        <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                        ${project.location.address ? project.location.address.substring(0, 40) + '...' : 'N/A'}
+                    </small>
+                </td>
+                <td class="px-3 py-2">
+                    <a href="/projects/${project._id}" class="btn btn-sm btn-primary">Ver Detalhes</a>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Update radius value display
+    document.getElementById('radiusFilter').addEventListener('input', function() {
+        document.getElementById('radiusValue').textContent = this.value;
+    });
+</script>
+
+<!-- Load Google Maps API -->
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=places">
+</script>
+{% endblock %}
