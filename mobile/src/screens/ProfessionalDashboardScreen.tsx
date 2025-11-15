@@ -80,6 +80,10 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
 
       setCurrentLocation(coords);
       setLocationError(null);
+
+      // Save location for notification filtering
+      await AsyncStorage.setItem('user_location', JSON.stringify(coords));
+
       return coords;
     } catch (error) {
       console.error('Error getting location:', error);
@@ -277,6 +281,15 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
             </View>
           </View>
           <View style={styles.headerButtons}>
+            <Button
+              mode="text"
+              onPress={() => navigation.navigate('ProfileSettings')}
+              textColor="#3471b9"
+              icon="cog"
+              compact
+            >
+              Config
+            </Button>
             {user?.roles && user.roles.length > 1 && (
               <Button
                 mode="text"

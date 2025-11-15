@@ -152,11 +152,17 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     } else if (message.type === 'new_project') {
       // New project notification for professionals
       const project = message.project;
-      await notificationService.showProjectNotification(
-        'Novo Projeto Disponível',
-        project.title,
-        project._id
-      );
+
+      // Check if user should receive this notification
+      const shouldNotify = await checkProjectEligibility(project);
+
+      if (shouldNotify) {
+        await notificationService.showProjectNotification(
+          'Novo Projeto Disponível',
+          project.title,
+          project._id
+        );
+      }
     } else if (message.type === 'contact_update') {
       // Contact status update notification
       const { contact_id, status } = message.contact;
@@ -167,6 +173,91 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       );
     }
   }, [userId]);
+
+  const checkProjectEligibility = async (project: any): Promise<boolean> => {
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) return false;
+
+      // Get user data to check preferences
+      const { apiService } = require('../services/api');
+      const userData = await apiService.getCurrentUser(token);
+
+      // Check if notifications are enabled
+      if (!userData.notification_preferences?.enabled) {
+        return false;
+      }
+
+      const prefs = userData.notification_preferences;
+
+      // Check skills match if required
+      if (prefs.match_skills && userData.skills && userData.skills.length > 0) {
+        const projectSkills = project.skills_required || [];
+
+        // Check if any user skill matches project requirements
+        const hasMatchingSkill = userData.skills.some((userSkill: string) =>
+          projectSkills.some((projectSkill: string) =>
+            projectSkill.toLowerCase().includes(userSkill.toLowerCase()) ||
+            userSkill.toLowerCase().includes(projectSkill.toLowerCase())
+          )
+        );
+
+        if (!hasMatchingSkill) {
+          console.log('Project skills do not match user skills');
+          return false;
+        }
+      }
+
+      // Check location if coordinates are available
+      if (project.location?.coordinates) {
+        const userLocation = await getUserLocation();
+
+        if (userLocation) {
+          const distance = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            project.location.coordinates[1],
+            project.location.coordinates[0]
+          );
+
+          if (distance > prefs.radius_km) {
+            console.log(`Project too far: ${distance}km > ${prefs.radius_km}km`);
+            return false;
+          }
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error checking project eligibility:', error);
+      return false;
+    }
+  };
+
+  const getUserLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
+    try {
+      const storedLocation = await AsyncStorage.getItem('user_location');
+      if (storedLocation) {
+        return JSON.parse(storedLocation);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting user location:', error);
+      return null;
+    }
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   const markProjectAsRead = useCallback((projectId: string) => {
     setUnreadMessages((prev) => {
