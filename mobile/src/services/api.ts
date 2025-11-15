@@ -54,6 +54,19 @@ export interface ProjectCategory {
   sub: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  system?: boolean;
+}
+
+export interface ProjectChat {
+  professional_id: string;
+  messages: ChatMessage[];
+}
+
 export interface Project {
   _id: string;
   client_id: string;
@@ -72,6 +85,11 @@ export interface Project {
   created_at: string;
   updated_at: string;
   remote_execution?: boolean;
+  liberado_por?: string[];
+  chat?: ProjectChat[];
+  final_budget?: number;
+  closed_by?: string;
+  closed_by_name?: string;
 }
 
 export interface ProjectCreateRequest {
@@ -86,6 +104,46 @@ export interface ProjectCreateRequest {
     coordinates: [number, number];
   };
   remote_execution?: boolean;
+}
+
+export interface Contact {
+  _id: string;
+  professional_id: string;
+  professional_name?: string;
+  project_id: string;
+  client_id: string;
+  client_name?: string;
+  contact_type: string;
+  credits_used: number;
+  status: string;
+  contact_details: {
+    message?: string;
+    proposal_price?: number;
+    [key: string]: any;
+  };
+  chat: ChatMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactCreateRequest {
+  contact_type: string;
+  contact_details: {
+    message?: string;
+    proposal_price?: number;
+    [key: string]: any;
+  };
+}
+
+export interface ProjectCloseRequest {
+  final_budget: number;
+  professional_id: string;
+}
+
+export interface EvaluationRequest {
+  professional_id: string;
+  rating: number;
+  comment?: string;
 }
 
 class ApiService {
@@ -298,6 +356,97 @@ class ApiService {
     if (!response.ok) {
       const error: ApiError = await response.json();
       throw new Error(error.detail || 'Erro ao buscar projetos próximos');
+    }
+
+    return response.json();
+  }
+
+  // Contacts - Liberação de projetos
+  async createContact(token: string, projectId: string, contactData: ContactCreateRequest): Promise<Contact> {
+    const response = await fetch(`${this.baseUrl}/contacts/${projectId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(contactData),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao liberar projeto');
+    }
+
+    return response.json();
+  }
+
+  async getContactHistory(token: string, userType: string = 'professional'): Promise<Contact[]> {
+    const response = await fetch(`${this.baseUrl}/contacts/history?user_type=${userType}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar histórico de contatos');
+    }
+
+    return response.json();
+  }
+
+  async updateContactStatus(token: string, contactId: string, status: string): Promise<Contact> {
+    const response = await fetch(`${this.baseUrl}/contacts/${contactId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao atualizar status do contato');
+    }
+
+    return response.json();
+  }
+
+  // Project Close and Evaluation
+  async closeProject(token: string, projectId: string, closeData: ProjectCloseRequest): Promise<{ message: string; project_id: string }> {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}/close`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(closeData),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao finalizar projeto');
+    }
+
+    return response.json();
+  }
+
+  async evaluateProfessional(token: string, projectId: string, evaluation: EvaluationRequest): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}/evaluate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(evaluation),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao avaliar profissional');
     }
 
     return response.json();

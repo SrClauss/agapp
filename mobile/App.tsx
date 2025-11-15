@@ -16,6 +16,7 @@ import ClientDashboardScreen from './src/screens/ClientDashboardScreen';
 import ProfessionalDashboardScreen from './src/screens/ProfessionalDashboardScreen';
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
 import AddressSearchScreen from './src/screens/AddressSearchScreen';
+import ProjectDetailsScreen from './src/screens/ProjectDetailsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -27,6 +28,7 @@ export type RootStackParamList = {
   ProfessionalDashboard: undefined;
   CreateProject: undefined;
   AddressSearch: { onSelect: (address: string) => void };
+  ProjectDetails: { projectId: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -104,6 +106,7 @@ export default function App(): React.JSX.Element {
             <Stack.Screen name="ProfessionalDashboard" component={ProfessionalDashboardScreen} />
             <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
             <Stack.Screen name="AddressSearch" component={AddressSearchScreen} />
+            <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>
