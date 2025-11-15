@@ -22,6 +22,7 @@ import ContractManagementScreen from './src/screens/ContractManagementScreen';
 import BuyCreditsScreen from './src/screens/BuyCreditsScreen';
 import PaymentWebViewScreen from './src/screens/PaymentWebViewScreen';
 import { NotificationProvider } from './src/contexts/NotificationContext';
+import { colors } from './src/theme';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -46,14 +47,14 @@ const screenOptions: StackNavigationOptions = {
   headerShown: false,
 };
 
-const theme = {
+const paperTheme = {
   colors: {
-    primary: '#3471b9',
-    accent: '#5a8fd9',
-    background: '#ffffff',
-    surface: '#f5f5f5',
-    text: '#333333',
-    error: '#d32f2f',
+    primary: colors.primary,
+    accent: colors.primaryLight,
+    background: colors.background,
+    surface: colors.surface,
+    text: colors.textPrimary,
+    error: colors.error,
   },
 };
 
@@ -99,7 +100,7 @@ export default function App(): React.JSX.Element {
 
   return (
     <SafeAreaProvider>
-      <PaperProvider theme={theme}>
+      <PaperProvider theme={paperTheme}>
         <NotificationProvider>
           <NavigationContainer>
             <Stack.Navigator

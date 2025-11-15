@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type RoleChoiceScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RoleChoice'>;
 
@@ -130,7 +131,7 @@ export default function RoleChoiceScreen({ navigation }: RoleChoiceScreenProps):
                     value={role}
                     status={selectedRole === role ? 'checked' : 'unchecked'}
                     onPress={() => setSelectedRole(role)}
-                    color="#3471b9"
+                    color={colors.primary}
                   />
                 </View>
               </Card.Content>
@@ -165,35 +166,35 @@ export default function RoleChoiceScreen({ navigation }: RoleChoiceScreenProps):
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   scrollContent: {
-    padding: 24,
+    padding: spacing.xl,
   },
   header: {
-    marginBottom: 32,
-    marginTop: 40,
+    marginBottom: spacing["2xl"],
+    marginTop: spacing.xs0,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize["3xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   card: {
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
+    marginBottom: spacing.base,
+    backgroundColor: colors.white,
+    ...shadows.base,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   cardSelected: {
-    borderColor: '#3471b9',
+    borderColor: colors.primary,
     backgroundColor: '#f0f7ff',
   },
   cardContent: {
@@ -210,42 +211,42 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   icon: {
-    fontSize: 28,
+    fontSize: typography.fontSize["3xl"],
   },
   textContainer: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   cardDescription: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
   },
   infoCard: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
     backgroundColor: '#fff3e0',
-    elevation: 0,
+    ...shadows.none,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: typography.fontSize.base,
     color: '#e65100',
     lineHeight: 20,
   },
   button: {
-    borderRadius: 8,
-    elevation: 2,
-    backgroundColor: '#3471b9',
-    marginTop: 8,
+    borderRadius: borderRadius.base,
+    ...shadows.base,
+    backgroundColor: colors.primary,
+    marginTop: spacing.sm,
   },
   buttonContent: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   buttonLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
   },
 });

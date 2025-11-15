@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 import {
   apiService,
   ContractTemplate,
@@ -207,11 +208,11 @@ export default function ContractManagementScreen({
   const getValidationStatusColor = (status: string): string => {
     switch (status) {
       case 'valid':
-        return '#4caf50';
+        return colors.success;
       case 'invalid':
-        return '#f44336';
+        return colors.error;
       case 'pending':
-        return '#ff9800';
+        return colors.secondary;
       case 'error':
         return '#9e9e9e';
       default:
@@ -238,7 +239,7 @@ export default function ContractManagementScreen({
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3471b9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </SafeAreaView>
@@ -254,7 +255,7 @@ export default function ContractManagementScreen({
             mode="text"
             onPress={() => navigation.goBack()}
             icon="arrow-left"
-            textColor="#3471b9"
+            textColor={colors.primary}
           >
             Voltar
           </Button>
@@ -425,7 +426,7 @@ export default function ContractManagementScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   loadingContainer: {
     flex: 1,
@@ -433,133 +434,133 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   header: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize["3xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 24,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
   },
   generateButton: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   emptyCard: {
-    backgroundColor: '#fff',
-    marginBottom: 16,
+    backgroundColor: colors.white,
+    marginBottom: spacing.base,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.fontSize.base,
+    color: colors.textDisabled,
     fontStyle: 'italic',
     textAlign: 'center',
-    paddingVertical: 16,
+    paddingVertical: spacing.base,
   },
   documentCard: {
-    backgroundColor: '#fff',
-    marginBottom: 12,
-    elevation: 2,
+    backgroundColor: colors.white,
+    marginBottom: spacing.md,
+    ...shadows.base,
   },
   documentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   documentInfo: {
     flex: 1,
     marginRight: 12,
   },
   documentName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   documentDate: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
   },
   statusChip: {
     height: 28,
   },
   signaturesSection: {
-    marginTop: 12,
+    marginTop: spacing.md,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
   },
   signaturesTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   signatureItem: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   signatureName: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
   },
   signatureCpf: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
     marginLeft: 12,
   },
   errorText: {
-    fontSize: 13,
-    color: '#f44336',
-    marginTop: 8,
+    fontSize: typography.fontSize.sm,
+    color: colors.error,
+    marginTop: spacing.sm,
   },
   dialogContent: {
     paddingHorizontal: 0,
   },
   templateItem: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   templateLabel: {
-    fontSize: 16,
+    fontSize: typography.fontSize.md,
   },
   templateDescription: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
     marginLeft: 56,
     marginTop: -8,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   templateDivider: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   contractDialog: {
     maxHeight: '80%',
   },
   contractContent: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.base,
   },
   contractText: {
-    fontSize: 14,
+    fontSize: typography.fontSize.base,
     lineHeight: 22,
-    color: '#333',
+    color: colors.textPrimary,
   },
 });

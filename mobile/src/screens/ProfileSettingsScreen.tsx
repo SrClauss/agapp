@@ -19,6 +19,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, UserResponse } from '../services/api';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type ProfileSettingsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ProfileSettings'>;
 
@@ -123,7 +124,7 @@ export default function ProfileSettingsScreen({ navigation }: ProfileSettingsScr
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3471b9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </SafeAreaView>
@@ -139,7 +140,7 @@ export default function ProfileSettingsScreen({ navigation }: ProfileSettingsScr
             mode="text"
             onPress={() => navigation.goBack()}
             icon="arrow-left"
-            textColor="#3471b9"
+            textColor={colors.primary}
           >
             Voltar
           </Button>
@@ -219,7 +220,7 @@ export default function ProfileSettingsScreen({ navigation }: ProfileSettingsScr
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
-                color="#3471b9"
+                color={colors.primary}
               />
             </View>
 
@@ -259,7 +260,7 @@ export default function ProfileSettingsScreen({ navigation }: ProfileSettingsScr
                   <Switch
                     value={matchSkills}
                     onValueChange={setMatchSkills}
-                    color="#3471b9"
+                    color={colors.primary}
                   />
                 </View>
 
@@ -294,7 +295,7 @@ export default function ProfileSettingsScreen({ navigation }: ProfileSettingsScr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   loadingContainer: {
     flex: 1,
@@ -302,47 +303,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   header: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize["3xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 24,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
   },
   card: {
-    backgroundColor: '#fff',
-    marginBottom: 16,
-    elevation: 2,
+    backgroundColor: colors.white,
+    marginBottom: spacing.base,
+    ...shadows.base,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   cardDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.base,
   },
   addSkillRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   skillInput: {
     flex: 1,
@@ -359,17 +360,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#e3f2fd',
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.fontSize.base,
+    color: colors.textDisabled,
     fontStyle: 'italic',
     textAlign: 'center',
-    paddingVertical: 16,
+    paddingVertical: spacing.base,
   },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -378,17 +379,17 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   settingLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   settingDescription: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
   },
   settingSection: {
-    paddingVertical: 16,
+    paddingVertical: spacing.base,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -396,26 +397,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 12,
+    marginTop: spacing.md,
   },
   radiusChip: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   radiusChipSelected: {
-    backgroundColor: '#3471b9',
+    backgroundColor: colors.primary,
   },
   warningBox: {
     backgroundColor: '#fff3e0',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 12,
+    padding: spacing.md,
+    borderRadius: borderRadius.base,
+    marginTop: spacing.md,
   },
   warningText: {
-    fontSize: 13,
+    fontSize: typography.fontSize.sm,
     color: '#e65100',
   },
   saveButton: {
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
 });
