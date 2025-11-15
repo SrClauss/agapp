@@ -12,12 +12,14 @@ import {
   Avatar,
   ActivityIndicator,
   Chip,
+  Badge,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, UserResponse, Project } from '../services/api';
+import { useNotifications } from '../contexts/NotificationContext';
 
 type ClientDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ClientDashboard'>;
 
@@ -30,9 +32,11 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const { totalUnread, initializeNotifications } = useNotifications();
 
   useEffect(() => {
     loadData();
+    initializeNotifications();
   }, []);
 
   const loadData = async (): Promise<void> => {
@@ -135,11 +139,18 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <Avatar.Icon
-              size={60}
-              icon="account-circle"
-              style={styles.avatar}
-            />
+            <View>
+              <Avatar.Icon
+                size={60}
+                icon="account-circle"
+                style={styles.avatar}
+              />
+              {totalUnread > 0 && (
+                <Badge size={24} style={styles.notificationBadge}>
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </Badge>
+              )}
+            </View>
             <View style={styles.userInfo}>
               <Text style={styles.welcomeText}>Olá,</Text>
               <Text style={styles.userName}>{user?.full_name}</Text>
@@ -301,6 +312,12 @@ const styles = StyleSheet.create({
   },
   avatar: {
     backgroundColor: '#3471b9',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#f44336',
   },
   userInfo: {
     marginLeft: 16,

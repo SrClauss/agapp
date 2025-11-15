@@ -21,6 +21,8 @@ import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, UserResponse, Project } from '../services/api';
 import * as Location from 'expo-location';
+import { useNotifications } from '../contexts/NotificationContext';
+import { Badge } from 'react-native-paper';
 
 type ProfessionalDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ProfessionalDashboard'>;
 
@@ -36,9 +38,11 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
   const [locationError, setLocationError] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(10);
+  const { totalUnread, initializeNotifications } = useNotifications();
 
   useEffect(() => {
     loadData();
+    initializeNotifications();
   }, []);
 
   const requestLocationPermission = async (): Promise<boolean> => {
@@ -254,11 +258,18 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <Avatar.Icon
-              size={60}
-              icon="account-hard-hat"
-              style={styles.avatar}
-            />
+            <View>
+              <Avatar.Icon
+                size={60}
+                icon="account-hard-hat"
+                style={styles.avatar}
+              />
+              {totalUnread > 0 && (
+                <Badge size={24} style={styles.notificationBadge}>
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </Badge>
+              )}
+            </View>
             <View style={styles.userInfo}>
               <Text style={styles.welcomeText}>Olá,</Text>
               <Text style={styles.userName}>{user?.full_name}</Text>
@@ -516,6 +527,12 @@ const styles = StyleSheet.create({
   },
   avatar: {
     backgroundColor: '#3471b9',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#f44336',
   },
   userInfo: {
     marginLeft: 16,
