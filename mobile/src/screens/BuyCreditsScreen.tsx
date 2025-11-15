@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 import {
   apiService,
   CreditPackage,
@@ -165,7 +166,7 @@ export default function BuyCreditsScreen({
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3471b9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Carregando pacotes...</Text>
         </View>
       </SafeAreaView>
@@ -181,7 +182,7 @@ export default function BuyCreditsScreen({
             mode="text"
             onPress={() => navigation.goBack()}
             icon="arrow-left"
-            textColor="#3471b9"
+            textColor={colors.primary}
           >
             Voltar
           </Button>
@@ -319,7 +320,7 @@ export default function BuyCreditsScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   loadingContainer: {
     flex: 1,
@@ -327,82 +328,82 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   header: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize["3xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 18,
-    color: '#3471b9',
-    fontWeight: '600',
-    marginBottom: 16,
+    fontSize: typography.fontSize.lg,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.base,
   },
   infoCard: {
     backgroundColor: '#e3f2fd',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
+    padding: spacing.md,
+    borderRadius: borderRadius.base,
+    marginBottom: spacing.lg,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: typography.fontSize.base,
     color: '#1976d2',
   },
   packageCard: {
-    backgroundColor: '#fff',
-    marginBottom: 16,
-    elevation: 2,
+    backgroundColor: colors.white,
+    marginBottom: spacing.base,
+    ...shadows.base,
   },
   popularChip: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#ff9800',
+    backgroundColor: colors.secondary,
     zIndex: 1,
   },
   popularChipText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.white,
+    fontWeight: typography.fontWeight.semibold,
   },
   packageName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   packageDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
   },
   creditsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   creditsMain: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
     marginRight: 8,
   },
   bonusChip: {
-    backgroundColor: '#4caf50',
+    backgroundColor: colors.success,
   },
   bonusChipText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.white,
+    fontWeight: typography.fontWeight.semibold,
   },
   priceRow: {
     flexDirection: 'row',
@@ -410,26 +411,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   price: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#3471b9',
+    fontSize: typography.fontSize["2xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
   },
   pricePerCredit: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: typography.fontSize.sm,
+    color: colors.textDisabled,
   },
   buyButton: {
     minWidth: 120,
   },
   dialogPackageInfo: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   paymentMethodSection: {
-    marginTop: 16,
+    marginTop: spacing.base,
   },
   radioLabel: {
-    fontSize: 16,
+    fontSize: typography.fontSize.md,
   },
 });

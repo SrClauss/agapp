@@ -20,6 +20,7 @@ import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, UserResponse, Project } from '../services/api';
 import { useNotifications } from '../contexts/NotificationContext';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type ClientDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ClientDashboard'>;
 
@@ -94,10 +95,10 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
 
   const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'open': return '#4caf50';
-      case 'in_progress': return '#ff9800';
-      case 'completed': return '#2196f3';
-      case 'cancelled': return '#f44336';
+      case 'open': return colors.success;
+      case 'in_progress': return colors.secondary;
+      case 'completed': return colors.info;
+      case 'cancelled': return colors.error;
       default: return '#9e9e9e';
     }
   };
@@ -121,7 +122,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3471b9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </SafeAreaView>
@@ -162,7 +163,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
               <Button
                 mode="text"
                 onPress={handleSwitchRole}
-                textColor="#3471b9"
+                textColor={colors.primary}
                 icon="swap-horizontal"
                 compact
               >
@@ -172,7 +173,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
             <Button
               mode="text"
               onPress={handleLogout}
-              textColor="#3471b9"
+              textColor={colors.primary}
               icon="logout"
               compact
             >
@@ -209,7 +210,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
           <Button
             mode="text"
             onPress={() => navigation.navigate('CreateProject')}
-            textColor="#3471b9"
+            textColor={colors.primary}
             icon="plus"
             compact
           >
@@ -224,7 +225,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
                 size={80}
                 icon="folder-open"
                 style={styles.emptyIcon}
-                color="#999"
+                color={colors.textDisabled}
               />
               <Text style={styles.emptyTitle}>Nenhum projeto ainda</Text>
               <Text style={styles.emptySubtitle}>
@@ -279,7 +280,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   loadingContainer: {
     flex: 1,
@@ -287,19 +288,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   header: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
+    marginBottom: spacing.base,
+    ...shadows.base,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -308,34 +309,34 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   avatar: {
-    backgroundColor: '#3471b9',
+    backgroundColor: colors.primary,
   },
   notificationBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#f44336',
+    backgroundColor: colors.error,
   },
   userInfo: {
     marginLeft: 16,
     flex: 1,
   },
   welcomeText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 4,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginTop: spacing.xs,
   },
   roleChip: {
     alignSelf: 'flex-start',
-    marginTop: 8,
+    marginTop: spacing.sm,
     backgroundColor: '#e3f2fd',
   },
   headerButtons: {
@@ -345,77 +346,77 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    elevation: 2,
+    backgroundColor: colors.white,
+    ...shadows.base,
   },
   statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#3471b9',
+    fontSize: typography.fontSize["4xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
     textAlign: 'center',
   },
   statLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
   },
   emptyCard: {
-    backgroundColor: '#fff',
-    elevation: 2,
-    padding: 24,
+    backgroundColor: colors.white,
+    ...shadows.base,
+    padding: spacing.xl,
   },
   emptyIcon: {
     backgroundColor: 'transparent',
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   createButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   projectCard: {
-    marginBottom: 12,
-    backgroundColor: '#fff',
-    elevation: 2,
+    marginBottom: spacing.md,
+    backgroundColor: colors.white,
+    ...shadows.base,
   },
   projectHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   projectTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
     flex: 1,
     marginRight: 8,
   },
@@ -423,9 +424,9 @@ const styles = StyleSheet.create({
     height: 28,
   },
   projectDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     lineHeight: 20,
   },
   projectMeta: {
@@ -433,6 +434,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   metaChip: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
 });

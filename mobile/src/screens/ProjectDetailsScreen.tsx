@@ -23,6 +23,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, Project, UserResponse } from '../services/api';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type ProjectDetailsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ProjectDetails'>;
 type ProjectDetailsScreenRouteProp = RouteProp<RootStackParamList, 'ProjectDetails'>;
@@ -125,10 +126,10 @@ export default function ProjectDetailsScreen({ navigation, route }: ProjectDetai
 
   const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'open': return '#4caf50';
-      case 'in_progress': return '#ff9800';
-      case 'completed': return '#2196f3';
-      case 'cancelled': return '#f44336';
+      case 'open': return colors.success;
+      case 'in_progress': return colors.secondary;
+      case 'completed': return colors.info;
+      case 'cancelled': return colors.error;
       case 'closed': return '#9c27b0';
       default: return '#9e9e9e';
     }
@@ -168,7 +169,7 @@ export default function ProjectDetailsScreen({ navigation, route }: ProjectDetai
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3471b9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </SafeAreaView>
@@ -202,7 +203,7 @@ export default function ProjectDetailsScreen({ navigation, route }: ProjectDetai
             mode="text"
             onPress={() => navigation.goBack()}
             icon="arrow-left"
-            textColor="#3471b9"
+            textColor={colors.primary}
           >
             Voltar
           </Button>
@@ -324,7 +325,7 @@ export default function ProjectDetailsScreen({ navigation, route }: ProjectDetai
           <Card style={styles.successCard}>
             <Card.Content>
               <View style={styles.successContent}>
-                <Avatar.Icon size={48} icon="check-circle" color="#4caf50" style={styles.successIcon} />
+                <Avatar.Icon size={48} icon="check-circle" color={colors.success} style={styles.successIcon} />
                 <Text style={styles.successTitle}>Projeto Liberado</Text>
                 <Text style={styles.successText}>
                   Você já liberou este projeto. O cliente poderá entrar em contato com você.
@@ -409,34 +410,34 @@ export default function ProjectDetailsScreen({ navigation, route }: ProjectDetai
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.xl,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   errorText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 24,
+    fontSize: typography.fontSize.lg,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   header: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   titleCard: {
-    backgroundColor: '#fff',
-    marginBottom: 16,
-    elevation: 2,
+    backgroundColor: colors.white,
+    marginBottom: spacing.base,
+    ...shadows.base,
   },
   titleRow: {
     flexDirection: 'row',
@@ -444,9 +445,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: typography.fontSize["2xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
     flex: 1,
     marginRight: 12,
   },
@@ -454,15 +455,15 @@ const styles = StyleSheet.create({
     height: 32,
   },
   card: {
-    backgroundColor: '#fff',
-    marginBottom: 16,
-    elevation: 2,
+    backgroundColor: colors.white,
+    marginBottom: spacing.base,
+    ...shadows.base,
   },
   cardTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#666',
-    marginBottom: 12,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     textTransform: 'uppercase',
   },
   clientRow: {
@@ -474,13 +475,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   clientName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
   },
   description: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: typography.fontSize.md,
+    color: colors.textPrimary,
     lineHeight: 24,
   },
   budgetRow: {
@@ -492,9 +493,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   budgetText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4caf50',
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.success,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -502,7 +503,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   locationRow: {
     flexDirection: 'row',
@@ -513,60 +514,60 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   locationText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: typography.fontSize.md,
+    color: colors.textPrimary,
     flex: 1,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   infoIcon: {
     backgroundColor: 'transparent',
     marginRight: 8,
   },
   infoText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
   },
   successCard: {
     backgroundColor: '#e8f5e9',
-    marginBottom: 16,
-    elevation: 2,
+    marginBottom: spacing.base,
+    ...shadows.base,
   },
   successContent: {
     alignItems: 'center',
   },
   successIcon: {
     backgroundColor: 'transparent',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   successTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
     color: '#2e7d32',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   successText: {
-    fontSize: 14,
+    fontSize: typography.fontSize.base,
     color: '#2e7d32',
     textAlign: 'center',
   },
   contractButton: {
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
   liberateButton: {
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
   dialogDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.base,
   },
   textInput: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
 });

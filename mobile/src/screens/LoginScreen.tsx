@@ -21,6 +21,7 @@ import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
 import TurnstileModal from '../components/TurnstileModal';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -292,130 +293,130 @@ export default function LoginScreen({ navigation }: LoginScreenProps): React.JSX
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 24,
+    padding: spacing.xl,
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 40,
+    marginTop: spacing['3xl'],
+    marginBottom: spacing['3xl'],
   },
   logoImage: {
     width: 100,
     height: 100,
     resizeMode: 'contain',
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   appName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#3471b9',
-    marginBottom: 4,
+    fontSize: typography.fontSize['3xl'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
   },
   tagline: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
   },
   formContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 24,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
   },
   input: {
-    marginBottom: 16,
-    backgroundColor: '#fff',
+    marginBottom: spacing.base,
+    backgroundColor: colors.white,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: 24,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    marginBottom: spacing.xl,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
   forgotPasswordText: {
-    color: '#3471b9',
-    fontSize: 14,
-    fontWeight: '500',
+    color: colors.primary,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.medium,
   },
   loginButton: {
-    borderRadius: 8,
-    elevation: 2,
-    backgroundColor: '#3471b9',
+    borderRadius: borderRadius.base,
+    ...shadows.base,
+    backgroundColor: colors.primary,
   },
   buttonContent: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   buttonLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: spacing.xl,
   },
   divider: {
     flex: 1,
     height: 1,
   },
   dividerText: {
-    marginHorizontal: 16,
-    color: '#999',
-    fontSize: 14,
+    marginHorizontal: spacing.base,
+    color: colors.textDisabled,
+    fontSize: typography.fontSize.base,
   },
   googleButton: {
-    borderRadius: 8,
-    borderColor: '#e0e0e0',
+    borderRadius: borderRadius.base,
+    borderColor: colors.gray300,
     borderWidth: 1,
   },
   googleButtonLabel: {
-    color: '#333',
-    fontSize: 16,
-    fontWeight: '500',
+    color: colors.textPrimary,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.medium,
   },
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: spacing.xl,
   },
   signUpText: {
-    color: '#666',
-    fontSize: 14,
+    color: colors.textSecondary,
+    fontSize: typography.fontSize.base,
   },
   signUpLink: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
   signUpLinkText: {
-    color: '#3471b9',
-    fontSize: 14,
-    fontWeight: 'bold',
+    color: colors.primary,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
   },
   debugContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 24,
-    gap: 8,
+    marginTop: spacing.xl,
+    gap: spacing.sm,
   },
   debugButton: {
     flex: 1,
-    borderColor: '#999',
+    borderColor: colors.textDisabled,
   },
 });

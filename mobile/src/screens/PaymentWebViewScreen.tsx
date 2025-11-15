@@ -6,6 +6,7 @@ import { WebView } from 'react-native-webview';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type PaymentWebViewScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -87,7 +88,7 @@ export default function PaymentWebViewScreen({
 
         {isLoading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#3471b9" />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
       </View>
@@ -98,7 +99,7 @@ export default function PaymentWebViewScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   webViewContainer: {
     flex: 1,

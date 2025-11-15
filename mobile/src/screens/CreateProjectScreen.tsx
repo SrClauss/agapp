@@ -19,6 +19,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, Category, ProjectCreateRequest } from '../services/api';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type CreateProjectScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateProject'>;
 
@@ -184,7 +185,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3471b9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </SafeAreaView>
@@ -392,7 +393,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   loadingContainer: {
     flex: 1,
@@ -400,47 +401,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize["3xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   form: {
     gap: 8,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   pickerContainer: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   pickerLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
     marginLeft: 4,
   },
   pickerWrapper: {
-    backgroundColor: '#fff',
-    borderRadius: 4,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.gray400,
   },
   picker: {
     height: 56,
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
   budgetRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   budgetInput: {
     flex: 1,
@@ -457,28 +458,28 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   addressInput: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   addressButton: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 4,
+    marginTop: spacing.base,
+    marginBottom: spacing.xs,
   },
   checkboxLabel: {
-    fontSize: 16,
+    fontSize: typography.fontSize.md,
     marginLeft: 8,
-    color: '#333',
+    color: colors.textPrimary,
   },
   submitButton: {
-    marginTop: 24,
-    paddingVertical: 8,
+    marginTop: spacing.xl,
+    paddingVertical: spacing.sm,
   },
   cancelButton: {
-    marginTop: 8,
-    paddingVertical: 8,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
   },
 });
