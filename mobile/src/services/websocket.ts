@@ -117,6 +117,14 @@ class WebSocketService {
     });
   }
 
+  sendSupportMessage(ticketId: string, content: string): void {
+    this.send({
+      type: 'support_message',
+      ticket_id: ticketId,
+      content,
+    });
+  }
+
   addMessageHandler(handler: MessageHandler): () => void {
     this.messageHandlers.add(handler);
 
@@ -126,7 +134,15 @@ class WebSocketService {
     };
   }
 
+  addMessageListener(handler: MessageHandler): void {
+    this.messageHandlers.add(handler);
+  }
+
   removeMessageHandler(handler: MessageHandler): void {
+    this.messageHandlers.delete(handler);
+  }
+
+  removeMessageListener(handler: MessageHandler): void {
     this.messageHandlers.delete(handler);
   }
 

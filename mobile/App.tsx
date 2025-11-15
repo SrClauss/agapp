@@ -21,6 +21,9 @@ import ProfileSettingsScreen from './src/screens/ProfileSettingsScreen';
 import ContractManagementScreen from './src/screens/ContractManagementScreen';
 import BuyCreditsScreen from './src/screens/BuyCreditsScreen';
 import PaymentWebViewScreen from './src/screens/PaymentWebViewScreen';
+import SupportScreen from './src/screens/SupportScreen';
+import CreateTicketScreen from './src/screens/CreateTicketScreen';
+import TicketDetailsScreen from './src/screens/TicketDetailsScreen';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import { colors } from './src/theme';
 
@@ -39,6 +42,9 @@ export type RootStackParamList = {
   ContractManagement: { projectId: string; professionalId: string };
   BuyCredits: undefined;
   PaymentWebView: { paymentUrl: string; paymentId: string; onSuccess?: () => void };
+  Support: undefined;
+  CreateTicket: { projectId?: string; paymentId?: string };
+  TicketDetails: { ticketId: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -122,6 +128,9 @@ export default function App(): React.JSX.Element {
               <Stack.Screen name="ContractManagement" component={ContractManagementScreen} />
               <Stack.Screen name="BuyCredits" component={BuyCreditsScreen} />
               <Stack.Screen name="PaymentWebView" component={PaymentWebViewScreen} />
+              <Stack.Screen name="Support" component={SupportScreen} />
+              <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
+              <Stack.Screen name="TicketDetails" component={TicketDetailsScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </NotificationProvider>

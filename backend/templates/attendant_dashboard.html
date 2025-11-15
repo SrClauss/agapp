@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Atendente - Agiliza SAC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            font-size: 32px;
+        }
+
+        .header-title h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .header-title p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .attendant-info {
+            text-align: right;
+        }
+
+        .attendant-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .attendant-role {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 64px);
+        }
+
+        /* Sidebar - Ticket List */
+        .sidebar {
+            width: 350px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .sidebar-header h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-tab {
+            padding: 6px 12px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .filter-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .ticket-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .ticket-item {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .ticket-item:hover {
+            background: #f9fafb;
+        }
+
+        .ticket-item.active {
+            background: #eef2ff;
+            border-left: 3px solid #667eea;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .ticket-user {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .ticket-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .ticket-subject {
+            font-size: 14px;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .ticket-preview {
+            font-size: 13px;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ticket-badges {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge.priority-high { background: #fee2e2; color: #991b1b; }
+        .badge.priority-urgent { background: #fef3c7; color: #92400e; }
+        .badge.priority-normal { background: #dbeafe; color: #1e40af; }
+        .badge.status-open { background: #dcfce7; color: #166534; }
+        .badge.status-in_progress { background: #fef9c3; color: #854d0e; }
+
+        /* Content - Ticket Details */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #999;
+        }
+
+        .content-empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .ticket-details {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .ticket-details.active {
+            display: flex;
+        }
+
+        .ticket-details-header {
+            background: white;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .ticket-details-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .ticket-details-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            background: #f9fafb;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-header {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .message-content {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 70%;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .message.user .message-content {
+            background: #eef2ff;
+            align-self: flex-start;
+        }
+
+        .message.attendant .message-content {
+            background: #667eea;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .message-input-container {
+            background: white;
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .message-input-wrapper {
+            display: flex;
+            gap: 12px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-send {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-send:hover {
+            background: #5568d3;
+        }
+
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .ticket-actions {
+            padding: 16px 24px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            background: #f9fafb;
+        }
+
+        .btn-action.assign {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="header-logo">🎧</div>
+            <div class="header-title">
+                <h1>Painel do Atendente</h1>
+                <p>Sistema de Atendimento ao Cliente</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="attendant-info">
+                <div class="attendant-name" id="attendantName">Carregando...</div>
+                <div class="attendant-role" id="attendantRole"></div>
+            </div>
+            <button class="btn-logout" onclick="logout()">Sair</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Tickets</h2>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="my">Meus</button>
+                    <button class="filter-tab" data-filter="unassigned">Não Atribuídos</button>
+                    <button class="filter-tab" data-filter="all">Todos</button>
+                </div>
+            </div>
+            <div class="ticket-list" id="ticketList">
+                <div class="loading">Carregando tickets...</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="content-empty" id="emptyState">
+                <div class="content-empty-icon">📭</div>
+                <p>Selecione um ticket para visualizar</p>
+            </div>
+
+            <div class="ticket-details" id="ticketDetails">
+                <div class="ticket-details-header">
+                    <h2 class="ticket-details-title" id="ticketTitle"></h2>
+                    <div class="ticket-details-meta" id="ticketMeta"></div>
+                </div>
+
+                <div class="ticket-actions" id="ticketActions"></div>
+
+                <div class="messages-container" id="messagesContainer"></div>
+
+                <div class="message-input-container">
+                    <div class="message-input-wrapper">
+                        <textarea
+                            class="message-input"
+                            id="messageInput"
+                            placeholder="Digite sua mensagem..."
+                            rows="2"
+                        ></textarea>
+                        <button class="btn-send" id="btnSend" onclick="sendMessage()">Enviar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAttendant = null;
+        let currentTicket = null;
+        let currentFilter = 'my';
+        let tickets = [];
+
+        const token = localStorage.getItem('attendant_token') || sessionStorage.getItem('attendant_token');
+
+        if (!token) {
+            window.location.href = '/attendant/login';
+        }
+
+        // Load attendant info
+        async function loadAttendantInfo() {
+            try {
+                const response = await fetch('/attendant/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Unauthorized');
+
+                currentAttendant = await response.json();
+                document.getElementById('attendantName').textContent = currentAttendant.name;
+                document.getElementById('attendantRole').textContent =
+                    currentAttendant.role === 'admin' ? 'Administrador' :
+                    currentAttendant.role === 'supervisor' ? 'Supervisor' : 'Atendente';
+            } catch (error) {
+                console.error('Erro ao carregar informações:', error);
+                window.location.href = '/attendant/login';
+            }
+        }
+
+        // Load tickets
+        async function loadTickets() {
+            try {
+                let endpoint = '';
+                if (currentFilter === 'my') {
+                    endpoint = '/support/attendant/tickets';
+                } else if (currentFilter === 'unassigned') {
+                    endpoint = '/support/attendant/tickets/unassigned';
+                } else {
+                    endpoint = '/support/attendant/tickets';
+                }
+
+                const response = await fetch(endpoint, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load tickets');
+
+                tickets = await response.json();
+                renderTicketList();
+            } catch (error) {
+                console.error('Erro ao carregar tickets:', error);
+                document.getElementById('ticketList').innerHTML =
+                    '<div class="loading" style="color: #ef4444;">Erro ao carregar tickets</div>';
+            }
+        }
+
+        function renderTicketList() {
+            const container = document.getElementById('ticketList');
+
+            if (tickets.length === 0) {
+                container.innerHTML = '<div class="loading">Nenhum ticket encontrado</div>';
+                return;
+            }
+
+            container.innerHTML = tickets.map(ticket => `
+                <div class="ticket-item ${currentTicket && currentTicket.id === ticket.id ? 'active' : ''}"
+                     onclick="selectTicket('${ticket.id}')">
+                    <div class="ticket-header">
+                        <span class="ticket-user">${ticket.user_name}</span>
+                        <span class="ticket-time">${formatTime(ticket.created_at)}</span>
+                    </div>
+                    <div class="ticket-subject">${ticket.subject}</div>
+                    <div class="ticket-preview">${ticket.messages[0]?.message || ''}</div>
+                    <div class="ticket-badges">
+                        <span class="badge status-${ticket.status}">${formatStatus(ticket.status)}</span>
+                        <span class="badge priority-${ticket.priority}">${formatPriority(ticket.priority)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function selectTicket(ticketId) {
+            try {
+                const response = await fetch(`/support/attendant/tickets/${ticketId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load ticket');
+
+                currentTicket = await response.json();
+                renderTicketDetails();
+                renderTicketList();
+            } catch (error) {
+                console.error('Erro ao carregar ticket:', error);
+            }
+        }
+
+        function renderTicketDetails() {
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('ticketDetails').classList.add('active');
+
+            document.getElementById('ticketTitle').textContent = currentTicket.subject;
+            document.getElementById('ticketMeta').innerHTML = `
+                <span><strong>Categoria:</strong> ${formatCategory(currentTicket.category)}</span>
+                <span><strong>Prioridade:</strong> ${formatPriority(currentTicket.priority)}</span>
+                <span><strong>Status:</strong> ${formatStatus(currentTicket.status)}</span>
+                <span><strong>Cliente:</strong> ${currentTicket.user_name}</span>
+            `;
+
+            // Render actions
+            const actionsHtml = [];
+            if (!currentTicket.attendant_id) {
+                actionsHtml.push('<button class="btn-action assign" onclick="assignToMe()">Atribuir para mim</button>');
+            }
+            if (currentTicket.status === 'in_progress') {
+                actionsHtml.push('<button class="btn-action" onclick="resolveTicket()">Marcar como Resolvido</button>');
+            }
+            document.getElementById('ticketActions').innerHTML = actionsHtml.join('');
+
+            // Render messages
+            const messagesHtml = currentTicket.messages.map(msg => `
+                <div class="message ${msg.sender_type}">
+                    <div class="message-header">
+                        <span class="message-sender">${msg.sender_name}</span>
+                        <span class="message-time">${formatTime(msg.created_at)}</span>
+                    </div>
+                    <div class="message-content">${msg.message}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('messagesContainer').innerHTML = messagesHtml;
+            document.getElementById('messagesContainer').scrollTop =
+                document.getElementById('messagesContainer').scrollHeight;
+        }
+
+        async function sendMessage() {
+            if (!currentTicket) return;
+
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            const btn = document.getElementById('btnSend');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`/support/attendant/tickets/${currentTicket.id}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message, attachments: [] })
+                });
+
+                if (!response.ok) throw new Error('Failed to send message');
+
+                input.value = '';
+                await selectTicket(currentTicket.id);
+            } catch (error) {
+                console.error('Erro ao enviar mensagem:', error);
+                alert('Erro ao enviar mensagem');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function assignToMe() {
+            try {
+                const response = await fetch(`/support/attendant/tickets/${currentTicket.id}/assign`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ attendant_id: currentAttendant.id })
+                });
+
+                if (!response.ok) throw new Error('Failed to assign ticket');
+
+                await selectTicket(currentTicket.id);
+                await loadTickets();
+            } catch (error) {
+                console.error('Erro ao atribuir ticket:', error);
+                alert('Erro ao atribuir ticket');
+            }
+        }
+
+        async function resolveTicket() {
+            try {
+                const response = await fetch(`/support/attendant/tickets/${currentTicket.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'resolved' })
+                });
+
+                if (!response.ok) throw new Error('Failed to resolve ticket');
+
+                await selectTicket(currentTicket.id);
+                await loadTickets();
+            } catch (error) {
+                console.error('Erro ao resolver ticket:', error);
+                alert('Erro ao resolver ticket');
+            }
+        }
+
+        function logout() {
+            fetch('/attendant/logout', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).finally(() => {
+                localStorage.removeItem('attendant_token');
+                sessionStorage.removeItem('attendant_token');
+                window.location.href = '/attendant/login';
+            });
+        }
+
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = (now - date) / 1000 / 60;
+
+            if (diff < 1) return 'Agora';
+            if (diff < 60) return `${Math.floor(diff)}m`;
+            if (diff < 1440) return `${Math.floor(diff / 60)}h`;
+            return `${Math.floor(diff / 1440)}d`;
+        }
+
+        function formatStatus(status) {
+            const map = {
+                'open': 'Aberto',
+                'in_progress': 'Em Progresso',
+                'waiting_user': 'Aguardando',
+                'resolved': 'Resolvido',
+                'closed': 'Fechado'
+            };
+            return map[status] || status;
+        }
+
+        function formatPriority(priority) {
+            const map = {
+                'low': 'Baixa',
+                'normal': 'Normal',
+                'high': 'Alta',
+                'urgent': 'Urgente'
+            };
+            return map[priority] || priority;
+        }
+
+        function formatCategory(category) {
+            const map = {
+                'technical': 'Técnico',
+                'payment': 'Pagamento',
+                'general': 'Geral',
+                'complaint': 'Reclamação'
+            };
+            return map[category] || category;
+        }
+
+        // Filter tabs
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentFilter = tab.dataset.filter;
+                loadTickets();
+            });
+        });
+
+        // Enter to send message
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        });
+
+        // Initialize
+        loadAttendantInfo();
+        loadTickets();
+
+        // Auto-refresh tickets every 30 seconds
+        setInterval(loadTickets, 30000);
+    </script>
+</body>
+</html>
