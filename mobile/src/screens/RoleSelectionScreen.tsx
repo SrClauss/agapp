@@ -18,6 +18,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type RoleSelectionScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RoleSelection'>;
 type RoleSelectionScreenRouteProp = RouteProp<RootStackParamList, 'RoleSelection'>;
@@ -117,7 +118,7 @@ export default function RoleSelectionScreen({ navigation, route }: RoleSelection
                 value="client"
                 status={selectedRoles.includes('client') ? 'checked' : 'unchecked'}
                 onPress={() => toggleRole('client')}
-                color="#3471b9"
+                color={colors.primary}
               />
             </View>
             <Text style={styles.cardTitle}>Sou Cliente</Text>
@@ -150,7 +151,7 @@ export default function RoleSelectionScreen({ navigation, route }: RoleSelection
                 value="professional"
                 status={selectedRoles.includes('professional') ? 'checked' : 'unchecked'}
                 onPress={() => toggleRole('professional')}
-                color="#3471b9"
+                color={colors.primary}
               />
             </View>
             <Text style={styles.cardTitle}>Sou Profissional</Text>
@@ -198,41 +199,41 @@ export default function RoleSelectionScreen({ navigation, route }: RoleSelection
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   scrollContent: {
-    padding: 24,
+    padding: spacing.xl,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: spacing["2xl"],
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize["3xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   card: {
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
+    marginBottom: spacing.base,
+    backgroundColor: colors.white,
+    ...shadows.base,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   cardSelected: {
-    borderColor: '#3471b9',
+    borderColor: colors.primary,
     backgroundColor: '#f0f7ff',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   iconContainer: {
     width: 60,
@@ -243,49 +244,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   icon: {
-    fontSize: 32,
+    fontSize: typography.fontSize["4xl"],
   },
   cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   cardDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.base,
     lineHeight: 20,
   },
   features: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   feature: {
-    fontSize: 13,
+    fontSize: typography.fontSize.sm,
     color: '#555',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   infoCard: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
     backgroundColor: '#e8f5e9',
-    elevation: 0,
+    ...shadows.none,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: typography.fontSize.base,
     color: '#2e7d32',
     lineHeight: 20,
   },
   button: {
-    borderRadius: 8,
-    elevation: 2,
-    backgroundColor: '#3471b9',
-    marginTop: 8,
+    borderRadius: borderRadius.base,
+    ...shadows.base,
+    backgroundColor: colors.primary,
+    marginTop: spacing.sm,
   },
   buttonContent: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   buttonLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
   },
 });

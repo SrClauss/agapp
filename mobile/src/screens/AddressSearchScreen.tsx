@@ -22,6 +22,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { addressService, Address } from '../services/address';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 
 type AddressSearchScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddressSearch'>;
 type AddressSearchScreenRouteProp = RouteProp<RootStackParamList, 'AddressSearch'>;
@@ -239,7 +240,7 @@ export default function AddressSearchScreen({ navigation, route }: AddressSearch
           {/* Loading */}
           {isSearching && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#3471b9" />
+              <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.loadingText}>Buscando...</Text>
             </View>
           )}
@@ -293,110 +294,110 @@ export default function AddressSearchScreen({ navigation, route }: AddressSearch
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize["3xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   tabContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   tab: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   tabActive: {
-    backgroundColor: '#3471b9',
+    backgroundColor: colors.primary,
   },
   tabText: {
-    color: '#666',
+    color: colors.textSecondary,
   },
   tabTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
   card: {
-    backgroundColor: '#fff',
-    elevation: 2,
-    marginBottom: 16,
+    backgroundColor: colors.white,
+    ...shadows.base,
+    marginBottom: spacing.base,
   },
   input: {
-    backgroundColor: '#fff',
-    marginBottom: 12,
+    backgroundColor: colors.white,
+    marginBottom: spacing.md,
   },
   searchButton: {
-    marginTop: 8,
-    paddingVertical: 8,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   errorCard: {
     backgroundColor: '#ffebee',
-    elevation: 0,
-    marginBottom: 16,
+    ...shadows.none,
+    marginBottom: spacing.base,
   },
   errorText: {
     color: '#d32f2f',
-    fontSize: 14,
+    fontSize: typography.fontSize.base,
   },
   loadingContainer: {
     alignItems: 'center',
     paddingVertical: 32,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   resultsContainer: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   resultsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   resultCard: {
-    backgroundColor: '#fff',
-    elevation: 2,
-    marginBottom: 12,
+    backgroundColor: colors.white,
+    ...shadows.base,
+    marginBottom: spacing.md,
   },
   addressText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   addressDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   addressCep: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: typography.fontSize.sm,
+    color: colors.textDisabled,
   },
   divider: {
     marginVertical: 24,
   },
   manualButton: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
 });

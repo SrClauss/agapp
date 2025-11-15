@@ -7,7 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
-from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories
+from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, announcements
 from app.api.admin import router as admin_router
 from app.api.websockets.routes import router as websocket_router
 
@@ -38,6 +38,10 @@ tags_metadata = [
         "description": "Upload e gerenciamento de documentos PDF com validação de assinaturas digitais.",
     },
     {
+        "name": "contract-templates",
+        "description": "Gerenciamento de templates de contratos. Permite importar textos e gerar contratos personalizados.",
+    },
+    {
         "name": "uploads",
         "description": "Upload de mídia (imagens, vídeos e áudio) para a plataforma.",
     },
@@ -60,6 +64,18 @@ tags_metadata = [
     {
         "name": "websockets",
         "description": "Conexões WebSocket para comunicação em tempo real, notificações e chat.",
+    },
+    {
+        "name": "support",
+        "description": "Sistema de atendimento ao cliente (SAC). Permite criar tickets, enviar mensagens e acompanhar status.",
+    },
+    {
+        "name": "attendant",
+        "description": "Sistema de autenticação e gerenciamento de atendentes do SAC.",
+    },
+    {
+        "name": "announcements",
+        "description": "Sistema de anúncios e novidades da plataforma. Permite criar, gerenciar e exibir anúncios segmentados.",
     },
 ]
 
@@ -143,6 +159,7 @@ app.include_router(projects.router, prefix="/projects", tags=["projects"])
 app.include_router(categories.router, prefix="/categories", tags=["categories"])
 app.include_router(contacts.router, prefix="/contacts", tags=["contacts"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
+app.include_router(contract_templates.router, prefix="/contract-templates", tags=["contract-templates"])
 app.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 app.include_router(payments.router, tags=["payments"])
 app.include_router(webhooks.router, tags=["webhooks"])
@@ -150,6 +167,9 @@ app.include_router(turnstile.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin_router, prefix="/system-admin", tags=["admin"])
 app.include_router(admin_api.router, tags=["admin-api"])
 app.include_router(websocket_router, tags=["websockets"])
+app.include_router(support.router, prefix="/support", tags=["support"])
+app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"])
+app.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
 
 @app.on_event("startup")
 async def startup_event():
@@ -184,6 +204,20 @@ async def startup_event():
     await database.payment_webhooks.create_index("payment_id")
     await database.payment_webhooks.create_index("processed")
     await database.credit_transactions.create_index("user_id")
+    await database.attendants.create_index("email", unique=True)
+    await database.attendants.create_index("is_active")
+    await database.attendants.create_index("is_online")
+    await database.support_tickets.create_index("user_id")
+    await database.support_tickets.create_index("attendant_id")
+    await database.support_tickets.create_index("status")
+    await database.support_tickets.create_index("category")
+    await database.support_tickets.create_index("created_at")
+    await database.announcements.create_index("is_active")
+    await database.announcements.create_index("type")
+    await database.announcements.create_index("target_audience")
+    await database.announcements.create_index("start_date")
+    await database.announcements.create_index("end_date")
+    await database.announcements.create_index([("priority", -1), ("start_date", -1)])
     # A criação do admin é feita via script de inicialização do container (mongo-init)
 
 @app.get("/")

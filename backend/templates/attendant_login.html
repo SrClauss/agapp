@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Atendente - Agiliza SAC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 420px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .alert.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .alert.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-weight: 400;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎧</div>
+            <h1>Painel do Atendente</h1>
+            <p class="subtitle">Sistema de Atendimento ao Cliente</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    required
+                    placeholder="seu.email@agilizapro.cloud"
+                    autocomplete="email"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    placeholder="Digite sua senha"
+                    autocomplete="current-password"
+                >
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Manter conectado</label>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                Entrar
+            </button>
+        </form>
+    </div>
+
+    <div class="footer">
+        Agiliza Platform © 2025 - Sistema SAC
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const alertEl = document.getElementById('alert');
+
+        function showAlert(message, type = 'error') {
+            alertEl.textContent = message;
+            alertEl.className = `alert ${type}`;
+        }
+
+        function hideAlert() {
+            alertEl.className = 'alert';
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAlert();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+
+            // Desabilita botão e mostra loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Entrando...<div class="loading"></div>';
+
+            try {
+                const response = await fetch('/attendant/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Salva token
+                    if (remember) {
+                        localStorage.setItem('attendant_token', data.access_token);
+                        localStorage.setItem('attendant_refresh_token', data.refresh_token);
+                    } else {
+                        sessionStorage.setItem('attendant_token', data.access_token);
+                        sessionStorage.setItem('attendant_refresh_token', data.refresh_token);
+                    }
+
+                    showAlert('Login realizado com sucesso! Redirecionando...', 'success');
+
+                    // Redireciona para dashboard
+                    setTimeout(() => {
+                        window.location.href = '/attendant/dashboard';
+                    }, 1000);
+                } else {
+                    showAlert(data.detail || 'Email ou senha incorretos');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Entrar';
+                }
+            } catch (error) {
+                console.error('Erro ao fazer login:', error);
+                showAlert('Erro ao conectar com o servidor. Tente novamente.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Entrar';
+            }
+        });
+
+        // Auto-preenche se houver token salvo
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('attendant_token') || sessionStorage.getItem('attendant_token');
+            if (token) {
+                // Verifica se token é válido
+                fetch('/attendant/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/attendant/dashboard';
+                    }
+                })
+                .catch(() => {
+                    // Token inválido, limpa storage
+                    localStorage.removeItem('attendant_token');
+                    sessionStorage.removeItem('attendant_token');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

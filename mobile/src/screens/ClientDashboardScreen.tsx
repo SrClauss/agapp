@@ -12,12 +12,18 @@ import {
   Avatar,
   ActivityIndicator,
   Chip,
+  Badge,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, UserResponse, Project } from '../services/api';
+import { useNotifications } from '../contexts/NotificationContext';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import EmptyState from '../components/EmptyState';
+import StatusBadge from '../components/StatusBadge';
+import { useSnackbar } from '../hooks/useSnackbar';
 
 type ClientDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ClientDashboard'>;
 
@@ -30,9 +36,12 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const { totalUnread, initializeNotifications } = useNotifications();
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     loadData();
+    initializeNotifications();
   }, []);
 
   const loadData = async (): Promise<void> => {
@@ -61,6 +70,8 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
       const errorMessage = (error as Error).message || '';
       if (errorMessage.includes('credentials') || errorMessage.includes('unauthorized')) {
         await handleLogout();
+      } else {
+        showSnackbar('Erro ao carregar dados', 'error');
       }
     } finally {
       setIsLoading(false);
@@ -88,25 +99,6 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
     }
   };
 
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'open': return '#4caf50';
-      case 'in_progress': return '#ff9800';
-      case 'completed': return '#2196f3';
-      case 'cancelled': return '#f44336';
-      default: return '#9e9e9e';
-    }
-  };
-
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'open': return 'Aberto';
-      case 'in_progress': return 'Em Andamento';
-      case 'completed': return 'Concluído';
-      case 'cancelled': return 'Cancelado';
-      default: return status;
-    }
-  };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -117,7 +109,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3471b9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </SafeAreaView>
@@ -135,11 +127,18 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <Avatar.Icon
-              size={60}
-              icon="account-circle"
-              style={styles.avatar}
-            />
+            <View>
+              <Avatar.Icon
+                size={60}
+                icon="account-circle"
+                style={styles.avatar}
+              />
+              {totalUnread > 0 && (
+                <Badge size={24} style={styles.notificationBadge}>
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </Badge>
+              )}
+            </View>
             <View style={styles.userInfo}>
               <Text style={styles.welcomeText}>Olá,</Text>
               <Text style={styles.userName}>{user?.full_name}</Text>
@@ -151,7 +150,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
               <Button
                 mode="text"
                 onPress={handleSwitchRole}
-                textColor="#3471b9"
+                textColor={colors.primary}
                 icon="swap-horizontal"
                 compact
               >
@@ -161,7 +160,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
             <Button
               mode="text"
               onPress={handleLogout}
-              textColor="#3471b9"
+              textColor={colors.primary}
               icon="logout"
               compact
             >
@@ -198,7 +197,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
           <Button
             mode="text"
             onPress={() => navigation.navigate('CreateProject')}
-            textColor="#3471b9"
+            textColor={colors.primary}
             icon="plus"
             compact
           >
@@ -207,39 +206,26 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
         </View>
 
         {projects.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Card.Content>
-              <Avatar.Icon
-                size={80}
-                icon="folder-open"
-                style={styles.emptyIcon}
-                color="#999"
-              />
-              <Text style={styles.emptyTitle}>Nenhum projeto ainda</Text>
-              <Text style={styles.emptySubtitle}>
-                Crie seu primeiro projeto e conecte-se com profissionais qualificados!
-              </Text>
-              <Button
-                mode="contained"
-                onPress={() => navigation.navigate('CreateProject')}
-                style={styles.createButton}
-              >
-                Criar Primeiro Projeto
-              </Button>
-            </Card.Content>
-          </Card>
+          <EmptyState
+            icon="folder-open"
+            title="Nenhum projeto ainda"
+            message="Crie seu primeiro projeto e conecte-se com profissionais qualificados!"
+            action={{
+              label: 'Criar Primeiro Projeto',
+              onPress: () => navigation.navigate('CreateProject'),
+            }}
+          />
         ) : (
           projects.map((project) => (
-            <Card key={project._id} style={styles.projectCard}>
+            <Card
+              key={project._id}
+              style={styles.projectCard}
+              onPress={() => navigation.navigate('ProjectDetails', { projectId: project._id })}
+            >
               <Card.Content>
                 <View style={styles.projectHeader}>
                   <Text style={styles.projectTitle}>{project.title}</Text>
-                  <Chip
-                    style={[styles.statusChip, { backgroundColor: getStatusColor(project.status) + '20' }]}
-                    textStyle={{ color: getStatusColor(project.status) }}
-                  >
-                    {getStatusLabel(project.status)}
-                  </Chip>
+                  <StatusBadge status={project.status} type="status" />
                 </View>
                 <Text style={styles.projectDescription} numberOfLines={2}>
                   {project.description}
@@ -264,7 +250,7 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   loadingContainer: {
     flex: 1,
@@ -272,50 +258,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   header: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
+    marginBottom: spacing.base,
+    ...shadows.base,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   avatar: {
-    backgroundColor: '#3471b9',
+    backgroundColor: colors.primary,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.error,
   },
   userInfo: {
     marginLeft: 16,
     flex: 1,
   },
   welcomeText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 4,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginTop: spacing.xs,
   },
   roleChip: {
     alignSelf: 'flex-start',
-    marginTop: 8,
-    backgroundColor: '#e3f2fd',
+    marginTop: spacing.sm,
+    backgroundColor: colors.infoLight,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -324,87 +312,58 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    elevation: 2,
+    backgroundColor: colors.white,
+    ...shadows.base,
   },
   statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#3471b9',
+    fontSize: typography.fontSize["4xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
     textAlign: 'center',
   },
   statLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  emptyCard: {
-    backgroundColor: '#fff',
-    elevation: 2,
-    padding: 24,
-  },
-  emptyIcon: {
-    backgroundColor: 'transparent',
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  createButton: {
-    marginTop: 8,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
   },
   projectCard: {
-    marginBottom: 12,
-    backgroundColor: '#fff',
-    elevation: 2,
+    marginBottom: spacing.md,
+    backgroundColor: colors.white,
+    ...shadows.base,
   },
   projectHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   projectTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
     flex: 1,
     marginRight: 8,
   },
-  statusChip: {
-    height: 28,
-  },
   projectDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     lineHeight: 20,
   },
   projectMeta: {
@@ -412,6 +371,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   metaChip: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
 });

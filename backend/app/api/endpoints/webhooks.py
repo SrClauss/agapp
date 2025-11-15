@@ -18,6 +18,9 @@ from app.models.user import User
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
 
+# MODO DE TESTE - processar pagamentos imediatamente
+TEST_MODE = os.getenv("PAYMENT_TEST_MODE", "true").lower() == "true"
+
 
 async def process_webhook_background(
     event_type: str,
@@ -391,3 +394,61 @@ async def asaas_webhook(
     )
 
     return {"status": "received"}
+
+
+@router.post("/test-payment")
+async def test_payment_webhook(
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Endpoint de teste para simular pagamento confirmado
+
+    Corpo da requisição:
+    {
+        "external_reference": "credits:user_id:package_id",
+        "value": 100.00
+    }
+    """
+    if not TEST_MODE:
+        raise HTTPException(
+            status_code=403,
+            detail="Endpoint de teste disponível apenas em modo de teste (PAYMENT_TEST_MODE=true)"
+        )
+
+    try:
+        data = await request.json()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="JSON inválido")
+
+    external_reference = data.get("external_reference")
+    value = data.get("value", 0)
+
+    if not external_reference:
+        raise HTTPException(status_code=400, detail="external_reference é obrigatório")
+
+    # Simular dados de pagamento confirmado
+    payment_data = {
+        "id": f"test_{datetime.now().timestamp()}",
+        "value": value,
+        "status": "RECEIVED",
+        "billingType": "PIX",
+        "externalReference": external_reference,
+        "paymentDate": datetime.now().isoformat(),
+        "dueDate": datetime.now().isoformat(),
+    }
+
+    # Processar pagamento
+    try:
+        await handle_payment_success(payment_data, db)
+        logger.info(f"Pagamento de teste processado: {external_reference}")
+
+        return {
+            "status": "success",
+            "message": "Pagamento processado com sucesso (modo teste)",
+            "payment_id": payment_data["id"],
+            "external_reference": external_reference
+        }
+    except Exception as e:
+        logger.error(f"Erro ao processar pagamento de teste: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro ao processar: {str(e)}")
