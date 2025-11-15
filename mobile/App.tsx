@@ -19,6 +19,8 @@ import AddressSearchScreen from './src/screens/AddressSearchScreen';
 import ProjectDetailsScreen from './src/screens/ProjectDetailsScreen';
 import ProfileSettingsScreen from './src/screens/ProfileSettingsScreen';
 import ContractManagementScreen from './src/screens/ContractManagementScreen';
+import BuyCreditsScreen from './src/screens/BuyCreditsScreen';
+import PaymentWebViewScreen from './src/screens/PaymentWebViewScreen';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 
 export type RootStackParamList = {
@@ -34,6 +36,8 @@ export type RootStackParamList = {
   ProjectDetails: { projectId: string };
   ProfileSettings: undefined;
   ContractManagement: { projectId: string; professionalId: string };
+  BuyCredits: undefined;
+  PaymentWebView: { paymentUrl: string; paymentId: string; onSuccess?: () => void };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -115,6 +119,8 @@ export default function App(): React.JSX.Element {
               <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
               <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
               <Stack.Screen name="ContractManagement" component={ContractManagementScreen} />
+              <Stack.Screen name="BuyCredits" component={BuyCreditsScreen} />
+              <Stack.Screen name="PaymentWebView" component={PaymentWebViewScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </NotificationProvider>

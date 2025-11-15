@@ -210,6 +210,64 @@ export interface GeneratedContract {
   generated_at: string;
 }
 
+// Payment interfaces
+export interface PlanConfig {
+  _id: string;
+  name: string;
+  description: string;
+  weekly_credits: number;
+  monthly_price: number;
+  discount_3_months: number;
+  discount_6_months: number;
+  discount_12_months: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreditPackage {
+  _id: string;
+  name: string;
+  description: string;
+  credits: number;
+  bonus_credits: number;
+  price: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeaturedPricing {
+  _id: string;
+  duration_days: number;
+  price: number;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentResponse {
+  payment_id: string;
+  status: string;
+  value: number;
+  billing_type: string;
+  due_date: string;
+  invoice_url?: string;
+  pix_qrcode?: string;
+  pix_payload?: string;
+}
+
+export interface SubscriptionStatus {
+  has_subscription: boolean;
+  status?: string;
+  plan_name?: string;
+  credits_per_week?: number;
+  next_renewal?: string;
+  monthly_price?: number;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -657,6 +715,211 @@ class ApiService {
 
   getDocumentDownloadUrl(token: string, documentId: string): string {
     return `${this.baseUrl}/documents/${documentId}/download?token=${token}`;
+  }
+
+  // Payments - Plans
+  async getPlans(token: string): Promise<PlanConfig[]> {
+    const response = await fetch(`${this.baseUrl}/api/payments/plans`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar planos');
+    }
+
+    return response.json();
+  }
+
+  async getSubscriptionStatus(token: string): Promise<SubscriptionStatus> {
+    const response = await fetch(`${this.baseUrl}/api/payments/subscription/status`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar status da assinatura');
+    }
+
+    return response.json();
+  }
+
+  async createSubscriptionPayment(
+    token: string,
+    planId: string,
+    billingType: string,
+    cycleMonths: number = 1
+  ): Promise<PaymentResponse> {
+    const response = await fetch(`${this.baseUrl}/api/payments/subscription`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        plan_id: planId,
+        billing_type: billingType,
+        cycle_months: cycleMonths,
+      }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao criar pagamento de assinatura');
+    }
+
+    return response.json();
+  }
+
+  async cancelSubscription(token: string): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${this.baseUrl}/api/payments/subscription/cancel`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao cancelar assinatura');
+    }
+
+    return response.json();
+  }
+
+  // Payments - Credits
+  async getCreditPackages(token: string): Promise<CreditPackage[]> {
+    const response = await fetch(`${this.baseUrl}/api/payments/credit-packages`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar pacotes de créditos');
+    }
+
+    return response.json();
+  }
+
+  async createCreditPackagePayment(
+    token: string,
+    packageId: string,
+    billingType: string
+  ): Promise<PaymentResponse> {
+    const response = await fetch(`${this.baseUrl}/api/payments/credits`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        package_id: packageId,
+        billing_type: billingType,
+      }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao criar pagamento de créditos');
+    }
+
+    return response.json();
+  }
+
+  // Payments - Featured Projects
+  async getFeaturedPricing(token: string): Promise<FeaturedPricing[]> {
+    const response = await fetch(`${this.baseUrl}/api/payments/featured-pricing`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar preços de destaque');
+    }
+
+    return response.json();
+  }
+
+  async createFeaturedProjectPayment(
+    token: string,
+    projectId: string,
+    durationDays: number,
+    billingType: string
+  ): Promise<PaymentResponse> {
+    const response = await fetch(`${this.baseUrl}/api/payments/featured-project`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        project_id: projectId,
+        duration_days: durationDays,
+        billing_type: billingType,
+      }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao criar pagamento de projeto destacado');
+    }
+
+    return response.json();
+  }
+
+  // Payments - Status and Test
+  async getPaymentStatus(token: string, paymentId: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/payments/status/${paymentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao buscar status do pagamento');
+    }
+
+    return response.json();
+  }
+
+  async testPayment(externalReference: string, value: number): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/webhooks/test-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        external_reference: externalReference,
+        value: value,
+      }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Erro ao processar pagamento de teste');
+    }
+
+    return response.json();
   }
 }
 

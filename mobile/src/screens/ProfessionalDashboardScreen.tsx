@@ -278,9 +278,20 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
               <Text style={styles.welcomeText}>Olá,</Text>
               <Text style={styles.userName}>{user?.full_name}</Text>
               <Chip icon="briefcase" style={styles.roleChip}>Profissional</Chip>
+              <Chip icon="wallet" style={styles.creditsChip}>{user?.credits || 0} créditos</Chip>
             </View>
           </View>
           <View style={styles.headerButtons}>
+            <Button
+              mode="contained"
+              onPress={() => navigation.navigate('BuyCredits')}
+              textColor="#fff"
+              icon="credit-card-plus"
+              compact
+              style={styles.buyCreditsButton}
+            >
+              Comprar
+            </Button>
             <Button
               mode="text"
               onPress={() => navigation.navigate('ProfileSettings')}
@@ -566,9 +577,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: '#fff3e0',
   },
+  creditsChip: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    backgroundColor: '#e3f2fd',
+  },
   headerButtons: {
     flexDirection: 'row',
     gap: 8,
+  },
+  buyCreditsButton: {
+    backgroundColor: '#4caf50',
   },
   errorCard: {
     backgroundColor: '#ffebee',
