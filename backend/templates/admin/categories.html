@@ -204,6 +204,8 @@
 </div>
 
 {% endblock %}
+
+{% block scripts %}
 <script>
 function editCategory(id, name, subcategories, defaultRemoteExecution) {
     document.getElementById('editCategoryName').value = name;
@@ -240,44 +242,17 @@ document.addEventListener('click', (event) => {
         modal.show();
 });
 
-    // Edit category: use data attributes instead of inline onclick
-    document.addEventListener('click', (event) => {
-        const btn = event.target.closest('.js-category-edit');
-        if (!btn) return;
+// Edit category: use data attributes instead of inline onclick
+document.addEventListener('click', (event) => {
+    const btn = event.target.closest('.js-category-edit');
+    if (!btn) return;
 
-        const id = JSON.parse(btn.dataset.id);
-        const name = JSON.parse(btn.dataset.name);
-        const subcategories = JSON.parse(btn.dataset.subcategories);
-        const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
+    const id = JSON.parse(btn.dataset.id);
+    const name = JSON.parse(btn.dataset.name);
+    const subcategories = JSON.parse(btn.dataset.subcategories);
+    const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
 
-        editCategory(id, name, subcategories, defaultRemote);
-    });
+    editCategory(id, name, subcategories, defaultRemote);
+});
 </script>
 {% endblock %}
-
-<!-- Modal: Category Info -->
-<div class="modal fade" id="categoryInfoModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Informações da Categoria</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>Nome:</strong> <span id="infoCategoryName"></span></p>
-                <p><strong>Subcategorias:</strong> <span id="infoCategorySubcategories"></span></p>
-                <p><strong>Execução remota:</strong> <span id="infoCategoryDefaultRemote"></span></p>
-                <p><strong>Status:</strong> <span id="infoCategoryStatus"></span></p>
-                <p><strong>Criado em:</strong> <span id="infoCategoryCreatedAt"></span></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                {% if 'admin' in current_user.roles %}
-                <form id="deletePermanentForm" method="POST" onsubmit="return confirm('Excluir permanentemente? Esta ação é irreversível.')">
-                    <button type="submit" class="btn btn-danger">Excluir permanentemente</button>
-                </form>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
