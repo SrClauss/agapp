@@ -1,11 +1,146 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { notificationService } from '../services/notification';
-import { websocketService, WebSocketMessage } from '../services/websocket';
-import * as Notifications from 'expo-notifications';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../App';
+import React, { ReactNode, useEffect } from 'react';
+import useNotificationStore from '../stores/notificationStore';
+
+/**
+ * Compatibility shim: older code using NotificationProvider/useNotifications
+ * will now be forwarded to the zustand store.
+ */
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    const initStore = async () => {
+      const store = useNotificationStore.getState();
+      try {
+        await store.loadSavedUnread();
+        await store.initializeNotifications();
+        await store.setupWebSocket();
+      } catch (err) {
+        console.error('Error initializing notification store (shim):', err);
+      }
+    };
+    initStore();
+  }, []);
+
+  return <>{children}</>;
+}
+
+export function useNotifications() {
+  const { unreadMessages, totalUnread, markProjectAsRead, addUnreadMessage, getUnreadCount, initializeNotifications, isConnected } = useNotificationStore((s) => ({
+    unreadMessages: s.unreadMessages,
+    totalUnread: s.totalUnread,
+    markProjectAsRead: s.markProjectAsRead,
+    addUnreadMessage: s.addUnreadMessage,
+    getUnreadCount: s.getUnreadCount,
+    initializeNotifications: s.initializeNotifications,
+    isConnected: s.isConnected,
+  }));
+
+  const unreadMap = new Map(Object.entries(unreadMessages || {}));
+
+  return {
+    unreadMessages: unreadMap,
+    totalUnread,
+    markProjectAsRead,
+    addUnreadMessage,
+    getUnreadCount,
+    initializeNotifications,
+    isConnected,
+  };
+}
+
+export default useNotificationStore;
+import React, { ReactNode, useEffect } from 'react';
+import useNotificationStore from '../stores/notificationStore';
+
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    (async () => {
+      try {
+        const store = useNotificationStore.getState();
+        await store.loadSavedUnread();
+        await store.initializeNotifications();
+        await store.setupWebSocket();
+      } catch (err) {
+        console.error('Error initializing notification store (shim):', err);
+      }
+    })();
+  }, []);
+
+  return <>{children}</>;
+}
+
+export function useNotifications() {
+  const { unreadMessages, totalUnread, markProjectAsRead, addUnreadMessage, getUnreadCount, initializeNotifications, isConnected } = useNotificationStore((s) => ({
+    unreadMessages: s.unreadMessages,
+    totalUnread: s.totalUnread,
+    markProjectAsRead: s.markProjectAsRead,
+    addUnreadMessage: s.addUnreadMessage,
+    getUnreadCount: s.getUnreadCount,
+    initializeNotifications: s.initializeNotifications,
+    isConnected: s.isConnected,
+  }));
+
+  const unreadMap = new Map(Object.entries(unreadMessages || {}));
+
+  return {
+    unreadMessages: unreadMap,
+    totalUnread,
+    markProjectAsRead,
+    addUnreadMessage,
+    getUnreadCount,
+    initializeNotifications,
+    isConnected,
+  };
+}
+
+export default useNotificationStore;
+import React, { ReactNode, useEffect } from 'react';
+import useNotificationStore from '../stores/notificationStore';
+
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    (async () => {
+      try {
+        const store = useNotificationStore.getState();
+        await store.loadSavedUnread();
+        await store.initializeNotifications();
+        await store.setupWebSocket();
+      } catch (err) {
+        console.error('Error initializing notification store (shim):', err);
+      }
+    })();
+  }, []);
+
+  return <>{children}</>;
+}
+
+export function useNotifications() {
+  const { unreadMessages, totalUnread, markProjectAsRead, addUnreadMessage, getUnreadCount, initializeNotifications, isConnected } = useNotificationStore((s) => ({
+    unreadMessages: s.unreadMessages,
+    totalUnread: s.totalUnread,
+    markProjectAsRead: s.markProjectAsRead,
+    addUnreadMessage: s.addUnreadMessage,
+    getUnreadCount: s.getUnreadCount,
+    initializeNotifications: s.initializeNotifications,
+    isConnected: s.isConnected,
+  }));
+
+  // Convert object to Map for backward compatibility
+  const unreadMap = new Map(Object.entries(unreadMessages || {}));
+
+  return {
+    unreadMessages: unreadMap,
+    totalUnread,
+    markProjectAsRead,
+    addUnreadMessage,
+    getUnreadCount,
+    initializeNotifications,
+    isConnected,
+  };
+}
+
+export default useNotificationStore;
+import React, { ReactNode, useEffect } from 'react';
+import useNotificationStore from '../stores/notificationStore';
 
 interface UnreadMessage {
   projectId: string;
@@ -25,247 +160,107 @@ interface NotificationContextData {
   isConnected: boolean;
 }
 
-const NotificationContext = createContext<NotificationContextData>({} as NotificationContextData);
+interface NotificationProviderProps {
+  children: ReactNode;
+}
+
+// This file is a compatibility shim that keeps the old Context API signature
+// while delegating all logic to the new zustand store. It allows a safer
+// migration with minimal changes to the rest of the app.
+
+export function NotificationProvider({ children }: NotificationProviderProps) {
+  useEffect(() => {
+    (async () => {
+      try {
+        const store = useNotificationStore.getState();
+        await store.loadSavedUnread();
+        await store.initializeNotifications();
+        await store.setupWebSocket();
+      } catch (err) {
+        console.error('Error initializing notification store (shim):', err);
+      }
+    })();
+  }, []);
+
+  return <>{children}</>;
+}
+
+export function useNotifications(): NotificationContextData {
+  const { unreadMessages, totalUnread, markProjectAsRead, addUnreadMessage, getUnreadCount, initializeNotifications, isConnected } = useNotificationStore((s) => ({
+    unreadMessages: s.unreadMessages,
+    totalUnread: s.totalUnread,
+    markProjectAsRead: s.markProjectAsRead,
+    addUnreadMessage: s.addUnreadMessage,
+    getUnreadCount: s.getUnreadCount,
+    initializeNotifications: s.initializeNotifications,
+    isConnected: s.isConnected,
+  }));
+
+  // Convert object to Map to preserve previous type and behavior
+  const unreadMap = new Map<string, UnreadMessage>(Object.entries(unreadMessages || {}));
+
+  return {
+    unreadMessages: unreadMap,
+    totalUnread,
+    markProjectAsRead,
+    addUnreadMessage,
+    getUnreadCount,
+    initializeNotifications,
+    isConnected,
+  };
+}
+
+export default useNotificationStore;
+import React, { useEffect, ReactNode } from 'react';
+import useNotificationStore from '../stores/notificationStore';
+
+interface UnreadMessage {
+  projectId: string;
+  count: number;
+  lastMessage?: string;
+  lastSender?: string;
+  lastTimestamp?: string;
+}
+
+interface NotificationContextData {
+  unreadMessages: Map<string, UnreadMessage>;
+  totalUnread: number;
+  markProjectAsRead: (projectId: string) => void;
+  addUnreadMessage: (projectId: string, message: string, sender: string) => void;
+  getUnreadCount: (projectId: string) => number;
+  initializeNotifications: () => Promise<void>;
+  isConnected: boolean;
+}
+
+// Backwards compatibility shim: route old context API to zustand store
+const NotificationContext = null as unknown as any;
 
 interface NotificationProviderProps {
   children: ReactNode;
 }
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
-  const [unreadMessages, setUnreadMessages] = useState<Map<string, UnreadMessage>>(new Map());
-  const [totalUnread, setTotalUnread] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  // This provider no longer supplies context - keep as compatibility wrapper for mount side-effects.
+  const init = useNotificationStore((s) => s.initializeNotifications);
+  const loadSaved = useNotificationStore((s) => s.loadSavedUnread);
 
-  // Load unread messages from storage
   useEffect(() => {
-    loadUnreadMessages();
-  }, []);
+    loadSaved();
+    init();
+  export function NotificationProvider({ children }: NotificationProviderProps) {
+    const init = useNotificationStore.getState().initializeNotifications;
+    const loadSaved = useNotificationStore.getState().loadSavedUnread;
 
-  // Update badge count when unread changes
-  useEffect(() => {
-    const total = Array.from(unreadMessages.values()).reduce((sum, msg) => sum + msg.count, 0);
-    setTotalUnread(total);
-    notificationService.setBadgeCount(total);
-  }, [unreadMessages]);
-
-  // Setup WebSocket connection
-  useEffect(() => {
-    setupWebSocket();
-    return () => {
-      websocketService.disconnect();
-    };
-  }, []);
-
-  // Setup notification listeners
-  useEffect(() => {
-    const receivedSubscription = notificationService.addNotificationReceivedListener((notification) => {
-      console.log('Notification received:', notification);
-    });
-
-    const responseSubscription = notificationService.addNotificationResponseReceivedListener((response) => {
-      console.log('Notification response:', response);
-      const data = response.notification.request.content.data;
-
-      if (data.type === 'chat_message' && data.projectId) {
-        // Navigate to project details when notification is tapped
-        // This would need navigation ref or deep linking
-        console.log('Navigate to project:', data.projectId);
-      }
-    });
-
-    return () => {
-      receivedSubscription.remove();
-      responseSubscription.remove();
-    };
-  }, []);
-
-  const loadUnreadMessages = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('unread_messages');
-      if (stored) {
-        // interpreta o JSON como um objeto com valores do tipo UnreadMessage
-        const parsed = JSON.parse(stored) as Record<string, UnreadMessage>;
-
-        // garante a tipagem correta para o Map
-        const entries = Object.entries(parsed) as [string, UnreadMessage][];
-        const map = new Map<string, UnreadMessage>(entries);
-
-        setUnreadMessages(map);
-      }
-    } catch (error) {
-      console.error('Error loading unread messages:', error);
-    }
-  };
-
-  const saveUnreadMessages = async (messages: Map<string, UnreadMessage>) => {
-    try {
-      const obj = Object.fromEntries(messages) as Record<string, UnreadMessage>;
-      await AsyncStorage.setItem('unread_messages', JSON.stringify(obj));
-    } catch (error) {
-      console.error('Error saving unread messages:', error);
-    }
-  };
-
-  const setupWebSocket = async () => {
-    try {
-      const token = await AsyncStorage.getItem('access_token');
-      const storedUserId = await AsyncStorage.getItem('user_id');
-
-      if (!token || !storedUserId) {
-        return;
-      }
-
-      setUserId(storedUserId);
-
-      // Connect WebSocket
-      websocketService.connect(storedUserId, token);
-      setIsConnected(true);
-
-      // Add message handler
-      websocketService.addMessageHandler(handleWebSocketMessage);
-    } catch (error) {
-      console.error('Error setting up WebSocket:', error);
-    }
-  };
-
-  const handleWebSocketMessage = useCallback(async (message: WebSocketMessage) => {
-    console.log('WebSocket message in context:', message);
-
-    if (message.type === 'new_message') {
-      const { contact_id, message: chatMessage } = message;
-
-      // Don't show notification for own messages
-      if (chatMessage.sender_id === userId) {
-        return;
-      }
-
-      // Get project info (you might need to fetch this)
-      const projectTitle = 'Projeto'; // TODO: Get from cache or API
-      const senderName = chatMessage.sender_id; // TODO: Get actual name
-
-      // Show notification
-      await notificationService.showChatNotification(
-        projectTitle,
-        senderName,
-        chatMessage.content,
-        contact_id
-      );
-
-      // Add to unread
-      addUnreadMessage(contact_id, chatMessage.content, senderName);
-    } else if (message.type === 'new_project') {
-      // New project notification for professionals
-      const project = message.project;
-
-      // Check if user should receive this notification
-      const shouldNotify = await checkProjectEligibility(project);
-
-      if (shouldNotify) {
-        await notificationService.showProjectNotification(
-          'Novo Projeto Disponível',
-          project.title,
-          project._id
-        );
-      }
-    } else if (message.type === 'contact_update') {
-      // Contact status update notification
-      const { contact_id, status } = message.contact;
-      await notificationService.showProjectNotification(
-        'Atualização de Contato',
-        `Status atualizado para: ${status}`,
-        contact_id
-      );
-    }
-  }, [userId]);
-
-  const checkProjectEligibility = async (project: any): Promise<boolean> => {
-    try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) return false;
-
-      // Get user data to check preferences
-      const { apiService } = require('../services/api');
-      const userData = await apiService.getCurrentUser(token);
-
-      // Check if notifications are enabled
-      if (!userData.notification_preferences?.enabled) {
-        return false;
-      }
-
-      const prefs = userData.notification_preferences;
-
-      // Check skills match if required
-      if (prefs.match_skills && userData.skills && userData.skills.length > 0) {
-        const projectSkills = project.skills_required || [];
-
-        // Check if any user skill matches project requirements
-        const hasMatchingSkill = userData.skills.some((userSkill: string) =>
-          projectSkills.some((projectSkill: string) =>
-            projectSkill.toLowerCase().includes(userSkill.toLowerCase()) ||
-            userSkill.toLowerCase().includes(projectSkill.toLowerCase())
-          )
-        );
-
-        if (!hasMatchingSkill) {
-          console.log('Project skills do not match user skills');
-          return false;
+    useEffect(() => {
+      (async () => {
+        try {
+          await loadSaved();
+          await init();
+        } catch (e) {
+          console.error('Error initializing notification provider (shim):', e);
         }
-      }
-
-      // Check location if coordinates are available
-      if (project.location?.coordinates) {
-        const userLocation = await getUserLocation();
-
-        if (userLocation) {
-          const distance = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            project.location.coordinates[1],
-            project.location.coordinates[0]
-          );
-
-          if (distance > prefs.radius_km) {
-            console.log(`Project too far: ${distance}km > ${prefs.radius_km}km`);
-            return false;
-          }
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error checking project eligibility:', error);
-
-      // If the backend indicates invalid credentials, clear auth and redirect to Login
-      try {
-        const message = (error && (error as Error).message) || '';
-        if (message.includes('Could not validate credentials') || message.includes('credentials')) {
-          await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user_id', 'active_role', 'user_roles']);
-          // navigate to Login screen
-          try {
-            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-          } catch (navErr) {
-            console.warn('Navigation to Login failed:', navErr);
-          }
-        }
-      } catch (e) {
-        // ignore errors while cleaning up storage/navigation
-      }
-      return false;
-    }
-  };
-
-  const getUserLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
-    try {
-      const storedLocation = await AsyncStorage.getItem('user_location');
-      if (storedLocation) {
-        return JSON.parse(storedLocation);
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting user location:', error);
-      return null;
+      })();
+    }, []);
     }
   };
 
@@ -316,27 +311,31 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     await notificationService.requestPermissions();
   }, []);
 
-  return (
-    <NotificationContext.Provider
-      value={{
-        unreadMessages,
-        totalUnread,
-        markProjectAsRead,
-        addUnreadMessage,
-        getUnreadCount,
-        initializeNotifications,
-        isConnected,
-      }}
-    >
-      {children}
-    </NotificationContext.Provider>
-  );
+  return <>{children}</>;
 }
 
 export function useNotifications() {
-  const context = useContext(NotificationContext);
-  if (!context) {
-    throw new Error('useNotifications must be used within NotificationProvider');
-  }
-  return context;
+  // adapt to new zustand store
+  const { unreadMessages, totalUnread, markProjectAsRead, addUnreadMessage, getUnreadCount, initializeNotifications, isConnected } = useNotificationStore((s) => ({
+    unreadMessages: s.unreadMessages,
+    totalUnread: s.totalUnread,
+    markProjectAsRead: s.markProjectAsRead,
+    addUnreadMessage: s.addUnreadMessage,
+    getUnreadCount: s.getUnreadCount,
+    initializeNotifications: s.initializeNotifications,
+    isConnected: s.isConnected,
+  }));
+
+  // Return Map for backward compatibility in case some code expects it
+  const unreadMap = new Map<string, UnreadMessage>(Object.entries(unreadMessages || {}));
+
+  return {
+    unreadMessages: unreadMap,
+    totalUnread,
+    markProjectAsRead,
+    addUnreadMessage,
+    getUnreadCount,
+    initializeNotifications,
+    isConnected,
+  };
 }
