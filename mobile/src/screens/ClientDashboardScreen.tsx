@@ -19,7 +19,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, UserResponse, Project } from '../services/api';
-import { useNotifications } from '../contexts/NotificationContext';
+import useNotificationStore from '../stores/notificationStore';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 import EmptyState from '../components/EmptyState';
 import StatusBadge from '../components/StatusBadge';
@@ -36,7 +36,10 @@ export default function ClientDashboardScreen({ navigation }: ClientDashboardScr
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const { totalUnread, initializeNotifications } = useNotifications();
+  const { totalUnread, initializeNotifications } = useNotificationStore((s) => ({
+    totalUnread: s.totalUnread,
+    initializeNotifications: s.initializeNotifications,
+  }));
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {

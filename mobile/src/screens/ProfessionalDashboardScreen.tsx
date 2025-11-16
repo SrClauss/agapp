@@ -22,7 +22,7 @@ import { RootStackParamList } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, UserResponse, Project } from '../services/api';
 import * as Location from 'expo-location';
-import { useNotifications } from '../contexts/NotificationContext';
+import useNotificationStore from '../stores/notificationStore';
 import { Badge } from 'react-native-paper';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 import AppHeader from '../components/AppHeader';
@@ -44,7 +44,10 @@ export default function ProfessionalDashboardScreen({ navigation }: Professional
   const [locationError, setLocationError] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<string>('10');
-  const { totalUnread, initializeNotifications } = useNotifications();
+  const { totalUnread, initializeNotifications } = useNotificationStore((s) => ({
+    totalUnread: s.totalUnread,
+    initializeNotifications: s.initializeNotifications,
+  }));
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
