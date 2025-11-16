@@ -36,6 +36,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   const [totalUnread, setTotalUnread] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   // Load unread messages from storage
   useEffect(() => {
@@ -84,8 +85,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     try {
       const stored = await AsyncStorage.getItem('unread_messages');
       if (stored) {
-        const parsed = JSON.parse(stored);
-        const map = new Map(Object.entries(parsed));
+        // interpreta o JSON como um objeto com valores do tipo UnreadMessage
+        const parsed = JSON.parse(stored) as Record<string, UnreadMessage>;
+
+        // garante a tipagem correta para o Map
+        const entries = Object.entries(parsed) as [string, UnreadMessage][];
+        const map = new Map<string, UnreadMessage>(entries);
+
         setUnreadMessages(map);
       }
     } catch (error) {
@@ -95,7 +101,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   const saveUnreadMessages = async (messages: Map<string, UnreadMessage>) => {
     try {
-      const obj = Object.fromEntries(messages);
+      const obj = Object.fromEntries(messages) as Record<string, UnreadMessage>;
       await AsyncStorage.setItem('unread_messages', JSON.stringify(obj));
     } catch (error) {
       console.error('Error saving unread messages:', error);
@@ -230,6 +236,22 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       return true;
     } catch (error) {
       console.error('Error checking project eligibility:', error);
+
+      // If the backend indicates invalid credentials, clear auth and redirect to Login
+      try {
+        const message = (error && (error as Error).message) || '';
+        if (message.includes('Could not validate credentials') || message.includes('credentials')) {
+          await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user_id', 'active_role', 'user_roles']);
+          // navigate to Login screen
+          try {
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+          } catch (navErr) {
+            console.warn('Navigation to Login failed:', navErr);
+          }
+        }
+      } catch (e) {
+        // ignore errors while cleaning up storage/navigation
+      }
       return false;
     }
   };
