@@ -25,7 +25,8 @@ import SupportScreen from './src/screens/SupportScreen';
 import CreateTicketScreen from './src/screens/CreateTicketScreen';
 import TicketDetailsScreen from './src/screens/TicketDetailsScreen';
 import AnnouncementsScreen from './src/screens/AnnouncementsScreen';
-import { NotificationProvider } from './src/contexts/NotificationContext';
+import { navigationRef } from './src/navigation/RootNavigation';
+import useNotificationStore from './src/stores/notificationStore';
 import { SnackbarProvider } from './src/hooks/useSnackbar';
 import { colors } from './src/theme';
 
@@ -103,6 +104,21 @@ export default function App(): React.JSX.Element {
     checkAuthStatus();
   }, []);
 
+  // Initialize notification store (zustand) once
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const store = useNotificationStore.getState();
+        await store.loadSavedUnread();
+        await store.initializeNotifications();
+        await store.setupWebSocket();
+      } catch (e) {
+        console.error('Notification store init failed:', e);
+      }
+    };
+    init();
+  }, []);
+
   if (!isReady) {
     return null; // or a loading component
   }
@@ -111,8 +127,7 @@ export default function App(): React.JSX.Element {
     <SafeAreaProvider>
       <PaperProvider theme={paperTheme}>
         <SnackbarProvider>
-          <NotificationProvider>
-            <NavigationContainer>
+            <NavigationContainer ref={navigationRef}>
               <Stack.Navigator
                 initialRouteName={initialRoute}
                 screenOptions={screenOptions}
@@ -138,7 +153,6 @@ export default function App(): React.JSX.Element {
                 <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
               </Stack.Navigator>
             </NavigationContainer>
-          </NotificationProvider>
         </SnackbarProvider>
       </PaperProvider>
     </SafeAreaProvider>
