@@ -2,12 +2,15 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.database import get_database
-from app.core.security import create_access_token, create_refresh_token, verify_password, get_current_user
-from app.crud.user import get_user_by_email, create_user
-from app.schemas.user import UserCreate, Token, User, LoginRequest
+from app.core.security import create_access_token, create_refresh_token, verify_password, get_current_user, get_password_hash
+from app.crud.user import get_user_by_email, create_user, get_user_in_db_by_email
+from app.schemas.user import UserCreate, Token, User, LoginRequest, GoogleLoginRequest
 from app.utils.validators import validate_email_unique, validate_roles
 from app.utils.turnstile import verify_turnstile_token
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from google.oauth2 import id_token
+from google.auth.transport import requests
+import os
 
 router = APIRouter()
 
@@ -70,3 +73,78 @@ async def refresh_token(current_user: str = Depends(get_current_user), db: Async
     # In a real implementation, validate refresh token
     access_token = create_access_token(subject=current_user)
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/google", response_model=Token)
+async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
+    """
+    Autentica usuário usando token do Google OAuth.
+    Se o usuário não existe, cria uma nova conta automaticamente.
+    """
+    try:
+        # Verificar o token ID do Google
+        # NOTA: Configure a variável de ambiente GOOGLE_CLIENT_ID com seu Client ID do Google
+        GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+
+        if not GOOGLE_CLIENT_ID:
+            # Para desenvolvimento, permitir sem validação (REMOVER EM PRODUÇÃO!)
+            # Aqui você pode adicionar lógica de mock para testes
+            raise HTTPException(status_code=500, detail="Google Client ID não configurado")
+
+        # Verificar o token ID com o Google
+        idinfo = id_token.verify_oauth2_token(
+            google_data.idToken,
+            requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+
+        # Extrair informações do usuário do token
+        google_email = idinfo.get('email')
+        google_name = idinfo.get('name', '')
+        google_sub = idinfo.get('sub')  # ID único do Google
+
+        if not google_email:
+            raise HTTPException(status_code=400, detail="Email não encontrado no token do Google")
+
+        # Verificar se o usuário já existe
+        user = await get_user_in_db_by_email(db, google_email)
+
+        if not user:
+            # Criar novo usuário com dados do Google
+            # Para CPF, usar um valor temporário (deve ser completado depois)
+            new_user = UserCreate(
+                email=google_email,
+                full_name=google_name,
+                password=google_sub,  # Usar o Google Sub como senha (nunca será usado para login direto)
+                cpf="000.000.000-00",  # CPF temporário - usuário deve atualizar depois
+                phone=None,
+                roles=["client"]
+            )
+            user = await create_user(db, new_user)
+
+        # Criar tokens de acesso
+        access_token = create_access_token(subject=str(user.id))
+        refresh_token = create_refresh_token(subject=str(user.id))
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "user": user
+        }
+
+    except ValueError as e:
+        # Token inválido
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token do Google inválido: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao processar login com Google: {str(e)}"
+        )
+
+@router.get("/me", response_model=User)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """Retorna informações do usuário autenticado"""
+    return current_user

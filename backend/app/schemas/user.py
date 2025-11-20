@@ -45,6 +45,7 @@ class Token(BaseModel):
     access_token: str
     refresh_token: Optional[str] = None
     token_type: str
+    user: Optional[User] = None
 
 class TokenData(BaseModel):
     email: Optional[str] = None
@@ -56,3 +57,6 @@ class LoginRequest(BaseModel):
     username: str  # Email
     password: str
     turnstile_token: Optional[str] = None
+
+class GoogleLoginRequest(BaseModel):
+    idToken: str
