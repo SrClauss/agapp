@@ -3,6 +3,7 @@
     "name": "AgilizaPro",
     "slug": "agapp",
     "version": "1.0.0",
+    "scheme": "com.agilizapro.agapp",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

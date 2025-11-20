@@ -2,6 +2,8 @@
 
 Este guia explica como configurar a autenticação com Google no aplicativo mobile.
 
+**IMPORTANTE**: O app usa `expo-auth-session` com `useProxy: true` para abrir o login do Google em uma WebView dentro do app (não abre navegador externo).
+
 ## Pré-requisitos
 
 1. Conta do Google Cloud Platform
@@ -9,21 +11,36 @@ Este guia explica como configurar a autenticação com Google no aplicativo mobi
 
 ## Passo a Passo
 
-### 1. Criar Credenciais OAuth no Google Cloud Console
+### 1. Configurar OAuth Consent Screen (PRIMEIRO PASSO - OBRIGATÓRIO)
 
-1. Acesse [Google Cloud Console](https://console.cloud.google.com/)
-2. Selecione ou crie um novo projeto
-3. Navegue para **APIs & Services** > **Credentials**
-4. Clique em **+ CREATE CREDENTIALS** > **OAuth client ID**
-
-### 2. Configurar OAuth Consent Screen
-
-1. Configure a tela de consentimento em **OAuth consent screen**
+1. Acesse [Google Cloud Console - OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent?project=agilizzapp-206f1)
 2. Escolha **External** se for para uso público
 3. Preencha as informações obrigatórias:
-   - App name
-   - User support email
-   - Developer contact information
+   - **App name**: AgilizaPro
+   - **User support email**: seu-email@gmail.com
+   - **Developer contact information**: seu-email@gmail.com
+   - **App logo** (opcional)
+   - **Application home page** (opcional): https://agilizapro.cloud
+   - **Application privacy policy link** (opcional): https://agilizapro.cloud/privacy
+   - **Application terms of service link** (opcional): https://agilizapro.cloud/terms
+4. Clique em **SAVE AND CONTINUE**
+5. Em **Scopes**, adicione os scopes necessários:
+   - `.../auth/userinfo.email`
+   - `.../auth/userinfo.profile`
+   - `openid`
+6. Clique em **SAVE AND CONTINUE**
+7. Em **Test users**, adicione os emails que você vai usar para testar:
+   - Clique em **+ ADD USERS**
+   - Digite seu email de teste (ex: seu-email@gmail.com)
+   - Clique em **SAVE AND CONTINUE**
+8. Revise e clique em **BACK TO DASHBOARD**
+
+**IMPORTANTE**: Enquanto o app estiver em modo "Testing", apenas os emails adicionados em "Test users" conseguirão fazer login!
+
+### 2. Criar Credenciais OAuth no Google Cloud Console
+
+1. Acesse [Google Cloud Console - Credentials](https://console.cloud.google.com/apis/credentials?project=agilizzapp-206f1)
+2. Clique em **+ CREATE CREDENTIALS** > **OAuth client ID**
 
 ### 3. Criar Client IDs para cada plataforma
 
@@ -49,13 +66,23 @@ Este guia explica como configurar a autenticação com Google no aplicativo mobi
 2. Preencha:
    - **Bundle ID**: Encontre em `app.json` (ex: `com.yourcompany.agapp`)
 
-#### Web (para Expo Go e desenvolvimento)
+#### Web (OBRIGATÓRIO)
 
 1. Selecione **Web application** como tipo de aplicação
-2. Em **Authorized redirect URIs**, adicione:
+2. **Nome**: AgilizaPro Web Client
+3. Em **Authorized JavaScript origins**, NÃO é necessário adicionar nada
+4. Em **Authorized redirect URIs**, adicione APENAS estas URIs (Google não aceita exp:// ou IPs):
    ```
-   https://auth.expo.io/@your-expo-username/your-app-slug
+   https://auth.expo.io/clausemberg/agapp
+   https://agilizzapp-206f1.firebaseapp.com/__/auth/handler
    ```
+
+   **IMPORTANTE**:
+   - Google Cloud Console só aceita URLs HTTPS com domínios válidos (.com, .org, etc)
+   - URIs como `exp://` ou `com.agilizapro.agapp://` NÃO são aceitas
+   - Use apenas as duas URIs acima
+
+**IMPORTANTE**: O `webClientId` e os redirect URIs são necessários para o `expo-auth-session` funcionar. Este Client ID é usado para autenticação e validação do token no backend.
 
 ### 4. Configurar Variáveis de Ambiente
 
