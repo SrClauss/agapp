@@ -58,23 +58,10 @@ export default function LoginScreen() {
 
   const onGoogleLogin = async () => {
     setError(null);
-    setLoading(true);
     try {
-      const result = await promptAsync();
-
-      // Se o usuário cancelou, não mostra erro
-      if (result.type === 'cancel') {
-        setLoading(false);
-        return;
-      }
-
-      // Se deu erro, mostra mensagem
-      if (result.type === 'error') {
-        throw new Error(result.error?.message || 'Erro ao fazer login com Google');
-      }
+      await promptAsync();
     } catch (e: any) {
-      setError(e.message || 'Erro ao iniciar login com Google');
-      setLoading(false);
+      setError(e.message || 'Erro ao fazer login com Google');
     }
   };
 
