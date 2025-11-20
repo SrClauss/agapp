@@ -58,10 +58,23 @@ export default function LoginScreen() {
 
   const onGoogleLogin = async () => {
     setError(null);
+    setLoading(true);
     try {
-      await promptAsync();
+      const result = await promptAsync();
+
+      // Se o usuário cancelou, não mostra erro
+      if (result.type === 'cancel') {
+        setLoading(false);
+        return;
+      }
+
+      // Se deu erro, mostra mensagem
+      if (result.type === 'error') {
+        throw new Error(result.error?.message || 'Erro ao fazer login com Google');
+      }
     } catch (e: any) {
       setError(e.message || 'Erro ao iniciar login com Google');
+      setLoading(false);
     }
   };
 
@@ -96,7 +109,13 @@ export default function LoginScreen() {
           Entrar com e-mail
         </Button>
 
-        <Button mode="outlined" onPress={onGoogleLogin} loading={loading} style={styles.button}>
+        <Button
+          mode="outlined"
+          onPress={onGoogleLogin}
+          loading={loading}
+          disabled={loading || !request}
+          style={styles.button}
+        >
           Entrar com Google
         </Button>
 
