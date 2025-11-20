@@ -82,19 +82,23 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
     """
     try:
         # Verificar o token ID do Google
-        # NOTA: Configure a variável de ambiente GOOGLE_CLIENT_ID com seu Client ID do Google
-        GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+        # GOOGLE_AUDIENCE_CLIENT_IDS deve ser uma string com os IDs separados por vírgula
+        # ex: "id_web.apps...,id_android.apps...,id_ios.apps..."
+        audience_str = os.getenv("GOOGLE_AUDIENCE_CLIENT_IDS", "")
+        if not audience_str:
+            raise HTTPException(
+                status_code=500, 
+                detail="GOOGLE_AUDIENCE_CLIENT_IDS não configurado no backend."
+            )
 
-        if not GOOGLE_CLIENT_ID:
-            # Para desenvolvimento, permitir sem validação (REMOVER EM PRODUÇÃO!)
-            # Aqui você pode adicionar lógica de mock para testes
-            raise HTTPException(status_code=500, detail="Google Client ID não configurado")
+        # A biblioteca do Google espera uma lista de IDs de cliente como 'audience'
+        valid_audience = [client_id.strip() for client_id in audience_str.split(',')]
 
         # Verificar o token ID com o Google
         idinfo = id_token.verify_oauth2_token(
             google_data.idToken,
             requests.Request(),
-            GOOGLE_CLIENT_ID
+            audience=valid_audience
         )
 
         # Extrair informações do usuário do token
