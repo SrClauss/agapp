@@ -2,7 +2,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.database import get_database
-from app.core.security import create_access_token, create_refresh_token, verify_password, get_current_user, get_password_hash
+from app.core.security import create_access_token, create_refresh_token, verify_password, get_current_user
 from app.crud.user import get_user_by_email, create_user, get_user_in_db_by_email
 from app.schemas.user import UserCreate, Token, User, LoginRequest, GoogleLoginRequest
 from app.utils.validators import validate_email_unique, validate_roles
