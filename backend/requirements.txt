@@ -17,3 +17,4 @@ slowapi==0.1.9
 python-multipart==0.0.20
 cryptography==46.0.3
 requests==2.31.0
+google-auth==2.32.0

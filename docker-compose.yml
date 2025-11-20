@@ -1,0 +1,80 @@
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:7.0
+    container_name: agiliza_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${DATABASE_NAME:-agiliza}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - agiliza_network
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agiliza_backend
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URL=${MONGODB_URL}
+      - DATABASE_NAME=${DATABASE_NAME:-agiliza}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - ASAAS_API_KEY=${ASAAS_API_KEY}
+      - ASAAS_ENVIRONMENT=${ASAAS_ENVIRONMENT:-sandbox}
+      - ASAAS_WEBHOOK_TOKEN=${ASAAS_WEBHOOK_TOKEN}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - agiliza_network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: agiliza_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+    networks:
+      - agiliza_network
+    restart: unless-stopped
+
+  # Frontend (preparado para futuro)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: agiliza_frontend
+  #   networks:
+  #     - agiliza_network
+  #   restart: unless-stopped
+
+networks:
+  agiliza_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
