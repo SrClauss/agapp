@@ -73,8 +73,15 @@ export async function completeProfile(token: string, profileData: { phone: strin
     body: JSON.stringify(profileData),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Complete profile failed');
+    let errorMessage = 'Complete profile failed';
+    try {
+      const error = await res.json();
+      errorMessage = error.detail || errorMessage;
+    } catch (e) {
+      // Se não conseguir parsear JSON, usar status text
+      errorMessage = `Erro ${res.status}: ${res.statusText}`;
+    }
+    throw new Error(errorMessage);
   }
   return res.json();
 }

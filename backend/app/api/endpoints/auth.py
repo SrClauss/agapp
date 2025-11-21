@@ -163,6 +163,7 @@ async def complete_profile(
     Completa o perfil do usuário autenticado.
     Atualiza campos como phone, cpf, full_name, password, roles e marca como completo.
     """
+    print(f"Complete profile for user {current_user.id}: {profile_data.model_dump()}")
     from app.core.security import get_password_hash
 
     # Validar roles se fornecidas
@@ -177,11 +178,14 @@ async def complete_profile(
     # Marcar perfil como completo
     update_dict['is_profile_complete'] = True
 
+    print(f"Update dict: {update_dict}")
+
     # Atualizar usuário
     updated_user = await update_user(db, current_user.id, update_dict)
     if not updated_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    print(f"Updated user: {updated_user}")
     return updated_user
 
 @router.get("/me", response_model=User)

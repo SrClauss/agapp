@@ -39,6 +39,7 @@ export default function CompleteProfileScreen() {
     setLoading(true);
     setError(null);
     try {
+      console.log('Enviando dados para completar perfil:', { phone, cpf, full_name: user.full_name, password: '***', roles });
       const updatedUser = await completeProfile(token, {
         phone,
         cpf,
@@ -46,11 +47,13 @@ export default function CompleteProfileScreen() {
         password,
         roles,
       });
+      console.log('Perfil completado:', updatedUser);
       // Atualizar user com photo se disponível
       const userWithPhoto = { ...updatedUser, photo: user.photo };
       setUser(userWithPhoto);
       navigation.navigate('Welcome' as never);
     } catch (e: any) {
+      console.error('Erro ao completar perfil:', e);
       setError(e.message || 'Erro ao completar perfil');
     } finally {
       setLoading(false);
