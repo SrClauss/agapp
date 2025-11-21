@@ -65,6 +65,70 @@ async def read_nearby_projects(
     projects = await get_projects(db, filters=filters)
     return projects
 
+@router.get("/nearby/non-remote", response_model=List[Project])
+async def read_nearby_non_remote_projects(
+    latitude: float = None,
+    longitude: float = None,
+    radius_km: float = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Busca projetos NÃO-REMOTOS dentro de um raio específico.
+
+    Se latitude/longitude/radius_km não forem fornecidos, usa as configurações
+    salvas do prestador (establishment_coordinates e service_radius_km).
+
+    Retorna apenas projetos com remote_execution=false.
+    """
+    # Verificar se é prestador
+    if "professional" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="Only professionals can access this endpoint")
+
+    # Se coordenadas não fornecidas, buscar das configurações do prestador
+    if latitude is None or longitude is None or radius_km is None:
+        user = await db.users.find_one({"_id": str(current_user.id)})
+        professional_info = user.get("professional_info", {})
+        settings = professional_info.get("settings", {})
+
+        if not settings:
+            raise HTTPException(
+                status_code=400,
+                detail="No location parameters provided and no professional settings configured"
+            )
+
+        coords = settings.get("establishment_coordinates")
+        if not coords or len(coords) != 2:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid establishment coordinates configured. Please update your professional settings."
+            )
+
+        longitude = coords[0]
+        latitude = coords[1]
+        radius_km = settings.get("service_radius_km", 10)
+
+    # Buscar projetos não-remotos dentro do raio
+    query = {
+        "remote_execution": False,  # Apenas projetos NÃO-remotos
+        "status": "open",  # Apenas projetos abertos
+        "location.coordinates": {
+            "$near": {
+                "$geometry": {
+                    "type": "Point",
+                    "coordinates": [longitude, latitude]
+                },
+                "$maxDistance": radius_km * 1000  # Converter km para metros
+            }
+        }
+    }
+
+    projects = []
+    async for project in db.projects.find(query).limit(100):
+        projects.append(Project(**project))
+
+    return projects
+
 @router.get("/{project_id}", response_model=Project)
 async def read_project(
     project_id: str,

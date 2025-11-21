@@ -3,7 +3,7 @@ from typing import List
 from app.core.database import get_database
 from app.core.security import get_current_user, get_current_admin_user
 from app.crud.user import get_user, update_user, get_professionals_nearby, get_users, delete_user
-from app.schemas.user import User, UserUpdate, UserCreate, AddressGeocode
+from app.schemas.user import User, UserUpdate, UserCreate, AddressGeocode, ProfessionalSettings, ProfessionalSettingsUpdate
 from app.services.geocoding import geocode_address
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -40,6 +40,63 @@ async def geocode_user_address(geocode: AddressGeocode):
     if not result:
         raise HTTPException(status_code=400, detail="Could not geocode address")
     return result
+
+@router.get("/me/professional-settings", response_model=ProfessionalSettings)
+async def get_professional_settings(
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Retorna as configurações do prestador de serviços"""
+    if "professional" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="User is not a professional")
+
+    # Buscar usuário atualizado do banco
+    user = await db.users.find_one({"_id": str(current_user.id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    professional_info = user.get("professional_info", {})
+    settings = professional_info.get("settings", {})
+
+    return ProfessionalSettings(**settings) if settings else ProfessionalSettings()
+
+@router.put("/me/professional-settings", response_model=User)
+async def update_professional_settings(
+    settings: ProfessionalSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Atualiza as configurações do prestador de serviços"""
+    if "professional" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="User is not a professional")
+
+    # Geocode establishment address if provided
+    if settings.establishment_address:
+        geocoded = await geocode_address(settings.establishment_address)
+        if geocoded and "coordinates" in geocoded:
+            settings.establishment_coordinates = geocoded["coordinates"]
+
+    # Buscar professional_info atual
+    user = await db.users.find_one({"_id": str(current_user.id)})
+    professional_info = user.get("professional_info", {})
+    current_settings = professional_info.get("settings", {})
+
+    # Merge settings (mantém valores não-nulos)
+    updated_settings = {**current_settings}
+    for key, value in settings.dict(exclude_none=True).items():
+        updated_settings[key] = value
+
+    # Atualizar no banco
+    professional_info["settings"] = updated_settings
+
+    await db.users.update_one(
+        {"_id": str(current_user.id)},
+        {"$set": {"professional_info": professional_info}}
+    )
+
+    # Retornar usuário atualizado
+    updated_user = await get_user(db, str(current_user.id))
+    return updated_user
 
 # Admin endpoints
 @router.get("/admin/", response_model=List[User])
