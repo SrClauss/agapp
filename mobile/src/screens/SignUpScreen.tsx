@@ -109,7 +109,7 @@ export default function SignUpScreen() {
             label="Nome completo"
             value={fullName}
             onChangeText={setFullName}
-            style={styles.input}
+            style={commonStyles.input}
             autoCapitalize="words"
           />
 
@@ -119,7 +119,7 @@ export default function SignUpScreen() {
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-            style={styles.input}
+            style={commonStyles.input}
           />
 
           <TextInput
@@ -127,7 +127,7 @@ export default function SignUpScreen() {
             value={cpf}
             onChangeText={(text) => setCpf(formatCPF(text))}
             keyboardType="numeric"
-            style={styles.input}
+            style={commonStyles.input}
             maxLength={14}
           />
 
@@ -136,7 +136,7 @@ export default function SignUpScreen() {
             value={phone}
             onChangeText={(text) => setPhone(formatPhone(text))}
             keyboardType="phone-pad"
-            style={styles.input}
+            style={commonStyles.input}
             maxLength={15}
           />
 
@@ -145,7 +145,7 @@ export default function SignUpScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            style={styles.input}
+            style={commonStyles.input}
           />
 
           <TextInput
@@ -153,14 +153,13 @@ export default function SignUpScreen() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
-            style={styles.input}
+            style={commonStyles.input}
           />
 
           <Checkbox.Item
             label="Quero me cadastrar como profissional"
             status={isProfessional ? 'checked' : 'unchecked'}
             onPress={() => setIsProfessional(!isProfessional)}
-            style={styles.checkbox}
           />
 
           {error ? <HelperText type="error">{error}</HelperText> : null}

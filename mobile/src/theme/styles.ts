@@ -1,5 +1,23 @@
 import { StyleSheet } from 'react-native';
-import { colors, fonts, spacing, borderRadius } from './index';
+import { colors } from './colors';
+import { fonts } from './fonts';
+
+const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+} as const;
+
+const borderRadius = {
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  xxl: 24,
+} as const;
 
 export const commonStyles = StyleSheet.create({
   // Container styles
@@ -27,7 +45,7 @@ export const commonStyles = StyleSheet.create({
     padding: spacing.md,
     marginVertical: spacing.sm,
     elevation: 2,
-    shadowColor: colors.shadow,
+    shadowColor: colors.overlay,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
@@ -38,7 +56,7 @@ export const commonStyles = StyleSheet.create({
     padding: spacing.md,
     marginVertical: spacing.sm,
     elevation: 2,
-    shadowColor: colors.shadow,
+    shadowColor: colors.overlay,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,

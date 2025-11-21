@@ -1,4 +1,14 @@
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+// @ts-ignore - Dynamic import to handle CommonJS/ES module compatibility
+let GoogleSignin: any = null;
+
+const loadGoogleSignin = async () => {
+  if (!GoogleSignin) {
+    const module = await import('@react-native-google-signin/google-signin');
+    GoogleSignin = module.GoogleSignin;
+  }
+  return GoogleSignin;
+};
+
 import { useEffect } from 'react';
 
 // Configuração do Google OAuth usando variáveis de ambiente
@@ -9,12 +19,18 @@ if (!GOOGLE_CLIENT_ID_WEB) {
 }
 
 // Configurar o Google Sign-In
-GoogleSignin.configure({
-  webClientId: GOOGLE_CLIENT_ID_WEB, // Do Google Cloud Console (Web Client)
-  offlineAccess: true,
-  scopes: ['openid', 'profile', 'email'],
-  forceCodeForRefreshToken: true, // Força refresh token
-});
+const configureGoogleSignin = async () => {
+  const GoogleSigninModule = await loadGoogleSignin();
+  GoogleSigninModule.configure({
+    webClientId: GOOGLE_CLIENT_ID_WEB, // Do Google Cloud Console (Web Client)
+    offlineAccess: true,
+    scopes: ['openid', 'profile', 'email'],
+    forceCodeForRefreshToken: true, // Força refresh token
+  });
+};
+
+// Chamar configuração
+configureGoogleSignin();
 
 export function useGoogleAuth() {
   useEffect(() => {
@@ -27,23 +43,25 @@ export function useGoogleAuth() {
       try {
         console.log('Iniciando Google Sign-In nativo...');
 
+        const GoogleSigninModule = await loadGoogleSignin();
+
         // Fazer logout silencioso primeiro para forçar escolha de conta
         try {
-          await GoogleSignin.signOut();
+          await GoogleSigninModule.signOut();
         } catch (e) {
           // Ignora erro se não estava logado
         }
 
         // Verificar se Google Play Services está disponível
-        await GoogleSignin.hasPlayServices();
+        await GoogleSigninModule.hasPlayServices();
 
         // Fazer login - agora vai mostrar a tela de escolha de conta
-        const userInfo = await GoogleSignin.signIn();
+        const userInfo = await GoogleSigninModule.signIn();
 
         console.log('Login bem-sucedido!', userInfo);
 
         // Pegar o ID Token
-        const tokens = await GoogleSignin.getTokens();
+        const tokens = await GoogleSigninModule.getTokens();
         const idToken = tokens.idToken;
 
         console.log('ID Token obtido:', idToken ? 'Token encontrado ✓' : 'Token não encontrado ✗');
@@ -56,7 +74,8 @@ export function useGoogleAuth() {
     },
     signOut: async () => {
       try {
-        await GoogleSignin.signOut();
+        const GoogleSigninModule = await loadGoogleSignin();
+        await GoogleSigninModule.signOut();
         console.log('Logout bem-sucedido');
       } catch (error) {
         console.error('Erro no logout:', error);
