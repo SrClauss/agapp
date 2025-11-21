@@ -10,6 +10,7 @@ export type User = {
   phone?: string;
   roles: string[];
   is_active: boolean;
+  is_profile_complete: boolean;  // Novo campo
   credits: number;
   created_at: string;
   updated_at: string;

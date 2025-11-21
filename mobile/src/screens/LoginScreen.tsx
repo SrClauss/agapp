@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Button, TextInput, Surface, Title, HelperText } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { loginWithEmail, loginWithGoogle, fetchCurrentUser } from '../api/auth';
-import { useGoogleAuth, extractIdTokenFromResponse } from '../services/googleAuth';
+import { useGoogleAuth } from '../services/googleAuth';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -16,7 +16,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { request, response, promptAsync } = useGoogleAuth();
+  const { signIn } = useGoogleAuth();
 
   const onEmailLogin = async () => {
     setLoading(true);
@@ -24,7 +24,13 @@ export default function LoginScreen() {
     try {
       const data = await loginWithEmail(email, password);
       await setToken(data.token);
-      setUser(data.user || (await fetchCurrentUser(data.token)));
+      const user = data.user || (await fetchCurrentUser(data.token));
+      setUser(user);
+      if (!user.is_profile_complete) {
+        navigation.navigate('CompleteProfile' as never);
+      } else {
+        navigation.navigate('Welcome' as never);
+      }
     } catch (e: any) {
       setError(e.message || 'Erro no login');
     } finally {
@@ -32,36 +38,34 @@ export default function LoginScreen() {
     }
   };
 
-  useEffect(() => {
-    if (response?.type === 'success') {
-      handleGoogleResponse();
-    }
-  }, [response]);
-
-  const handleGoogleResponse = async () => {
-    setLoading(true);
+  const onGoogleLogin = async () => {
     setError(null);
+    setLoading(true);
     try {
-      const idToken = extractIdTokenFromResponse(response);
+      // Fazer login nativo com Google
+      const idToken = await signIn();
+
       if (!idToken) {
         throw new Error('Não foi possível obter o token do Google');
       }
+
+      console.log('Enviando token para o backend...');
       const data = await loginWithGoogle(idToken);
+
       await setToken(data.token);
-      setUser(data.user || (await fetchCurrentUser(data.token)));
+      const user = data.user || (await fetchCurrentUser(data.token));
+      setUser(user);
+
+      if (!user.is_profile_complete) {
+        navigation.navigate('CompleteProfile' as never);
+      } else {
+        navigation.navigate('Welcome' as never);
+      }
     } catch (e: any) {
-      setError(e.message || 'Erro no login com Google');
+      console.error('Erro no Google Sign-In:', e);
+      setError(e.message || 'Erro ao fazer login com Google');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const onGoogleLogin = async () => {
-    setError(null);
-    try {
-      await promptAsync();
-    } catch (e: any) {
-      setError(e.message || 'Erro ao fazer login com Google');
     }
   };
 
@@ -100,7 +104,7 @@ export default function LoginScreen() {
           mode="outlined"
           onPress={onGoogleLogin}
           loading={loading}
-          disabled={loading || !request}
+          disabled={loading}
           style={styles.button}
         >
           Entrar com Google

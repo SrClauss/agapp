@@ -65,3 +65,16 @@ export async function fetchCurrentUser(token: string) {
   if (!res.ok) throw new Error('Failed fetching user');
   return res.json();
 }
+
+export async function completeProfile(token: string, profileData: { phone: string; cpf: string; full_name: string; password: string; roles: string[] }) {
+  const res = await fetch(`${BACKEND_URL}/auth/complete-profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(profileData),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || 'Complete profile failed');
+  }
+  return res.json();
+}
