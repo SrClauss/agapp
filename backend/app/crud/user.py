@@ -69,8 +69,11 @@ async def create_user(db: AsyncIOMotorDatabase, user: UserCreate) -> User:
     await db.users.insert_one(user_dict)
     return User(**user_dict)
 
-async def update_user(db: AsyncIOMotorDatabase, user_id: str, user_update: UserUpdate) -> Optional[User]:
-    update_data = {k: v for k, v in user_update.dict().items() if v is not None}
+async def update_user(db: AsyncIOMotorDatabase, user_id: str, user_update: UserUpdate | dict) -> Optional[User]:
+    if isinstance(user_update, dict):
+        update_data = {k: v for k, v in user_update.items() if v is not None}
+    else:
+        update_data = {k: v for k, v in user_update.dict().items() if v is not None}
     if update_data:
         update_data["updated_at"] = datetime.utcnow()
         await db.users.update_one({"_id": user_id}, {"$set": update_data})
