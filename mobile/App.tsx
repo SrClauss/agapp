@@ -6,13 +6,14 @@ import { StatusBar } from 'expo-status-bar';
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
-import CompleteProfileScreen from './src/screens/CompleteProfileScreen';  // Novo import
+import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
+import { theme } from './src/theme';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <PaperProvider>
+    <PaperProvider theme={theme}>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Login">
           <Stack.Screen name="Login" component={LoginScreen} />

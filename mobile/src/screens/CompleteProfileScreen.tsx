@@ -4,6 +4,7 @@ import { Button, TextInput, Surface, Title, HelperText, RadioButton } from 'reac
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { completeProfile } from '../api/auth';
+import { commonStyles } from '../theme/styles';
 
 export default function CompleteProfileScreen() {
   const navigation = useNavigation();
@@ -61,15 +62,15 @@ export default function CompleteProfileScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Surface style={styles.surface} elevation={2}>
-        <Title style={styles.title}>Completar Perfil</Title>
+    <ScrollView contentContainerStyle={commonStyles.scrollContainer}>
+      <Surface style={commonStyles.surface}>
+        <Title style={commonStyles.title}>Completar Perfil</Title>
 
         <TextInput
           label="Nome Completo"
           value={user?.full_name || ''}
           editable={false}
-          style={styles.input}
+          style={commonStyles.input}
         />
 
         <TextInput
@@ -77,7 +78,7 @@ export default function CompleteProfileScreen() {
           value={cpf}
           onChangeText={setCpf}
           keyboardType="numeric"
-          style={styles.input}
+          style={commonStyles.input}
         />
 
         <TextInput
@@ -85,7 +86,7 @@ export default function CompleteProfileScreen() {
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
-          style={styles.input}
+          style={commonStyles.input}
         />
 
         <TextInput
@@ -93,7 +94,7 @@ export default function CompleteProfileScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={styles.input}
+          style={commonStyles.input}
         />
 
         <TextInput
@@ -101,10 +102,10 @@ export default function CompleteProfileScreen() {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
-          style={styles.input}
+          style={commonStyles.input}
         />
 
-        <Title style={styles.subtitle}>Função</Title>
+        <Title style={commonStyles.subtitle}>Função</Title>
         <RadioButton.Group onValueChange={handleRoleChange} value={roles.includes('professional') && roles.includes('client') ? 'both' : roles[0] || 'client'}>
           <RadioButton.Item label="Cliente" value="client" />
           <RadioButton.Item label="Profissional" value="professional" />
@@ -113,19 +114,10 @@ export default function CompleteProfileScreen() {
 
         {error ? <HelperText type="error">{error}</HelperText> : null}
 
-        <Button mode="contained" onPress={onCompleteProfile} loading={loading} style={styles.button}>
+        <Button mode="contained" onPress={onCompleteProfile} loading={loading} style={commonStyles.button}>
           Completar Perfil
         </Button>
       </Surface>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: 'center', padding: 16 },
-  surface: { padding: 20, borderRadius: 8 },
-  title: { marginBottom: 12 },
-  subtitle: { marginTop: 12, marginBottom: 8 },
-  input: { marginBottom: 12 },
-  button: { marginTop: 12 },
-});

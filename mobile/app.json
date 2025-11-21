@@ -2,6 +2,7 @@
   "expo": {
     "name": "AgilizaPro",
     "slug": "agapp",
+    "owner": "clausemberg",
     "version": "1.0.0",
     "scheme": "com.agilizapro.agapp",
     "orientation": "portrait",
@@ -31,11 +32,12 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {
-        "projectId": "agilizzapp-206f1"
+        "projectId": "0e99eaba-51a4-4186-9e49-b0834615e7c9"
       }
     }
   }

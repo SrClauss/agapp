@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { loginWithEmail, loginWithGoogle, fetchCurrentUser } from '../api/auth';
 import { useGoogleAuth } from '../services/googleAuth';
+import { commonStyles } from '../theme/styles';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -71,11 +72,11 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={commonStyles.centeredContainer}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Surface style={styles.surface} elevation={2}>
-        <Title style={styles.title}>Entrar</Title>
+      <Surface style={commonStyles.surface}>
+        <Title style={commonStyles.title}>Entrar</Title>
 
         <TextInput
           label="E-mail"
@@ -83,7 +84,7 @@ export default function LoginScreen() {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          style={styles.input}
+          style={commonStyles.input}
         />
 
         <TextInput
@@ -91,12 +92,12 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={styles.input}
+          style={commonStyles.input}
         />
 
         {error ? <HelperText type="error">{error}</HelperText> : null}
 
-        <Button mode="contained" onPress={onEmailLogin} loading={loading} style={styles.button}>
+        <Button mode="contained" onPress={onEmailLogin} loading={loading} style={commonStyles.button}>
           Entrar com e-mail
         </Button>
 
@@ -105,7 +106,7 @@ export default function LoginScreen() {
           onPress={onGoogleLogin}
           loading={loading}
           disabled={loading}
-          style={styles.button}
+          style={commonStyles.button}
         >
           Entrar com Google
         </Button>
@@ -117,11 +118,3 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 16 },
-  surface: { padding: 20, borderRadius: 8 },
-  title: { marginBottom: 12 },
-  input: { marginBottom: 12 },
-  button: { marginVertical: 6 },
-});

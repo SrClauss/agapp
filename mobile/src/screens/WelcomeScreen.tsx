@@ -3,21 +3,22 @@ import { StyleSheet, View } from 'react-native';
 import { Button, Surface, Title, Paragraph } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
+import { commonStyles } from '../theme/styles';
 
 export default function WelcomeScreen() {
   const navigation = useNavigation();
   const user = useAuthStore((s: AuthState) => s.user);
 
   return (
-    <View style={styles.container}>
-      <Surface style={styles.surface} elevation={4}>
-        <Title style={styles.title}>🎉 Bem-vindo(a)!</Title>
+    <View style={commonStyles.centeredContainer}>
+      <Surface style={commonStyles.surface}>
+        <Title style={commonStyles.title}>🎉 Bem-vindo(a)!</Title>
 
-        <Paragraph style={styles.paragraph}>
+        <Paragraph style={commonStyles.body}>
           Olá, {user?.full_name || 'Usuário'}!
         </Paragraph>
 
-        <Paragraph style={styles.paragraph}>
+        <Paragraph style={commonStyles.body}>
           Seu login foi realizado com sucesso.
           Estamos felizes em ter você aqui!
         </Paragraph>
@@ -29,7 +30,7 @@ export default function WelcomeScreen() {
             // navigation.navigate('Home');
             console.log('Continuar para o app');
           }}
-          style={styles.button}
+          style={commonStyles.button}
         >
           Continuar
         </Button>
@@ -37,31 +38,3 @@ export default function WelcomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 16,
-    backgroundColor: '#f5f5f5',
-  },
-  surface: {
-    padding: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  paragraph: {
-    fontSize: 16,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  button: {
-    marginTop: 24,
-    paddingHorizontal: 32,
-  },
-});

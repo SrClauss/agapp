@@ -4,6 +4,7 @@ import { Button, TextInput, Surface, Title, HelperText, Checkbox, Text } from 'r
 import { useNavigation } from '@react-navigation/native';
 import { signUpWithEmail, loginWithEmail } from '../api/auth';
 import useAuthStore, { AuthState } from '../stores/authStore';
+import { commonStyles } from '../theme/styles';
 
 export default function SignUpScreen() {
   const navigation = useNavigation();
@@ -97,12 +98,12 @@ export default function SignUpScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={commonStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Surface style={styles.surface} elevation={2}>
-          <Title style={styles.title}>Criar conta</Title>
+      <ScrollView contentContainerStyle={commonStyles.scrollContainer}>
+        <Surface style={commonStyles.surface}>
+          <Title style={commonStyles.title}>Criar conta</Title>
 
           <TextInput
             label="Nome completo"
@@ -164,7 +165,7 @@ export default function SignUpScreen() {
 
           {error ? <HelperText type="error">{error}</HelperText> : null}
 
-          <Button mode="contained" onPress={onSignUp} loading={loading} style={styles.button}>
+          <Button mode="contained" onPress={onSignUp} loading={loading} style={commonStyles.button}>
             Criar conta
           </Button>
 
@@ -176,13 +177,3 @@ export default function SignUpScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 16 },
-  surface: { padding: 20, borderRadius: 8 },
-  title: { marginBottom: 12 },
-  input: { marginBottom: 12 },
-  checkbox: { marginVertical: 8 },
-  button: { marginVertical: 6 },
-});

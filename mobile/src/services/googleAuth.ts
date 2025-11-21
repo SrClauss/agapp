@@ -1,48 +1,66 @@
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { makeRedirectUri } from 'expo-auth-session';
-
-// Importante: completa a sessão de autenticação quando retornar da WebView
-WebBrowser.maybeCompleteAuthSession();
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useEffect } from 'react';
 
 // Configuração do Google OAuth usando variáveis de ambiente
-// TODOS os Client IDs apontam para o mesmo valor do google-services.json
-const GOOGLE_CLIENT_ID_ANDROID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '756816795062-0sj0423v6lqbaacrbij1fefc4fg9mk8g.apps.googleusercontent.com';
-const GOOGLE_CLIENT_ID_IOS = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || '756816795062-0sj0423v6lqbaacrbij1fefc4fg9mk8g.apps.googleusercontent.com';
-const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '756816795062-0sj0423v6lqbaacrbij1fefc4fg9mk8g.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
 
-export function useGoogleAuth() {
-  // Usar proxy do Expo (https://auth.expo.io)
-  // Isso evita problemas com URIs personalizadas que Google não aceita
-  const redirectUri = makeRedirectUri({
-    useProxy: true,
-  });
-
-  console.log('🔐 Google OAuth Redirect URI:', redirectUri);
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: GOOGLE_CLIENT_ID_ANDROID,
-    iosClientId: GOOGLE_CLIENT_ID_IOS,
-    webClientId: GOOGLE_CLIENT_ID_WEB,
-    redirectUri: redirectUri,
-    scopes: ['openid', 'profile', 'email'],
-    selectAccount: true,
-    // Configurações para obter id_token diretamente
-    responseType: 'id_token',
-    usePKCE: false,
-  });
-
-  return {
-    request,
-    response,
-    promptAsync,
-  };
+if (!GOOGLE_CLIENT_ID_WEB) {
+  throw new Error('EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB não está configurado no arquivo .env');
 }
 
-export function extractIdTokenFromResponse(response: any): string | null {
-  if (response?.type === 'success') {
-    const { authentication } = response;
-    return authentication?.idToken || null;
-  }
-  return null;
+// Configurar o Google Sign-In
+GoogleSignin.configure({
+  webClientId: GOOGLE_CLIENT_ID_WEB, // Do Google Cloud Console (Web Client)
+  offlineAccess: true,
+  scopes: ['openid', 'profile', 'email'],
+  forceCodeForRefreshToken: true, // Força refresh token
+});
+
+export function useGoogleAuth() {
+  useEffect(() => {
+    console.log('=== Google Sign-In NATIVO configurado ===');
+    console.log('Web Client ID:', GOOGLE_CLIENT_ID_WEB);
+  }, []);
+
+  return {
+    signIn: async () => {
+      try {
+        console.log('Iniciando Google Sign-In nativo...');
+
+        // Fazer logout silencioso primeiro para forçar escolha de conta
+        try {
+          await GoogleSignin.signOut();
+        } catch (e) {
+          // Ignora erro se não estava logado
+        }
+
+        // Verificar se Google Play Services está disponível
+        await GoogleSignin.hasPlayServices();
+
+        // Fazer login - agora vai mostrar a tela de escolha de conta
+        const userInfo = await GoogleSignin.signIn();
+
+        console.log('Login bem-sucedido!', userInfo);
+
+        // Pegar o ID Token
+        const tokens = await GoogleSignin.getTokens();
+        const idToken = tokens.idToken;
+
+        console.log('ID Token obtido:', idToken ? 'Token encontrado ✓' : 'Token não encontrado ✗');
+
+        return idToken;
+      } catch (error: any) {
+        console.error('Erro no Google Sign-In:', error);
+        throw error;
+      }
+    },
+    signOut: async () => {
+      try {
+        await GoogleSignin.signOut();
+        console.log('Logout bem-sucedido');
+      } catch (error) {
+        console.error('Erro no logout:', error);
+      }
+    }
+  };
 }
