@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     turnstile_site_key: str
     cors_origins: List[str] = ["http://localhost:3000"]
 
+    # Firebase Cloud Messaging (Backend)
+    firebase_project_id: Optional[str] = None
+    firebase_private_key_id: Optional[str] = None
+    firebase_private_key: Optional[str] = None
+    firebase_client_email: Optional[str] = None
+    firebase_client_id: Optional[str] = None
+    firebase_client_x509_cert_url: Optional[str] = None
+
     # Use pydantic v2 `model_config` to set env_file and ignore extra env vars
     model_config = {
         "env_file": ".env",

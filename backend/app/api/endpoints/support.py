@@ -134,6 +134,25 @@ async def add_message(
             detail="Could not add message"
         )
 
+    # Notificar atendente via WebSocket/Push
+    if ticket.attendant_id:
+        from app.api.websockets.manager import manager
+        import json
+
+        payload = json.dumps({
+            "type": "new_ticket_message",
+            "ticket_id": ticket_id,
+            "message": {
+                "id": message.id,
+                "sender_id": message.sender_id,
+                "sender_type": message.sender_type,
+                "sender_name": message.sender_name,
+                "message": message.message,
+                "created_at": message.created_at.isoformat(),
+            }
+        })
+        await manager.send_personal_message(payload, ticket.attendant_id)
+
     return message
 
 
@@ -309,6 +328,24 @@ async def add_attendant_message(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Could not add message"
         )
+
+    # Notificar usuário via WebSocket/Push
+    from app.api.websockets.manager import manager
+    import json
+
+    payload = json.dumps({
+        "type": "support_reply",
+        "ticket_id": ticket_id,
+        "message": {
+            "id": message.id,
+            "sender_id": message.sender_id,
+            "sender_type": message.sender_type,
+            "sender_name": message.sender_name,
+            "message": message.message,
+            "created_at": message.created_at.isoformat(),
+        }
+    })
+    await manager.send_personal_message(payload, ticket.user_id)
 
     return message
 

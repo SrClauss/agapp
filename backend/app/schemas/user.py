@@ -60,3 +60,31 @@ class LoginRequest(BaseModel):
 
 class GoogleLoginRequest(BaseModel):
     idToken: str
+
+class ProfessionalSettings(BaseModel):
+    """Configurações específicas do prestador de serviços"""
+    establishment_name: Optional[str] = None
+    establishment_address: Optional[str] = None
+    establishment_coordinates: Optional[List[float]] = None  # [longitude, latitude]
+    service_radius_km: Optional[float] = 10  # Raio padrão de atuação em km
+    accepts_remote: bool = True  # Aceita trabalhos remotos
+    portfolio_url: Optional[str] = None
+    skills: Optional[List[str]] = []
+    bio: Optional[str] = None
+
+class ProfessionalSettingsUpdate(BaseModel):
+    """Atualização de configurações de prestador"""
+    establishment_name: Optional[str] = None
+    establishment_address: Optional[str] = None
+    establishment_coordinates: Optional[List[float]] = None
+    service_radius_km: Optional[float] = None
+    accepts_remote: Optional[bool] = None
+    portfolio_url: Optional[str] = None
+    skills: Optional[List[str]] = None
+    bio: Optional[str] = None
+
+class FCMTokenRegister(BaseModel):
+    """Schema para registrar FCM token"""
+    fcm_token: str = Field(..., min_length=20)
+    device_id: Optional[str] = None
+    device_name: Optional[str] = None  # Ex: "Samsung Galaxy S21", "iPhone 13"
