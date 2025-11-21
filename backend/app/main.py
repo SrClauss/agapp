@@ -9,6 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
 from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, announcements
 from app.api.admin import router as admin_router
+from app.api.professional import router as professional_router
 from app.api.websockets.routes import router as websocket_router
 
 # Tags metadata para organizar a documentação
@@ -60,6 +61,10 @@ tags_metadata = [
     {
         "name": "admin-api",
         "description": "API JSON administrativa para gerenciamento de usuários, projetos, contatos, assinaturas e configurações.",
+    },
+    {
+        "name": "professional",
+        "description": "Painel do profissional com dashboard, mapa de projetos com geolocalização e gerenciamento de perfil.",
     },
     {
         "name": "websockets",
@@ -165,6 +170,7 @@ app.include_router(payments.router, tags=["payments"])
 app.include_router(webhooks.router, tags=["webhooks"])
 app.include_router(turnstile.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin_router, prefix="/system-admin", tags=["admin"])
+app.include_router(professional_router, prefix="/professional", tags=["professional"])
 app.include_router(admin_api.router, tags=["admin-api"])
 app.include_router(websocket_router, tags=["websockets"])
 app.include_router(support.router, prefix="/support", tags=["support"])

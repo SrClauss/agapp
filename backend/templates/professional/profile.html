@@ -1,0 +1,222 @@
+{% extends "professional/base.html" %}
+
+{% block title %}Meu Perfil - Agiliza{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-4">
+    <h1 class="h3 mb-1 text-gray-800 fw-bold">Meu Perfil Profissional</h1>
+    <p class="text-muted mb-0">Gerencie suas informações e configurações</p>
+</div>
+
+<div class="row g-3">
+    <!-- Profile Information -->
+    <div class="col-12 col-lg-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="user-avatar mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+                    {{ current_user.full_name[0] if current_user.full_name else 'P' }}
+                </div>
+                <h5 class="fw-bold mb-1">{{ current_user.full_name }}</h5>
+                <p class="text-muted mb-2">{{ current_user.email }}</p>
+                <div class="mb-3">
+                    {% for role in current_user.roles %}
+                    <span class="badge bg-primary">{{ role }}</span>
+                    {% endfor %}
+                </div>
+                <hr>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="alert('Funcionalidade em desenvolvimento')">
+                        <i class="fas fa-edit me-2"></i>Editar Perfil
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="updateLocation()">
+                        <i class="fas fa-map-marker-alt me-2"></i>Atualizar Localização
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Info -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold">Localização</h6>
+            </div>
+            <div class="card-body">
+                {% if current_user.coordinates %}
+                <p class="mb-2">
+                    <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                    <strong>Coordenadas:</strong><br>
+                    <small>Lat: {{ "%.6f"|format(current_user.coordinates[1]) }}<br>
+                    Lng: {{ "%.6f"|format(current_user.coordinates[0]) }}</small>
+                </p>
+                {% endif %}
+
+                {% if current_user.address %}
+                <p class="mb-0">
+                    <i class="fas fa-home text-primary me-2"></i>
+                    <strong>Endereço:</strong><br>
+                    <small>{{ current_user.address }}</small>
+                </p>
+                {% else %}
+                <p class="text-muted">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Nenhuma localização cadastrada
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Professional Info -->
+    <div class="col-12 col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">Informações Profissionais</h6>
+            </div>
+            <div class="card-body">
+                {% if current_user.professional_info %}
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <h6 class="fw-bold">Habilidades</h6>
+                        <p>{{ current_user.professional_info.skills if current_user.professional_info.skills else 'Não informado' }}</p>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <h6 class="fw-bold">Experiência</h6>
+                        <p>{{ current_user.professional_info.experience if current_user.professional_info.experience else 'Não informado' }}</p>
+                    </div>
+                    <div class="col-12">
+                        <h6 class="fw-bold">Portfólio</h6>
+                        <p>{{ current_user.professional_info.portfolio if current_user.professional_info.portfolio else 'Não informado' }}</p>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Complete suas informações profissionais para aumentar suas chances de ser contratado!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- My Projects -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">Meus Projetos</h6>
+            </div>
+            <div class="card-body">
+                {% if my_projects %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 px-3 py-2">Título</th>
+                                <th class="border-0 px-3 py-2">Status</th>
+                                <th class="border-0 px-3 py-2">Orçamento</th>
+                                <th class="border-0 px-3 py-2">Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in my_projects %}
+                            <tr>
+                                <td class="px-3 py-2">
+                                    <div class="fw-semibold">{{ project.title }}</div>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <span class="badge bg-{{ 'success' if project.status == 'closed' else 'warning' if project.status == 'in_progress' else 'secondary' }}">
+                                        {{ project.status }}
+                                    </span>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <small>R$ {{ "%.0f"|format(project.budget_min or 0) }} - {{ "%.0f"|format(project.budget_max or 0) }}</small>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <small>{{ project.created_at.strftime('%d/%m/%Y') }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Você ainda não possui projetos. Explore a <a href="/professional/dashboard">dashboard</a> para encontrar oportunidades!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Account Stats -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold">Estatísticas da Conta</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4 class="fw-bold text-primary">{{ current_user.credits }}</h4>
+                        <small class="text-muted">Créditos</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="fw-bold text-success">{{ my_projects|length }}</h4>
+                        <small class="text-muted">Projetos</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="fw-bold text-info">{{ current_user.created_at.strftime('%d/%m/%Y') }}</h4>
+                        <small class="text-muted">Membro desde</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function updateLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    // Here you would send this to the server to update the user's location
+                    fetch('/users/me/location', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + getToken()
+                        },
+                        body: JSON.stringify({
+                            coordinates: [position.coords.longitude, position.coords.latitude]
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert('Localização atualizada com sucesso!');
+                        location.reload();
+                    })
+                    .catch(error => {
+                        alert('Erro ao atualizar localização: ' + error);
+                    });
+                },
+                function(error) {
+                    alert('Erro ao obter localização: ' + error.message);
+                }
+            );
+        } else {
+            alert('Geolocalização não é suportada pelo seu navegador.');
+        }
+    }
+
+    function getToken() {
+        // Get token from cookie
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'access_token') {
+                return value.replace('Bearer ', '');
+            }
+        }
+        return null;
+    }
+</script>
+{% endblock %}
