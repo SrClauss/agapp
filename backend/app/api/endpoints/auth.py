@@ -104,6 +104,7 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
         # Extrair informações do usuário do token
         google_email = idinfo.get('email')
         google_name = idinfo.get('name', '')
+        google_picture = idinfo.get('picture', '')
         google_sub = idinfo.get('sub')  # ID único do Google
 
         if not google_email:
@@ -122,7 +123,8 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
                 cpf="000.000.000-00",  # CPF temporário - usuário deve atualizar depois
                 phone=None,
                 roles=["client"],
-                is_profile_complete=False  # Novo campo
+                is_profile_complete=False,  # Novo campo
+                photo=google_picture  # Novo campo
             )
             await create_user(db, new_user)
             # Recarregar usuário do banco para garantir todos os campos preenchidos (is_active, timestamps, etc.)

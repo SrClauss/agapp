@@ -14,6 +14,7 @@ export type User = {
   credits: number;
   created_at: string;
   updated_at: string;
+  photo?: string;  // Novo campo para photo do Google
   address?: {
     street?: string;
     city?: string;

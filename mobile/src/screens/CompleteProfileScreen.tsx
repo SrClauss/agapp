@@ -8,12 +8,13 @@ import { completeProfile } from '../api/auth';
 export default function CompleteProfileScreen() {
   const navigation = useNavigation();
   const token = useAuthStore((s: AuthState) => s.token);
+  const user = useAuthStore((s: AuthState) => s.user);
   const setUser = useAuthStore((s: AuthState) => s.setUser);
 
   const [phone, setPhone] = useState('');
   const [cpf, setCpf] = useState('');
-  const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [roles, setRoles] = useState<string[]>(['client']); // Default to client
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +28,12 @@ export default function CompleteProfileScreen() {
   };
 
   const onCompleteProfile = async () => {
-    if (!token) {
-      setError('Token não encontrado');
+    if (!token || !user) {
+      setError('Token ou usuário não encontrado');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Senhas não coincidem');
       return;
     }
     setLoading(true);
@@ -37,11 +42,13 @@ export default function CompleteProfileScreen() {
       const updatedUser = await completeProfile(token, {
         phone,
         cpf,
-        full_name: fullName,
+        full_name: user.full_name, // Usar o nome do Google
         password,
         roles,
       });
-      setUser(updatedUser);
+      // Atualizar user com photo se disponível
+      const userWithPhoto = { ...updatedUser, photo: user.photo };
+      setUser(userWithPhoto);
       navigation.navigate('Welcome' as never);
     } catch (e: any) {
       setError(e.message || 'Erro ao completar perfil');
@@ -57,8 +64,8 @@ export default function CompleteProfileScreen() {
 
         <TextInput
           label="Nome Completo"
-          value={fullName}
-          onChangeText={setFullName}
+          value={user?.full_name || ''}
+          editable={false}
           style={styles.input}
         />
 
@@ -82,6 +89,14 @@ export default function CompleteProfileScreen() {
           label="Senha"
           value={password}
           onChangeText={setPassword}
+          secureTextEntry
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Confirmar Senha"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
           secureTextEntry
           style={styles.input}
         />

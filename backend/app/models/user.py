@@ -16,6 +16,7 @@ class User(BaseModel):
     credits: int = 0  # Créditos para contatar profissionais
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    photo: Optional[str] = None  # Novo campo para photo do Google
 
     # Perfil de endereço
     address: Optional[Dict[str, Any]] = None  # {street, city, state, zip_code, country}
