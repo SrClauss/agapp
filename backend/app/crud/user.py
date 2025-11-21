@@ -54,6 +54,10 @@ async def create_user(db: AsyncIOMotorDatabase, user: UserCreate) -> User:
     user_dict = user.dict()
     user_dict["hashed_password"] = get_password_hash(user_dict.pop("password"))
     user_dict["_id"] = str(uuid.uuid4())
+    # Definir campos padrão
+    user_dict["is_active"] = True
+    user_dict["created_at"] = datetime.utcnow()
+    user_dict["updated_at"] = datetime.utcnow()
     # Model User usa alias _id <- id, então manter _id como string é suficiente
     await db.users.insert_one(user_dict)
     return User(**user_dict)
