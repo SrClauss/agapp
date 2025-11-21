@@ -164,7 +164,7 @@ async def complete_profile(
     Atualiza campos como phone, cpf, full_name, password, roles e marca como completo.
     """
     print(f"Complete profile for user {current_user.id}: {profile_data.model_dump()}")
-    from app.core.security import get_password_hash
+    from app.crud.user import get_password_hash
 
     # Validar roles se fornecidas
     if profile_data.roles and not validate_roles(profile_data.roles):
