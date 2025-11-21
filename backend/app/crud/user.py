@@ -46,7 +46,14 @@ async def get_user_in_db_by_email(db: AsyncIOMotorDatabase, email: str) -> Optio
     user = await db.users.find_one({"email": email})
     if user:
         if isinstance(user.get("_id"), ObjectId):
-            user["_id"] = str(user["_id"]) 
+            user["_id"] = str(user["_id"])
+        # Garantir campos padrão se ausentes
+        if "is_active" not in user:
+            user["is_active"] = True
+        if "created_at" not in user:
+            user["created_at"] = datetime.utcnow()
+        if "updated_at" not in user:
+            user["updated_at"] = datetime.utcnow()
         return UserInDB(**user)
     return None
 
