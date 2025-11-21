@@ -17,7 +17,7 @@ export default function App() {
         <Stack.Navigator initialRouteName="Login">
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="SignUp" component={SignUpScreen} />
-          <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />  // Nova tela
+          <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
           <Stack.Screen
             name="Welcome"
             component={WelcomeScreen}
