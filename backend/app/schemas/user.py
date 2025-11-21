@@ -82,3 +82,9 @@ class ProfessionalSettingsUpdate(BaseModel):
     portfolio_url: Optional[str] = None
     skills: Optional[List[str]] = None
     bio: Optional[str] = None
+
+class FCMTokenRegister(BaseModel):
+    """Schema para registrar FCM token"""
+    fcm_token: str = Field(..., min_length=20)
+    device_id: Optional[str] = None
+    device_name: Optional[str] = None  # Ex: "Samsung Galaxy S21", "iPhone 13"

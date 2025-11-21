@@ -29,3 +29,7 @@ __pycache__/
 *.pyo
 .pytest_cache/certs/privkey.pem
 certs/privkey.pem
+
+# Firebase credentials (NEVER commit these!)
+backend/*firebase*.json
+*firebase-adminsdk*.json

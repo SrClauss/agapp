@@ -3,7 +3,7 @@ from typing import List
 from app.core.database import get_database
 from app.core.security import get_current_user, get_current_admin_user
 from app.crud.user import get_user, update_user, get_professionals_nearby, get_users, delete_user
-from app.schemas.user import User, UserUpdate, UserCreate, AddressGeocode, ProfessionalSettings, ProfessionalSettingsUpdate
+from app.schemas.user import User, UserUpdate, UserCreate, AddressGeocode, ProfessionalSettings, ProfessionalSettingsUpdate, FCMTokenRegister
 from app.services.geocoding import geocode_address
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -97,6 +97,78 @@ async def update_professional_settings(
     # Retornar usuário atualizado
     updated_user = await get_user(db, str(current_user.id))
     return updated_user
+
+@router.post("/me/fcm-token")
+async def register_fcm_token(
+    token_data: FCMTokenRegister,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Registra FCM token para notificações push
+
+    O token é adicionado à lista de tokens do usuário (suporta múltiplos dispositivos).
+    Se o token já existe, não duplica.
+    """
+    from datetime import datetime
+
+    # Criar objeto de token com metadados
+    token_obj = {
+        "token": token_data.fcm_token,
+        "device_id": token_data.device_id,
+        "device_name": token_data.device_name,
+        "registered_at": datetime.utcnow()
+    }
+
+    # Remover token antigo do mesmo device_id (se houver)
+    if token_data.device_id:
+        await db.users.update_one(
+            {"_id": str(current_user.id)},
+            {"$pull": {"fcm_tokens": {"device_id": token_data.device_id}}}
+        )
+
+    # Adicionar novo token
+    await db.users.update_one(
+        {"_id": str(current_user.id)},
+        {"$addToSet": {"fcm_tokens": token_obj}}
+    )
+
+    return {"message": "FCM token registered successfully"}
+
+@router.delete("/me/fcm-token/{fcm_token}")
+async def unregister_fcm_token(
+    fcm_token: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Remove FCM token (logout do dispositivo)
+
+    Útil quando o usuário faz logout em um dispositivo específico.
+    """
+    result = await db.users.update_one(
+        {"_id": str(current_user.id)},
+        {"$pull": {"fcm_tokens": {"token": fcm_token}}}
+    )
+
+    if result.modified_count > 0:
+        return {"message": "FCM token removed successfully"}
+    else:
+        return {"message": "Token not found or already removed"}
+
+@router.get("/me/fcm-tokens")
+async def list_fcm_tokens(
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Lista todos os tokens FCM registrados do usuário"""
+    user = await db.users.find_one({"_id": str(current_user.id)})
+    tokens = user.get("fcm_tokens", [])
+
+    return {
+        "tokens": tokens,
+        "count": len(tokens)
+    }
 
 # Admin endpoints
 @router.get("/admin/", response_model=List[User])
