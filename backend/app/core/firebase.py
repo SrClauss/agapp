@@ -18,19 +18,49 @@ def initialize_firebase():
         return _firebase_app
 
     try:
-        # Caminho para o arquivo de credenciais
+        from app.core.config import settings
+
+        # Opção 1: Usar variáveis de ambiente (RECOMENDADO)
+        if settings.firebase_project_id and settings.firebase_private_key:
+            print("Initializing Firebase from environment variables...")
+
+            # Construir objeto de credenciais a partir das variáveis
+            cred_dict = {
+                "type": "service_account",
+                "project_id": settings.firebase_project_id,
+                "private_key_id": settings.firebase_private_key_id,
+                "private_key": settings.firebase_private_key.replace("\\n", "\n"),  # Corrigir quebras de linha
+                "client_email": settings.firebase_client_email,
+                "client_id": settings.firebase_client_id,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url": settings.firebase_client_x509_cert_url,
+                "universe_domain": "googleapis.com"
+            }
+
+            cred = credentials.Certificate(cred_dict)
+            _firebase_app = firebase_admin.initialize_app(cred)
+            print("✅ Firebase Admin SDK initialized from environment variables")
+            return _firebase_app
+
+        # Opção 2: Fallback para arquivo JSON (para desenvolvimento local)
         creds_path = Path(__file__).parent.parent.parent / "agilizzapp-206f1-firebase-adminsdk-fbsvc-6b55054773.json"
 
-        if not creds_path.exists():
-            print(f"Warning: Firebase credentials not found at {creds_path}")
-            return None
+        if creds_path.exists():
+            print("Initializing Firebase from JSON file (fallback)...")
+            cred = credentials.Certificate(str(creds_path))
+            _firebase_app = firebase_admin.initialize_app(cred)
+            print("✅ Firebase Admin SDK initialized from JSON file")
+            return _firebase_app
 
-        cred = credentials.Certificate(str(creds_path))
-        _firebase_app = firebase_admin.initialize_app(cred)
-        print("Firebase Admin SDK initialized successfully")
-        return _firebase_app
+        # Nenhuma opção disponível
+        print("⚠️ Warning: Firebase credentials not configured (neither env vars nor JSON file)")
+        print("   Push notifications will NOT work until you configure Firebase credentials")
+        return None
+
     except Exception as e:
-        print(f"Error initializing Firebase: {e}")
+        print(f"❌ Error initializing Firebase: {e}")
         return None
 
 
