@@ -12,6 +12,7 @@ class User(BaseModel):
     phone: Optional[str] = None
     roles: List[str] = Field(default=["client"])  # ["client", "professional"]
     is_active: bool = True
+    is_profile_complete: bool = False  # Novo campo
     credits: int = 0  # Créditos para contatar profissionais
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

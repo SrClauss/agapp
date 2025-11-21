@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     cpf: str
     phone: Optional[str] = None
     roles: List[str] = Field(default=["client"])
+    is_profile_complete: bool = False  # Novo campo
 
 class UserCreate(UserBase):
     password: str
@@ -19,10 +20,12 @@ class UserUpdate(BaseModel):
     address: Optional[Dict[str, Any]] = None
     professional_info: Optional[Dict[str, Any]] = None
     roles: Optional[List[str]] = None
+    is_profile_complete: Optional[bool] = None  # Novo campo opcional para updates
 
 class UserInDBBase(UserBase):
     id: str = Field(alias="_id")
     is_active: bool
+    is_profile_complete: bool = False  # Novo campo
     credits: int = 0  # Créditos para contatar profissionais
     created_at: datetime
     updated_at: datetime
