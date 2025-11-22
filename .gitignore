@@ -33,4 +33,3 @@ certs/privkey.pem
 # Firebase credentials (NEVER commit these!)
 backend/*firebase*.json
 *firebase-adminsdk*.json
-mobile/google-services.json
