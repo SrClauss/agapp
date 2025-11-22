@@ -1,0 +1,335 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Publicidade - Painel Administrativo{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-4">
+    <h1 class="h3 mb-1 text-gray-800 fw-bold">Gerenciamento de Publicidade</h1>
+    <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel</p>
+</div>
+
+<!-- Alert Container -->
+<div id="alert-container"></div>
+
+<!-- Ads Grid -->
+<div class="row g-4">
+    <!-- PubliScreen Cliente -->
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>PubliScreen Cliente</h5>
+                <small>Tela cheia exibida após login do cliente</small>
+            </div>
+            <div class="card-body">
+                <form id="form-publi-client" class="upload-form" data-ad-type="publi_client">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Arquivos do Anúncio</label>
+                        <input type="file" class="form-control" multiple accept=".html,.htm,.css,.js,.png,.jpg,.jpeg,.gif,.svg,.webp">
+                        <div class="form-text">HTML, CSS, JS e imagens. Máx 5MB por arquivo.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Fazer Upload
+                        </button>
+                        <a href="/ads/publi_client/index.html" target="_blank" class="btn btn-outline-secondary">
+                            <i class="fas fa-eye me-1"></i>Preview
+                        </a>
+                    </div>
+                </form>
+
+                <hr class="my-3">
+
+                <div class="file-list" id="files-publi-client">
+                    <small class="text-muted">Carregando arquivos...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PubliScreen Profissional -->
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>PubliScreen Profissional</h5>
+                <small>Tela cheia exibida após login do profissional</small>
+            </div>
+            <div class="card-body">
+                <form id="form-publi-professional" class="upload-form" data-ad-type="publi_professional">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Arquivos do Anúncio</label>
+                        <input type="file" class="form-control" multiple accept=".html,.htm,.css,.js,.png,.jpg,.jpeg,.gif,.svg,.webp">
+                        <div class="form-text">HTML, CSS, JS e imagens. Máx 5MB por arquivo.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-upload me-1"></i>Fazer Upload
+                        </button>
+                        <a href="/ads/publi_professional/index.html" target="_blank" class="btn btn-outline-secondary">
+                            <i class="fas fa-eye me-1"></i>Preview
+                        </a>
+                    </div>
+                </form>
+
+                <hr class="my-3">
+
+                <div class="file-list" id="files-publi-professional">
+                    <small class="text-muted">Carregando arquivos...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner Cliente -->
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-rectangle-ad me-2"></i>Banner Cliente</h5>
+                <small>Banner exibido na tela home do cliente</small>
+            </div>
+            <div class="card-body">
+                <form id="form-banner-client" class="upload-form" data-ad-type="banner_client">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Arquivos do Banner</label>
+                        <input type="file" class="form-control" multiple accept=".html,.htm,.css,.js,.png,.jpg,.jpeg,.gif,.svg,.webp">
+                        <div class="form-text">HTML, CSS, JS e imagens. Máx 5MB por arquivo.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-upload me-1"></i>Fazer Upload
+                        </button>
+                        <a href="/ads/banner_client/index.html" target="_blank" class="btn btn-outline-secondary">
+                            <i class="fas fa-eye me-1"></i>Preview
+                        </a>
+                    </div>
+                </form>
+
+                <hr class="my-3">
+
+                <div class="file-list" id="files-banner-client">
+                    <small class="text-muted">Carregando arquivos...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner Profissional -->
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-rectangle-ad me-2"></i>Banner Profissional</h5>
+                <small>Banner exibido na tela home do profissional</small>
+            </div>
+            <div class="card-body">
+                <form id="form-banner-professional" class="upload-form" data-ad-type="banner_professional">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Arquivos do Banner</label>
+                        <input type="file" class="form-control" multiple accept=".html,.htm,.css,.js,.png,.jpg,.jpeg,.gif,.svg,.webp">
+                        <div class="form-text">HTML, CSS, JS e imagens. Máx 5MB por arquivo.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-upload me-1"></i>Fazer Upload
+                        </button>
+                        <a href="/ads/banner_professional/index.html" target="_blank" class="btn btn-outline-secondary">
+                            <i class="fas fa-eye me-1"></i>Preview
+                        </a>
+                    </div>
+                </form>
+
+                <hr class="my-3">
+
+                <div class="file-list" id="files-banner-professional">
+                    <small class="text-muted">Carregando arquivos...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.file-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.file-item:hover {
+    background: #e9ecef;
+}
+
+.file-name {
+    font-size: 0.875rem;
+    font-family: monospace;
+}
+
+.badge-file {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.upload-progress {
+    margin-top: 1rem;
+}
+</style>
+
+<script>
+// Auth helper
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+function showAlert(message, type = 'success') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.getElementById('alert-container').appendChild(alert);
+
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
+// Load files for each ad type
+async function loadFiles(adType) {
+    const container = document.getElementById(`files-${adType.replace('_', '-')}`);
+
+    try {
+        const response = await fetch(`/system-admin/api/ads/${adType}/files`, {
+            headers: {
+                'Authorization': `Bearer ${getCookie('access_token')}`
+            }
+        });
+
+        if (!response.ok) {
+            container.innerHTML = '<small class="text-muted">Nenhum arquivo encontrado</small>';
+            return;
+        }
+
+        const files = await response.json();
+
+        if (files.length === 0) {
+            container.innerHTML = '<small class="text-muted">Nenhum arquivo enviado ainda</small>';
+            return;
+        }
+
+        container.innerHTML = files.map(file => `
+            <div class="file-item">
+                <div>
+                    <span class="file-name">${file.name}</span>
+                    <span class="badge badge-file ${file.type === 'html' ? 'bg-primary' : file.type === 'css' ? 'bg-info' : file.type === 'js' ? 'bg-warning' : 'bg-secondary'} ms-2">
+                        ${file.type.toUpperCase()}
+                    </span>
+                </div>
+                <button class="btn btn-sm btn-danger" onclick="deleteFile('${adType}', '${file.name}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading files:', error);
+        container.innerHTML = '<small class="text-danger">Erro ao carregar arquivos</small>';
+    }
+}
+
+// Delete file
+async function deleteFile(adType, filename) {
+    if (!confirm(`Deseja deletar ${filename}?`)) return;
+
+    try {
+        const response = await fetch(`/system-admin/api/ads/${adType}/files/${filename}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${getCookie('access_token')}`
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to delete');
+
+        showAlert(`Arquivo ${filename} deletado com sucesso!`, 'success');
+        loadFiles(adType);
+    } catch (error) {
+        showAlert('Erro ao deletar arquivo', 'danger');
+    }
+}
+
+// Handle form submissions
+document.querySelectorAll('.upload-form').forEach(form => {
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const adType = form.dataset.adType;
+        const fileInput = form.querySelector('input[type="file"]');
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            showAlert('Selecione pelo menos um arquivo', 'warning');
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando...';
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`/system-admin/api/ads/${adType}/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${getCookie('access_token')}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                successCount++;
+            } catch (error) {
+                console.error('Upload error:', error);
+                errorCount++;
+            }
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+
+        if (errorCount === 0) {
+            showAlert(`${successCount} arquivo(s) enviado(s) com sucesso!`, 'success');
+            fileInput.value = '';
+            loadFiles(adType);
+        } else {
+            showAlert(`${successCount} enviado(s), ${errorCount} erro(s)`, 'warning');
+        }
+    });
+});
+
+// Load files on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadFiles('publi_client');
+    loadFiles('publi_professional');
+    loadFiles('banner_client');
+    loadFiles('banner_professional');
+});
+</script>
+{% endblock %}
