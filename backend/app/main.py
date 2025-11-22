@@ -2,12 +2,13 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
-from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, announcements
+from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, announcements, ads
 from app.api.admin import router as admin_router
 from app.api.professional import router as professional_router
 from app.api.websockets.routes import router as websocket_router
@@ -82,6 +83,10 @@ tags_metadata = [
         "name": "announcements",
         "description": "Sistema de anúncios e novidades da plataforma. Permite criar, gerenciar e exibir anúncios segmentados.",
     },
+    {
+        "name": "advertisements",
+        "description": "Sistema de publicidade (PubliScreens e Banners). Gerencia conteúdo HTML/CSS/JS para exibição no app mobile.",
+    },
 ]
 
 app = FastAPI(
@@ -145,8 +150,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# Configurar templates
+# Configurar templates e static files
 templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # CORS
 app.add_middleware(
@@ -176,6 +182,7 @@ app.include_router(websocket_router, tags=["websockets"])
 app.include_router(support.router, prefix="/support", tags=["support"])
 app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"])
 app.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
+app.include_router(ads.router, prefix="/ads", tags=["advertisements"])
 
 @app.on_event("startup")
 async def startup_event():
@@ -224,6 +231,14 @@ async def startup_event():
     await database.announcements.create_index("start_date")
     await database.announcements.create_index("end_date")
     await database.announcements.create_index([("priority", -1), ("start_date", -1)])
+    # Ad content indexes
+    await database.ad_contents.create_index("alias", unique=True)
+    await database.ad_contents.create_index("type")
+    await database.ad_contents.create_index("target")
+    await database.ad_contents.create_index("is_active")
+    await database.ad_contents.create_index([("priority", -1), ("created_at", -1)])
+    await database.ad_assignments.create_index("location", unique=True)
+    await database.ad_assignments.create_index("ad_content_id")
     # A criação do admin é feita via script de inicialização do container (mongo-init)
 
 @app.get("/")

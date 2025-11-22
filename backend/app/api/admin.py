@@ -47,6 +47,11 @@ def validate_admin_request(request: Request) -> bool:
     
     return True
 
+@router.get("/ads", response_class=HTMLResponse)
+async def ads_admin_panel(request: Request):
+    """Painel de gerenciamento de publicidade"""
+    return templates.TemplateResponse("ads_admin.html", {"request": request})
+
 @router.get("/", response_class=HTMLResponse)
 async def admin_dashboard(
     request: Request,
