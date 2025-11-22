@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Surface, Title, Paragraph } from 'react-native-paper';
+import { Button, Surface, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { commonStyles } from '../theme/styles';
@@ -12,16 +12,15 @@ export default function WelcomeScreen() {
   return (
     <View style={commonStyles.centeredContainer}>
       <Surface style={commonStyles.surface}>
-        <Title style={commonStyles.title}>🎉 Bem-vindo(a)!</Title>
+        <Text style={commonStyles.title}>🎉 Bem-vindo(a)!</Text>
 
-        <Paragraph style={commonStyles.body}>
+        <Text style={commonStyles.body}>
           Olá, {user?.full_name || 'Usuário'}!
-        </Paragraph>
-
-        <Paragraph style={commonStyles.body}>
+        </Text>
+        <Text style={commonStyles.body}>
           Seu login foi realizado com sucesso.
           Estamos felizes em ter você aqui!
-        </Paragraph>
+        </Text>
 
         <Button
           mode="contained"

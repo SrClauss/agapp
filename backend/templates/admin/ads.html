@@ -32,9 +32,12 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-upload me-1"></i>Fazer Upload
                         </button>
-                        <a href="/ads/publi_client/index.html" target="_blank" class="btn btn-outline-secondary">
-                            <i class="fas fa-eye me-1"></i>Preview
-                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="openPreview('/ads/publi_client/index.html')">
+                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreview('/ads/publi_client/index.html')">
+                            <i class="fas fa-desktop me-1"></i>Preview Desktop
+                        </button>
                     </div>
                 </form>
 
@@ -65,9 +68,12 @@
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-upload me-1"></i>Fazer Upload
                         </button>
-                        <a href="/ads/publi_professional/index.html" target="_blank" class="btn btn-outline-secondary">
-                            <i class="fas fa-eye me-1"></i>Preview
-                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="openPreview('/ads/publi_professional/index.html')">
+                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreview('/ads/publi_professional/index.html')">
+                            <i class="fas fa-desktop me-1"></i>Preview Desktop
+                        </button>
                     </div>
                 </form>
 
@@ -98,9 +104,12 @@
                         <button type="submit" class="btn btn-info">
                             <i class="fas fa-upload me-1"></i>Fazer Upload
                         </button>
-                        <a href="/ads/banner_client/index.html" target="_blank" class="btn btn-outline-secondary">
-                            <i class="fas fa-eye me-1"></i>Preview
-                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="openPreview('/ads/banner_client/index.html')">
+                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreview('/ads/banner_client/index.html')">
+                            <i class="fas fa-desktop me-1"></i>Preview Desktop
+                        </button>
                     </div>
                 </form>
 
@@ -131,9 +140,12 @@
                         <button type="submit" class="btn btn-warning">
                             <i class="fas fa-upload me-1"></i>Fazer Upload
                         </button>
-                        <a href="/ads/banner_professional/index.html" target="_blank" class="btn btn-outline-secondary">
-                            <i class="fas fa-eye me-1"></i>Preview
-                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="openPreview('/ads/banner_professional/index.html')">
+                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreview('/ads/banner_professional/index.html')">
+                            <i class="fas fa-desktop me-1"></i>Preview Desktop
+                        </button>
                     </div>
                 </form>
 
@@ -211,7 +223,7 @@ async function loadFiles(adType) {
     try {
         const response = await fetch(`/system-admin/api/ads/${adType}/files`, {
             headers: {
-                'Authorization': `Bearer ${getCookie('access_token')}`
+                'Authorization': getCookie('access_token')
             }
         });
 
@@ -254,7 +266,7 @@ async function deleteFile(adType, filename) {
         const response = await fetch(`/system-admin/api/ads/${adType}/files/${filename}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${getCookie('access_token')}`
+                'Authorization': getCookie('access_token')
             }
         });
 
@@ -297,7 +309,7 @@ document.querySelectorAll('.upload-form').forEach(form => {
                 const response = await fetch(`/system-admin/api/ads/${adType}/upload`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${getCookie('access_token')}`
+                        'Authorization': getCookie('access_token')
                     },
                     body: formData
                 });
@@ -324,6 +336,25 @@ document.querySelectorAll('.upload-form').forEach(form => {
     });
 });
 
+// Preview modal functions
+function openPreview(url) {
+    const modal = document.getElementById('preview-modal');
+    const iframe = document.getElementById('preview-iframe');
+    iframe.src = url;
+    modal.style.display = 'block';
+}
+
+function openDesktopPreview(url) {
+    window.open(url, '_blank');
+}
+
+function closePreview() {
+    const modal = document.getElementById('preview-modal');
+    const iframe = document.getElementById('preview-iframe');
+    modal.style.display = 'none';
+    iframe.src = '';
+}
+
 // Load files on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadFiles('publi_client');
@@ -332,4 +363,20 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFiles('banner_professional');
 });
 </script>
+
+<!-- Preview Modal -->
+<div id="preview-modal" class="modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content" style="position: relative; margin: auto; top: 50%; transform: translateY(-50%); width: 90%; max-width: 400px; max-height: 90vh;">
+        <div class="modal-header" style="background: #f8f9fa; padding: 10px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;">
+            <h5 style="margin: 0; font-size: 1.1rem;">Preview Mobile</h5>
+            <button type="button" class="btn-close" onclick="closePreview()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 0; border-radius: 0 0 10px 10px; overflow: hidden;">
+            <div class="phone-frame" style="width: 100%; height: 0; padding-bottom: 200%; position: relative; border-radius: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
+                <iframe id="preview-iframe" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 20px;" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

@@ -1,0 +1,22 @@
+{
+    "data": {
+        "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImE1NzMzYmJiZDgxOGFhNWRiMTk1MTk5Y2Q1NjhlNWQ2ODUxMzJkM2YiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI3NTY4MTY3OTUwNjItZXVpNTg2M21ua2I0aHZrYzgxZWdlbDZuanAyOXU4Y2cuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI3NTY4MTY3OTUwNjItMHNqMDQyM3Y2bHFiYWFjcmJpajFmZWZjNGZnOW1rOGcuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDE4NDg5NjA2NzcwOTI4Mzg3OTYiLCJlbWFpbCI6ImNsYXVzZW1iZXJncm9kcmlndWVzQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiQ2xhdXNlbWJlcmcgUm9kcmlndWVzIGRlIE9saXZlaXJhIiwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FDZzhvY0pYZXJVaTBLUUM2VG1aWlVFR2JDT2tlb0V1YXZfM3YyZzM3M0J0LU5oM2hUT1NXbENmSnc9czk2LWMiLCJnaXZlbl9uYW1lIjoiQ2xhdXNlbWJlcmciLCJmYW1pbHlfbmFtZSI6IlJvZHJpZ3VlcyBkZSBPbGl2ZWlyYSIsImlhdCI6MTc2Mzc2MDkzNiwiZXhwIjoxNzYzNzY0NTM2fQ.aEQ_1bXgdiGzLghOspmhNg9boFYbNQfFSsuDR5kI5dJinq3UX-Qfhtb726vZvQ4Zc2ZBPbFQNAUGg-JGyl8jhvTmxVcqpbbrU8NVuTdQ3NrzsX3eJgnnJVnoN1_vIcnXRw_cK3GhfY1_o1QHLhGIHwSJjZb5-otlH1b7kTz_kDmDqBIXr0A57JQQEm0byB_rxv4LCqrE-8DjoMEPoeoIL5YwhJ2NjRElCHxKkOt2VnkuxC5kRkm9zHHHpU3PV3nbfjqaOUZ4V58vEKvnJpuxRNHVlIbybahL2xEEcdjkLzFj1REobSigLpHso0p4gsLL2w_IdvefzLT8bBFbZz6oJg",
+        "scopes": [
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "openid",
+            "profile",
+            "email"
+        ],
+        "serverAuthCode": "4/0Ab32j91pnZalVu2f5kiYT1s3ld4XNq0R0WmU0Wz_7ROGUHYOCjmISegCPyp1X-jSQ0iA7Q",
+        "user": {
+            "email": "clausembergrodrigues@gmail.com",
+            "familyName": "Rodrigues de Oliveira",
+            "givenName": "Clausemberg",
+            "id": "101848960677092838796",
+            "name": "Clausemberg Rodrigues de Oliveira",
+            "photo": "https://lh3.googleusercontent.com/a/ACg8ocJXerUi0KQC6TmZZUEGbCOkeoEuav_3v2g373Bt-Nh3hTOSWlCfJw=s96-c"
+        }
+    },
+    "type": "success"
+}

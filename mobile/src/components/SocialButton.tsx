@@ -34,6 +34,7 @@ export default function SocialButton({
       disabled={disabled}
       uppercase={false}
       style={style}
+      textColor='#000'
       icon={
         iconName
           ? () => <MaterialCommunityIcons name={iconName} size={20} color={iconColor} />

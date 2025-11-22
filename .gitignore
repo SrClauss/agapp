@@ -33,3 +33,7 @@ certs/privkey.pem
 # Firebase credentials (NEVER commit these!)
 backend/*firebase*.json
 *firebase-adminsdk*.json
+
+# Development files
+docker-compose.dev.yml
+Dockerfile_dev

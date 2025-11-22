@@ -43,8 +43,10 @@ export type User = {
 export type AuthState = {
   token: string | null;
   user: User | null;
+  activeRole: string | null;
   setToken: (token: string | null) => Promise<void>;
   setUser: (user: User | null) => void;
+  setActiveRole: (role: string) => void;
   logout: () => Promise<void>;
 };
 
@@ -80,6 +82,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       token: null,
       user: null,
+      activeRole: null,
       setToken: async (token: string | null) => {
         set({ token });
         if (token) {
@@ -89,8 +92,9 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       setUser: (user: User | null) => set({ user }),
+      setActiveRole: (role: string) => set({ activeRole: role }),
       logout: async () => {
-        set({ token: null, user: null });
+        set({ token: null, user: null, activeRole: null });
         await secureStorage.removeItem(SECURE_KEY);
       },
     }),

@@ -14,22 +14,32 @@ import { useEffect } from 'react';
 // Configuração do Google OAuth usando variáveis de ambiente
 const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
 
+console.log('=== DEBUG googleAuth.ts ===');
+console.log('GOOGLE_CLIENT_ID_WEB:', GOOGLE_CLIENT_ID_WEB);
+console.log('process.env:', Object.keys(process.env));
+
 if (!GOOGLE_CLIENT_ID_WEB) {
-  throw new Error('EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB não está configurado no arquivo .env');
+  console.error('ERRO: EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB não está configurado!');
+  // Não lançar erro para não travar o app
 }
 
 // Configurar o Google Sign-In
 const configureGoogleSignin = async () => {
-  const GoogleSigninModule = await loadGoogleSignin();
-  GoogleSigninModule.configure({
-    webClientId: GOOGLE_CLIENT_ID_WEB, // Do Google Cloud Console (Web Client)
-    offlineAccess: true,
-    scopes: ['openid', 'profile', 'email'],
-    forceCodeForRefreshToken: true, // Força refresh token
-  });
+  try {
+    const GoogleSigninModule = await loadGoogleSignin();
+    GoogleSigninModule.configure({
+      webClientId: GOOGLE_CLIENT_ID_WEB, // Do Google Cloud Console (Web Client)
+      offlineAccess: true,
+      scopes: ['openid', 'profile', 'email'],
+      forceCodeForRefreshToken: true, // Força refresh token
+    });
+    console.log('Google Sign-In configurado com sucesso');
+  } catch (error) {
+    console.error('Erro ao configurar Google Sign-In:', error);
+  }
 };
 
-// Chamar configuração
+// Chamar configuração (não bloqueia a renderização)
 configureGoogleSignin();
 
 export function useGoogleAuth() {
