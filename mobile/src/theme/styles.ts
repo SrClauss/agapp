@@ -175,4 +175,48 @@ export const commonStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+
+  // Background / Glassmorphism
+  fullBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.background,
+  },
+  glassSurfaceContainer: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  glassSurface: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    marginVertical: spacing.sm,
+    alignSelf: 'stretch',
+    width: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    shadowColor: colors.overlay,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+  },
+  logo: {
+    width: 84,
+    height: 84,
+    marginBottom: spacing.md,
+    alignSelf: 'center',
+  },
+  googleButton: {
+    marginVertical: spacing.xs,
+    borderRadius: borderRadius.md,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  socialButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 });

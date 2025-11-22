@@ -66,6 +66,19 @@ export async function fetchCurrentUser(token: string) {
   return res.json();
 }
 
+export async function registerFcmToken(token: string, fcmToken: string, deviceId?: string, deviceName?: string) {
+  const res = await fetch(`${BACKEND_URL}/users/me/fcm-token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fcm_token: fcmToken, device_id: deviceId, device_name: deviceName }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || 'Register FCM token failed');
+  }
+  return res.json();
+}
+
 export async function completeProfile(token: string, profileData: { phone: string; cpf: string; full_name: string; password: string; roles: string[] }) {
   const res = await fetch(`${BACKEND_URL}/auth/complete-profile`, {
     method: 'PUT',

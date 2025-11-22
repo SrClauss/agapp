@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { Button, TextInput, Surface, Title, HelperText } from 'react-native-paper';
+import { Text, KeyboardAvoidingView, Platform, ImageBackground, Image, View } from 'react-native';
+import { Button, TextInput, HelperText } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { loginWithEmail, loginWithGoogle, fetchCurrentUser } from '../api/auth';
 import { useGoogleAuth } from '../services/googleAuth';
 import { commonStyles } from '../theme/styles';
+import { BlurView } from 'expo-blur';
+import SocialButton from '../components/SocialButton';
+import NotificationsService from '../services/notifications';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -27,6 +30,15 @@ export default function LoginScreen() {
       await setToken(data.token);
       const user = data.user || (await fetchCurrentUser(data.token));
       setUser(user);
+      // Register push token on successful login
+      try {
+        const pushToken = await NotificationsService.registerForPushNotificationsAsync();
+        if (pushToken) {
+          await NotificationsService.registerPushTokenOnServer(pushToken);
+        }
+      } catch (err) {
+        console.warn('Failed to register push token', err);
+      }
       if (!user.is_profile_complete) {
         navigation.navigate('CompleteProfile' as never);
       } else {
@@ -56,6 +68,15 @@ export default function LoginScreen() {
       await setToken(data.token);
       const user = data.user || (await fetchCurrentUser(data.token));
       setUser(user);
+      // Register push token on successful Google login
+      try {
+        const pushToken = await NotificationsService.registerForPushNotificationsAsync();
+        if (pushToken) {
+          await NotificationsService.registerPushTokenOnServer(pushToken);
+        }
+      } catch (err) {
+        console.warn('Failed to register push token', err);
+      }
 
       if (!user.is_profile_complete) {
         navigation.navigate('CompleteProfile' as never);
@@ -71,50 +92,61 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={commonStyles.centeredContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <ImageBackground
+      source={require('../../assets/background.jpg')}
+      style={commonStyles.fullBackground}
+      resizeMode="cover"
     >
-      <Surface style={commonStyles.surface}>
-        <Title style={commonStyles.title}>Entrar</Title>
+      <KeyboardAvoidingView
+        style={commonStyles.centeredContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <BlurView intensity={60} tint="light" style={commonStyles.glassSurface}>
+          <View style={commonStyles.glassSurfaceContainer}>
+            <Image source={require('../../assets/icon.png')} style={commonStyles.logo} />
+            <Text style={commonStyles.title}>Entrar</Text>
+            <Text style={commonStyles.subtitle}>Agilize quem você precisa, exatamente onde você está</Text>
 
-        <TextInput
-          label="E-mail"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          style={commonStyles.input}
-        />
+            <TextInput
+              label="E-mail"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={commonStyles.input}
+            />
 
-        <TextInput
-          label="Senha"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={commonStyles.input}
-        />
+            <TextInput
+              label="Senha"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              style={commonStyles.input}
+            />
 
-        {error ? <HelperText type="error">{error}</HelperText> : null}
+            {error ? <HelperText type="error">{error}</HelperText> : null}
 
-        <Button mode="contained" onPress={onEmailLogin} loading={loading} style={commonStyles.button}>
-          Entrar com e-mail
-        </Button>
+            <Button mode="contained" onPress={onEmailLogin} loading={loading} style={commonStyles.button}>
+              Entrar
+            </Button>
 
-        <Button
-          mode="outlined"
-          onPress={onGoogleLogin}
-          loading={loading}
-          disabled={loading}
-          style={commonStyles.button}
-        >
-          Entrar com Google
-        </Button>
+            <SocialButton
+              label="Continuar com Google"
+              onPress={onGoogleLogin}
+              loading={loading}
+              disabled={loading}
+              iconName="google"
+              iconColor="#DB4437"
+              mode="outlined"
+              style={commonStyles.googleButton}
+            />
 
-        <Button onPress={() => navigation.navigate('SignUp')} compact>
-          Criar conta
-        </Button>
-      </Surface>
-    </KeyboardAvoidingView>
+            <Button onPress={() => navigation.navigate('SignUp')} compact>
+              Criar conta
+            </Button>
+          </View>
+        </BlurView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
