@@ -30,6 +30,10 @@ __pycache__/
 .pytest_cache/certs/privkey.pem
 certs/privkey.pem
 
+# Virtual environment
+venv/
+backend/venv/
+
 # Firebase credentials (NEVER commit these!)
 backend/*firebase*.json
 *firebase-adminsdk*.json
