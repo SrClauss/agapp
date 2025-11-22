@@ -1,18 +1,60 @@
 // Global state
 let currentAdId = null;
-let adminToken = null;
+
+// Get auth token from cookies
+function getToken() {
+    const token = document.cookie.split('; ')
+        .find(row => row.startsWith('access_token='))
+        ?.split('=')[1];
+    return token ? token.replace(/"/g, '') : null;
+}
+
+// API helper
+async function apiCall(url, options = {}) {
+    const token = getToken();
+    if (!token) {
+        window.location.href = '/system-admin/login';
+        throw new Error('Not authenticated');
+    }
+
+    const headers = {
+        ...options.headers
+    };
+
+    if (!token.startsWith('Bearer ')) {
+        headers['Authorization'] = `Bearer ${token}`;
+    } else {
+        headers['Authorization'] = token;
+    }
+
+    if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
+
+    if (response.status === 401) {
+        window.location.href = '/system-admin/login';
+        throw new Error('Unauthorized');
+    }
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+        throw new Error(error.detail || 'Request failed');
+    }
+
+    if (response.status === 204) {
+        return null;
+    }
+
+    return await response.json();
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // Get token from localStorage or prompt
-    adminToken = localStorage.getItem('admin_token');
-    if (!adminToken) {
-        adminToken = prompt('Digite o token de admin:');
-        if (adminToken) {
-            localStorage.setItem('admin_token', adminToken);
-        }
-    }
-
     // Setup tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -73,15 +115,7 @@ function switchTab(tabName) {
 
 async function loadAds() {
     try {
-        const response = await fetch('/ads/ad-contents', {
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-
-        if (!response.ok) throw new Error('Failed to load ads');
-
-        const ads = await response.json();
+        const ads = await apiCall('/ad-contents');
         renderAds(ads);
     } catch (error) {
         console.error('Error loading ads:', error);
@@ -130,7 +164,7 @@ function renderAds(ads) {
             </div>
 
             <div style="color: #718096; font-size: 13px; margin-bottom: 12px;">
-                <div>📁 ${ad.css_files.length} CSS, ${ad.js_files.length} JS, ${ad.image_files.length} imagens</div>
+                <div>📁 ${ad.css_files?.length || 0} CSS, ${ad.js_files?.length || 0} JS, ${ad.image_files?.length || 0} imagens</div>
                 <div>🎯 Target: ${ad.target}</div>
                 <div>⭐ Prioridade: ${ad.priority}</div>
             </div>
@@ -139,7 +173,7 @@ function renderAds(ads) {
                 <button class="btn btn-secondary" onclick="openUploadModal('${ad.id}')">
                     📤 Upload
                 </button>
-                <button class="btn btn-secondary" onclick="previewAd('${ad.id}')">
+                <button class="btn btn-secondary" onclick="previewAd('${ad.alias}')">
                     👁️ Preview
                 </button>
                 <button class="btn btn-${ad.is_active ? 'secondary' : 'success'}" onclick="toggleAdActive('${ad.id}', ${!ad.is_active})">
@@ -162,26 +196,16 @@ async function handleCreateAd(e) {
         type: formData.get('type'),
         target: formData.get('target'),
         title: formData.get('title'),
-        description: formData.get('description'),
+        description: formData.get('description') || '',
         priority: parseInt(formData.get('priority'))
     };
 
     try {
-        const response = await fetch('/ads/ad-contents', {
+        const ad = await apiCall('/ad-contents', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`,
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify(data)
         });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to create ad');
-        }
-
-        const ad = await response.json();
         showAlert('success', `Anúncio "${ad.title}" criado com sucesso!`);
         e.target.reset();
 
@@ -199,6 +223,7 @@ function openUploadModal(adId) {
     document.getElementById('upload-modal').classList.add('active');
     document.getElementById('files-to-upload').innerHTML = '';
     document.getElementById('file-input').value = '';
+    window.filesToUpload = [];
 }
 
 function closeUploadModal() {
@@ -273,17 +298,10 @@ async function uploadFiles() {
             formData.append('file', file);
             formData.append('file_type', getFileType(file.name));
 
-            const response = await fetch(`/ads/ad-contents/${currentAdId}/files`, {
+            await apiCall(`/ad-contents/${currentAdId}/files`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${adminToken}`
-                },
                 body: formData
             });
-
-            if (!response.ok) {
-                throw new Error(`Failed to upload ${file.name}`);
-            }
 
             successCount++;
         } catch (error) {
@@ -308,16 +326,10 @@ async function uploadFiles() {
 
 async function toggleAdActive(adId, isActive) {
     try {
-        const response = await fetch(`/ads/ad-contents/${adId}`, {
+        await apiCall(`/ad-contents/${adId}`, {
             method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`,
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify({ is_active: isActive })
         });
-
-        if (!response.ok) throw new Error('Failed to update ad');
 
         showAlert('success', `Anúncio ${isActive ? 'ativado' : 'desativado'} com sucesso!`);
         loadAds();
@@ -333,14 +345,9 @@ async function deleteAd(adId) {
     }
 
     try {
-        const response = await fetch(`/ads/ad-contents/${adId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
+        await apiCall(`/ad-contents/${adId}`, {
+            method: 'DELETE'
         });
-
-        if (!response.ok) throw new Error('Failed to delete ad');
 
         showAlert('success', 'Anúncio deletado com sucesso!');
         loadAds();
@@ -351,51 +358,13 @@ async function deleteAd(adId) {
     }
 }
 
-async function previewAd(adId) {
+async function previewAd(alias) {
     try {
-        const response = await fetch(`/ads/ad-contents/${adId}`, {
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-
-        if (!response.ok) throw new Error('Failed to load ad');
-
-        const ad = await response.json();
-
-        // Get file content
-        const contentResponse = await fetch(`/ads/public/ads/publi_screen_client`, {
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-
-        if (contentResponse.ok) {
-            const content = await contentResponse.json();
-
-            // Build HTML
-            const html = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>${content.css}</style>
-                </head>
-                <body>
-                    ${content.html}
-                    <script>${content.js}</script>
-                </body>
-                </html>
-            `;
-
-            // Show in iframe
-            const iframe = document.getElementById('preview-frame');
-            iframe.srcdoc = html;
-            document.getElementById('preview-modal').classList.add('active');
-        }
+        // Open preview in new window/tab to see the actual ad
+        window.open(`/ads/${alias}/index.html`, '_blank');
     } catch (error) {
         console.error('Error previewing ad:', error);
-        showAlert('error', 'Erro ao carregar preview: ' + error.message);
+        showAlert('error', 'Erro ao abrir preview: ' + error.message);
     }
 }
 
@@ -405,19 +374,10 @@ function closePreviewModal() {
 
 async function loadAssignments() {
     try {
-        const [assignmentsRes, adsRes] = await Promise.all([
-            fetch('/ads/ad-assignments', {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
-            }),
-            fetch('/ads/ad-contents', {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
-            })
+        const [assignments, ads] = await Promise.all([
+            apiCall('/ad-assignments'),
+            apiCall('/ad-contents')
         ]);
-
-        if (!assignmentsRes.ok || !adsRes.ok) throw new Error('Failed to load data');
-
-        const assignments = await assignmentsRes.json();
-        const ads = await adsRes.json();
 
         renderAssignments(assignments, ads);
     } catch (error) {
@@ -454,7 +414,7 @@ function renderAssignments(assignments, ads) {
                         </button>
                     ` : `
                         <div style="color: #a0aec0; margin: 12px 0;">Nenhum anúncio atribuído</div>
-                        <select id="assign-${location.id}" class="form-group" style="margin-bottom: 8px;">
+                        <select id="assign-${location.id}" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 2px solid #e2e8f0; border-radius: 8px;">
                             <option value="">Selecione um anúncio...</option>
                             ${ads.filter(a => a.is_active).map(a => `
                                 <option value="${a.id}">${a.title}</option>
@@ -480,19 +440,13 @@ async function createAssignment(location) {
     }
 
     try {
-        const response = await fetch('/ads/ad-assignments', {
+        await apiCall('/ad-assignments', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`,
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify({
                 location: location,
                 ad_content_id: adId
             })
         });
-
-        if (!response.ok) throw new Error('Failed to create assignment');
 
         showAlert('success', 'Atribuição criada com sucesso!');
         loadAssignments();
@@ -506,14 +460,9 @@ async function deleteAssignment(location) {
     if (!confirm('Deseja remover esta atribuição?')) return;
 
     try {
-        const response = await fetch(`/ads/ad-assignments/${location}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
+        await apiCall(`/ad-assignments/${location}`, {
+            method: 'DELETE'
         });
-
-        if (!response.ok) throw new Error('Failed to delete assignment');
 
         showAlert('success', 'Atribuição removida com sucesso!');
         loadAssignments();
@@ -525,15 +474,7 @@ async function deleteAssignment(location) {
 
 async function loadAnalytics() {
     try {
-        const response = await fetch('/ads/ad-contents', {
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-
-        if (!response.ok) throw new Error('Failed to load analytics');
-
-        const ads = await response.json();
+        const ads = await apiCall('/ad-contents');
 
         const totalViews = ads.reduce((sum, ad) => sum + (ad.views || 0), 0);
         const totalClicks = ads.reduce((sum, ad) => sum + (ad.clicks || 0), 0);
