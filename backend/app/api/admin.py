@@ -48,9 +48,20 @@ def validate_admin_request(request: Request) -> bool:
     return True
 
 @router.get("/ads", response_class=HTMLResponse)
-async def ads_admin_panel(request: Request):
+async def ads_admin_panel(
+    request: Request,
+    current_user: User = Depends(get_current_user_from_request)
+):
     """Painel de gerenciamento de publicidade"""
-    return templates.TemplateResponse("ads_admin.html", {"request": request})
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return templates.TemplateResponse("ads_admin.html", {
+        "request": request,
+        "current_user": current_user
+    })
 
 @router.get("/", response_class=HTMLResponse)
 async def admin_dashboard(
