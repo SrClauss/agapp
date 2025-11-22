@@ -22,6 +22,9 @@
             color: white;
             padding: 20px 40px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .header h1 {
@@ -30,7 +33,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 30px 40px;
         }
@@ -40,10 +43,13 @@
             gap: 10px;
             margin-bottom: 30px;
             border-bottom: 2px solid #e1e8ed;
+            background: white;
+            padding: 0 20px;
+            border-radius: 12px 12px 0 0;
         }
 
         .tab {
-            padding: 12px 24px;
+            padding: 16px 24px;
             background: none;
             border: none;
             cursor: pointer;
@@ -86,41 +92,6 @@
             color: #2c3e50;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 14px;
-            color: #4a5568;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 10px 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
         .btn {
             padding: 12px 24px;
             border: none;
@@ -141,6 +112,8 @@
 
         .btn-primary:hover {
             background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
         .btn-secondary {
@@ -148,17 +121,9 @@
             color: #4a5568;
         }
 
-        .btn-secondary:hover {
-            background: #cbd5e0;
-        }
-
         .btn-danger {
             background: #f56565;
             color: white;
-        }
-
-        .btn-danger:hover {
-            background: #e53e3e;
         }
 
         .btn-success {
@@ -166,36 +131,47 @@
             color: white;
         }
 
-        .btn-success:hover {
-            background: #38a169;
-        }
-
+        /* Upload Zone */
         .upload-zone {
             border: 2px dashed #cbd5e0;
             border-radius: 12px;
-            padding: 40px;
+            padding: 60px 40px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s;
             margin-bottom: 20px;
+            background: #f7fafc;
         }
 
         .upload-zone:hover {
             border-color: #667eea;
-            background: #f7fafc;
+            background: #edf2f7;
+            transform: scale(1.01);
         }
 
         .upload-zone.dragover {
             border-color: #667eea;
-            background: #edf2f7;
+            background: #667eea10;
+            transform: scale(1.02);
         }
 
-        .upload-zone-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
+        .upload-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            font-size: 16px;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            font-size: 13px;
             color: #a0aec0;
         }
 
+        /* File List */
         .file-list {
             list-style: none;
         }
@@ -204,32 +180,122 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px;
+            padding: 14px 16px;
             background: #f7fafc;
             border-radius: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
         }
 
-        .file-item-name {
+        .file-item:hover {
+            background: #edf2f7;
+            transform: translateX(4px);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 8px;
+            font-size: 20px;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
             font-weight: 500;
             color: #2d3748;
+            margin-bottom: 2px;
         }
 
-        .file-item-size {
+        .file-meta {
             font-size: 12px;
             color: #718096;
-            margin-left: 10px;
         }
 
-        .file-item-actions {
+        .file-actions {
             display: flex;
             gap: 8px;
         }
 
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        /* Preview Container */
+        .preview-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .preview-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+        .preview-frame {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .device-frame {
+            background: #1a202c;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .device-mobile {
+            width: 375px;
+            margin: 0 auto;
+        }
+
+        .device-desktop {
+            width: 100%;
+        }
+
+        .device-screen {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .preview-iframe {
+            width: 100%;
+            border: none;
+            min-height: 600px;
+        }
+
+        /* Ads Grid */
         .ads-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
         }
 
         .ad-card {
@@ -237,36 +303,40 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
+            cursor: pointer;
         }
 
         .ad-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            transform: translateY(-6px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         }
 
         .ad-card-header {
             display: flex;
             justify-content: space-between;
-            align-items: start;
-            margin-bottom: 12px;
+            align-items: flex-start;
+            margin-bottom: 16px;
         }
 
         .ad-card-title {
             font-size: 16px;
             font-weight: 600;
             color: #2d3748;
+            margin-bottom: 4px;
         }
 
         .ad-card-alias {
             font-size: 12px;
             color: #718096;
-            font-family: monospace;
-            margin-top: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #f7fafc;
+            padding: 2px 8px;
+            border-radius: 4px;
         }
 
         .ad-badge {
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 12px;
             font-size: 11px;
             font-weight: 600;
@@ -283,47 +353,29 @@
             color: #742a2a;
         }
 
-        .badge-publi {
-            background: #bee3f8;
-            color: #2c5282;
-        }
-
-        .badge-banner {
-            background: #feebc8;
-            color: #7c2d12;
-        }
-
         .ad-stats {
             display: flex;
             gap: 20px;
             margin: 16px 0;
-            padding: 12px;
-            background: #f7fafc;
-            border-radius: 8px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
         }
 
         .stat {
             flex: 1;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 20px;
-            font-weight: 700;
-            color: #2d3748;
         }
 
         .stat-label {
             font-size: 11px;
-            color: #718096;
+            color: #a0aec0;
             text-transform: uppercase;
-            margin-top: 4px;
+            margin-bottom: 4px;
         }
 
-        .ad-card-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 16px;
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
         }
 
         .modal {
@@ -335,22 +387,23 @@
             bottom: 0;
             background: rgba(0,0,0,0.5);
             z-index: 1000;
-            align-items: center;
-            justify-content: center;
+            backdrop-filter: blur(4px);
         }
 
         .modal.active {
             display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .modal-content {
             background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 800px;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 900px;
+            width: 90%;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
         .modal-header {
@@ -361,239 +414,638 @@
         }
 
         .modal-title {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 600;
         }
 
-        .close-modal {
+        .close-btn {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 28px;
             cursor: pointer;
             color: #a0aec0;
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transition: color 0.2s;
         }
 
-        .close-modal:hover {
-            color: #2d3748;
+        .close-btn:hover {
+            color: #4a5568;
         }
 
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
+        .form-group {
             margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
             font-size: 14px;
+            color: #4a5568;
         }
 
-        .alert-success {
-            background: #c6f6d5;
-            color: #22543d;
-            border: 1px solid #9ae6b4;
-        }
-
-        .alert-error {
-            background: #fed7d7;
-            color: #742a2a;
-            border: 1px solid #fc8181;
-        }
-
-        .alert-info {
-            background: #bee3f8;
-            color: #2c5282;
-            border: 1px solid #90cdf4;
-        }
-
-        .preview-frame {
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.show {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-left: 4px solid #48bb78;
+        }
+
+        .notification.error {
+            border-left: 4px solid #f56565;
+        }
+
+        .code-editor {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
             min-height: 400px;
             border: 2px solid #e2e8f0;
             border-radius: 8px;
-            background: white;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f4f6;
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .assignment-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-        }
-
-        .assignment-card {
-            background: white;
-            border-radius: 8px;
             padding: 16px;
-            border: 2px solid #e2e8f0;
-        }
-
-        .assignment-location {
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 8px;
-        }
-
-        .assignment-ad {
-            font-size: 14px;
-            color: #718096;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🎨 Gerenciamento de Publicidade</h1>
+        <h1>📢 Gerenciamento de Publicidade</h1>
     </div>
 
     <div class="container">
         <div class="tabs">
-            <button class="tab active" data-tab="ads">Anúncios</button>
-            <button class="tab" data-tab="create">Criar Novo</button>
-            <button class="tab" data-tab="assignments">Atribuições</button>
-            <button class="tab" data-tab="analytics">Analytics</button>
+            <button class="tab active" onclick="switchTab('list')">📋 Anúncios</button>
+            <button class="tab" onclick="switchTab('create')">➕ Novo Anúncio</button>
+            <button class="tab" onclick="switchTab('assignments')">🎯 Atribuições</button>
+            <button class="tab" onclick="switchTab('preview')">👁️ Preview</button>
         </div>
 
-        <!-- Tab: Anúncios -->
-        <div id="tab-ads" class="tab-content active">
-            <div id="ads-list" class="ads-grid">
-                <!-- Will be populated by JavaScript -->
+        <!-- Tab: List -->
+        <div id="tab-list" class="tab-content active">
+            <div class="card">
+                <div class="card-title">Anúncios Cadastrados</div>
+                <div id="ads-grid" class="ads-grid">
+                    <!-- Ads will be loaded here -->
+                </div>
             </div>
         </div>
 
-        <!-- Tab: Criar Novo -->
+        <!-- Tab: Create -->
         <div id="tab-create" class="tab-content">
             <div class="card">
-                <h2 class="card-title">Criar Novo Anúncio</h2>
-
+                <div class="card-title">Criar Novo Anúncio</div>
                 <form id="create-ad-form">
-                    <div class="form-group">
-                        <label for="alias">Alias (identificador único)</label>
-                        <input type="text" id="alias" name="alias" required placeholder="ex: promo_natal_2024">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nome do Anúncio *</label>
+                            <input type="text" name="name" required placeholder="Ex: Banner Promoção">
+                        </div>
+                        <div class="form-group">
+                            <label>Alias (identificador único) *</label>
+                            <input type="text" name="alias" required placeholder="Ex: banner_promocao_2024">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tipo *</label>
+                            <select name="type" required>
+                                <option value="publi_screen">PubliScreen (Tela Cheia)</option>
+                                <option value="banner">Banner</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Público Alvo *</label>
+                            <select name="target" required>
+                                <option value="client">Cliente</option>
+                                <option value="professional">Profissional</option>
+                                <option value="both">Ambos</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="type">Tipo</label>
-                        <select id="type" name="type" required>
-                            <option value="publi_screen">PubliScreen (Tela Inteira)</option>
-                            <option value="banner">Banner</option>
-                        </select>
+                        <label>Descrição</label>
+                        <textarea name="description" rows="3" placeholder="Descrição do anúncio"></textarea>
                     </div>
 
-                    <div class="form-group">
-                        <label for="target">Público-Alvo</label>
-                        <select id="target" name="target" required>
-                            <option value="client">Cliente</option>
-                            <option value="professional">Profissional</option>
-                            <option value="both">Ambos</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="title">Título</label>
-                        <input type="text" id="title" name="title" required placeholder="Título do anúncio para identificação">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="description">Descrição</label>
-                        <textarea id="description" name="description" placeholder="Descrição opcional"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="priority">Prioridade (maior = exibido primeiro)</label>
-                        <input type="number" id="priority" name="priority" value="0" min="0">
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">
-                        <span>Criar Anúncio</span>
-                    </button>
+                    <button type="submit" class="btn btn-primary">✓ Criar Anúncio</button>
                 </form>
             </div>
         </div>
 
-        <!-- Tab: Atribuições -->
+        <!-- Tab: Assignments -->
         <div id="tab-assignments" class="tab-content">
             <div class="card">
-                <h2 class="card-title">Atribuições de Anúncios</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Configure qual anúncio será exibido em cada localização</p>
+                <div class="card-title">Atribuir Anúncios a Locais</div>
+                <form id="assignment-form">
+                    <div class="form-group">
+                        <label>Local *</label>
+                        <select name="location" required>
+                            <option value="publi_screen_client">PubliScreen - Cliente (Welcome)</option>
+                            <option value="publi_screen_professional">PubliScreen - Profissional (Welcome)</option>
+                            <option value="banner_client_home">Banner - Cliente (Home)</option>
+                            <option value="banner_professional_home">Banner - Profissional (Home)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Anúncio *</label>
+                        <select name="ad_id" id="assignment-ad-select" required>
+                            <!-- Will be populated -->
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success">🎯 Atribuir</button>
+                </form>
 
-                <div id="assignments-list" class="assignment-grid">
-                    <!-- Will be populated by JavaScript -->
+                <div style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 16px;">Atribuições Atuais</h3>
+                    <div id="assignments-list"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Tab: Analytics -->
-        <div id="tab-analytics" class="tab-content">
+        <!-- Tab: Preview -->
+        <div id="tab-preview" class="tab-content">
             <div class="card">
-                <h2 class="card-title">Analytics de Publicidade</h2>
-                <div id="analytics-content">
-                    <!-- Will be populated by JavaScript -->
+                <div class="card-title">Visualizar Anúncio</div>
+
+                <div class="form-group">
+                    <label>Selecione um anúncio</label>
+                    <select id="preview-ad-select">
+                        <!-- Will be populated -->
+                    </select>
+                </div>
+
+                <div class="preview-controls">
+                    <button class="btn btn-secondary" onclick="setPreviewMode('mobile')">📱 Mobile</button>
+                    <button class="btn btn-secondary" onclick="setPreviewMode('desktop')">🖥️ Desktop</button>
+                </div>
+
+                <div class="preview-container">
+                    <div id="preview-frame" class="preview-frame">
+                        <div class="device-frame">
+                            <div id="device-container" class="device-screen device-mobile">
+                                <iframe id="preview-iframe" class="preview-iframe"></iframe>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Upload de Arquivos -->
-    <div id="upload-modal" class="modal">
+    <!-- Modal: Manage Files -->
+    <div id="file-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Upload de Arquivos</h2>
-                <button class="close-modal" onclick="closeUploadModal()">×</button>
+                <h2 class="modal-title" id="modal-title">Gerenciar Arquivos</h2>
+                <button class="close-btn" onclick="closeFileModal()">&times;</button>
             </div>
 
-            <div id="upload-alert"></div>
+            <div id="upload-section">
+                <div class="upload-zone" id="upload-zone">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Arraste arquivos aqui ou clique para selecionar</div>
+                    <div class="upload-hint">HTML, CSS, JS, Imagens (PNG, JPG, SVG) - Máx 5MB</div>
+                    <input type="file" id="file-input" multiple style="display: none;">
+                </div>
 
-            <div class="upload-zone" id="upload-zone">
-                <div class="upload-zone-icon">📁</div>
-                <p><strong>Arraste arquivos aqui</strong> ou clique para selecionar</p>
-                <p style="color: #a0aec0; font-size: 14px; margin-top: 8px;">
-                    HTML, CSS, JS ou imagens (PNG, JPG, GIF, SVG, WebP)
-                </p>
-                <input type="file" id="file-input" style="display: none;" multiple>
+                <div class="form-group">
+                    <label>Tipo de Arquivo</label>
+                    <select id="file-type">
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="js">JavaScript</option>
+                        <option value="image">Imagem</option>
+                    </select>
+                </div>
             </div>
 
-            <div id="files-to-upload"></div>
-
-            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
-                <button class="btn btn-secondary" onclick="closeUploadModal()">Cancelar</button>
-                <button class="btn btn-primary" id="upload-btn" onclick="uploadFiles()">
-                    <span>Upload Arquivos</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Preview -->
-    <div id="preview-modal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2 class="modal-title">Preview do Anúncio</h2>
-                <button class="close-modal" onclick="closePreviewModal()">×</button>
-            </div>
-
-            <iframe id="preview-frame" class="preview-frame"></iframe>
-
-            <div style="margin-top: 16px; text-align: right;">
-                <button class="btn btn-secondary" onclick="closePreviewModal()">Fechar</button>
+            <div id="current-files">
+                <h3 style="margin-bottom: 16px;">Arquivos Atuais</h3>
+                <ul class="file-list" id="file-list"></ul>
             </div>
         </div>
     </div>
 
-    <script src="/static/js/ads_admin.js"></script>
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <span id="notification-text"></span>
+    </div>
+
+    <script>
+        let currentAdId = null;
+        let allAds = [];
+        const API_BASE = '';
+
+        // Get auth token
+        function getToken() {
+            return document.cookie.split('; ')
+                .find(row => row.startsWith('access_token='))
+                ?.split('=')[1]?.replace(/['"]/g, '');
+        }
+
+        // API calls
+        async function apiCall(url, options = {}) {
+            const token = getToken();
+            const headers = {
+                ...options.headers,
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            if (!(options.body instanceof FormData)) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Request failed');
+            }
+
+            if (response.status !== 204) {
+                return await response.json();
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const text = document.getElementById('notification-text');
+            text.textContent = message;
+            notification.className = `notification ${type} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'list') loadAds();
+            if (tabName === 'assignments') loadAssignments();
+            if (tabName === 'preview') loadPreviewAds();
+        }
+
+        // Load ads
+        async function loadAds() {
+            try {
+                allAds = await apiCall('/ad-contents');
+                const grid = document.getElementById('ads-grid');
+
+                if (allAds.length === 0) {
+                    grid.innerHTML = '<p style="color: #a0aec0;">Nenhum anúncio cadastrado ainda.</p>';
+                    return;
+                }
+
+                grid.innerHTML = allAds.map(ad => `
+                    <div class="ad-card" onclick="openFileModal('${ad.id}', '${ad.name}')">
+                        <div class="ad-card-header">
+                            <div>
+                                <div class="ad-card-title">${ad.name}</div>
+                                <div class="ad-card-alias">${ad.alias}</div>
+                            </div>
+                            <span class="ad-badge ${ad.is_active ? 'badge-active' : 'badge-inactive'}">
+                                ${ad.is_active ? 'Ativo' : 'Inativo'}
+                            </span>
+                        </div>
+                        <div class="ad-stats">
+                            <div class="stat">
+                                <div class="stat-label">Visualizações</div>
+                                <div class="stat-value">${ad.view_count || 0}</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">Cliques</div>
+                                <div class="stat-value">${ad.click_count || 0}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; gap: 8px;">
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); openFileModal('${ad.id}', '${ad.name}')">
+                                📁 Arquivos
+                            </button>
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); deleteAd('${ad.id}')">
+                                🗑️ Excluir
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showNotification('Erro ao carregar anúncios: ' + error.message, 'error');
+            }
+        }
+
+        // Create ad
+        document.getElementById('create-ad-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+
+            try {
+                await apiCall('/ad-contents', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                showNotification('Anúncio criado com sucesso!');
+                e.target.reset();
+                switchTab('list');
+            } catch (error) {
+                showNotification('Erro ao criar anúncio: ' + error.message, 'error');
+            }
+        });
+
+        // Delete ad
+        async function deleteAd(id) {
+            if (!confirm('Tem certeza que deseja excluir este anúncio?')) return;
+
+            try {
+                await apiCall(`/ad-contents/${id}`, { method: 'DELETE' });
+                showNotification('Anúncio excluído com sucesso!');
+                loadAds();
+            } catch (error) {
+                showNotification('Erro ao excluir anúncio: ' + error.message, 'error');
+            }
+        }
+
+        // File modal
+        function openFileModal(adId, adName) {
+            currentAdId = adId;
+            document.getElementById('modal-title').textContent = `Arquivos - ${adName}`;
+            document.getElementById('file-modal').classList.add('active');
+            loadFiles(adId);
+        }
+
+        function closeFileModal() {
+            document.getElementById('file-modal').classList.remove('active');
+            currentAdId = null;
+        }
+
+        // Load files
+        async function loadFiles(adId) {
+            try {
+                const ad = await apiCall(`/ad-contents/${adId}`);
+                const fileList = document.getElementById('file-list');
+                const allFiles = [
+                    ...(ad.css_files || []).map(f => ({ name: f, type: 'css', icon: '🎨' })),
+                    ...(ad.js_files || []).map(f => ({ name: f, type: 'js', icon: '⚙️' })),
+                    ...(ad.image_files || []).map(f => ({ name: f, type: 'image', icon: '🖼️' }))
+                ];
+
+                if (allFiles.length === 0) {
+                    fileList.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 20px;">Nenhum arquivo enviado ainda.</p>';
+                    return;
+                }
+
+                fileList.innerHTML = allFiles.map(file => `
+                    <li class="file-item">
+                        <div class="file-info">
+                            <div class="file-icon">${file.icon}</div>
+                            <div class="file-details">
+                                <div class="file-name">${file.name}</div>
+                                <div class="file-meta">${file.type.toUpperCase()}</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-icon btn-danger" onclick="deleteFile('${adId}', '${file.name}', '${file.type}')">
+                                🗑️
+                            </button>
+                        </div>
+                    </li>
+                `).join('');
+            } catch (error) {
+                showNotification('Erro ao carregar arquivos: ' + error.message, 'error');
+            }
+        }
+
+        // Upload zone
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+
+        uploadZone.onclick = () => fileInput.click();
+
+        uploadZone.ondragover = (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        };
+
+        uploadZone.ondragleave = () => {
+            uploadZone.classList.remove('dragover');
+        };
+
+        uploadZone.ondrop = (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        };
+
+        fileInput.onchange = (e) => {
+            handleFiles(e.target.files);
+        };
+
+        async function handleFiles(files) {
+            if (!currentAdId) return;
+
+            const fileType = document.getElementById('file-type').value;
+
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('file_type', fileType);
+
+                try {
+                    await apiCall(`/ad-contents/${currentAdId}/files`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    showNotification(`Arquivo ${file.name} enviado com sucesso!`);
+                } catch (error) {
+                    showNotification(`Erro ao enviar ${file.name}: ${error.message}`, 'error');
+                }
+            }
+
+            loadFiles(currentAdId);
+            fileInput.value = '';
+        }
+
+        // Delete file
+        async function deleteFile(adId, filename, fileType) {
+            if (!confirm(`Excluir ${filename}?`)) return;
+
+            try {
+                const formData = new FormData();
+                formData.append('file_type', fileType);
+
+                await apiCall(`/ad-contents/${adId}/files/${filename}`, {
+                    method: 'DELETE',
+                    body: formData
+                });
+                showNotification('Arquivo excluído!');
+                loadFiles(adId);
+            } catch (error) {
+                showNotification('Erro ao excluir arquivo: ' + error.message, 'error');
+            }
+        }
+
+        // Assignments
+        async function loadAssignments() {
+            try {
+                const [assignments, ads] = await Promise.all([
+                    apiCall('/ad-assignments'),
+                    apiCall('/ad-contents')
+                ]);
+
+                // Populate ad select
+                const select = document.getElementById('assignment-ad-select');
+                select.innerHTML = '<option value="">Selecione um anúncio</option>' +
+                    ads.map(ad => `<option value="${ad.id}">${ad.name} (${ad.alias})</option>`).join('');
+
+                // Show assignments
+                const list = document.getElementById('assignments-list');
+                if (assignments.length === 0) {
+                    list.innerHTML = '<p style="color: #a0aec0;">Nenhuma atribuição configurada.</p>';
+                    return;
+                }
+
+                list.innerHTML = assignments.map(a => {
+                    const ad = ads.find(ad => ad.id === a.ad_id);
+                    return `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <div class="file-icon">🎯</div>
+                                <div class="file-details">
+                                    <div class="file-name">${a.location}</div>
+                                    <div class="file-meta">${ad ? ad.name : 'Anúncio não encontrado'}</div>
+                                </div>
+                            </div>
+                            <button class="btn-icon btn-danger" onclick="deleteAssignment('${a.location}')">🗑️</button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                showNotification('Erro ao carregar atribuições: ' + error.message, 'error');
+            }
+        }
+
+        document.getElementById('assignment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+
+            try {
+                await apiCall('/ad-assignments', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                showNotification('Atribuição criada com sucesso!');
+                e.target.reset();
+                loadAssignments();
+            } catch (error) {
+                showNotification('Erro ao criar atribuição: ' + error.message, 'error');
+            }
+        });
+
+        async function deleteAssignment(location) {
+            if (!confirm(`Remover atribuição de ${location}?`)) return;
+
+            try {
+                await apiCall(`/ad-assignments/${location}`, { method: 'DELETE' });
+                showNotification('Atribuição removida!');
+                loadAssignments();
+            } catch (error) {
+                showNotification('Erro ao remover atribuição: ' + error.message, 'error');
+            }
+        }
+
+        // Preview
+        async function loadPreviewAds() {
+            try {
+                const ads = await apiCall('/ad-contents');
+                const select = document.getElementById('preview-ad-select');
+                select.innerHTML = '<option value="">Selecione um anúncio</option>' +
+                    ads.map(ad => `<option value="${ad.alias}">${ad.name}</option>`).join('');
+
+                select.onchange = (e) => {
+                    const alias = e.target.value;
+                    if (alias) {
+                        const iframe = document.getElementById('preview-iframe');
+                        iframe.src = `/ads/${alias}/index.html`;
+                    }
+                };
+            } catch (error) {
+                showNotification('Erro ao carregar anúncios: ' + error.message, 'error');
+            }
+        }
+
+        function setPreviewMode(mode) {
+            const container = document.getElementById('device-container');
+            if (mode === 'mobile') {
+                container.className = 'device-screen device-mobile';
+            } else {
+                container.className = 'device-screen device-desktop';
+            }
+        }
+
+        // Init
+        loadAds();
+    </script>
 </body>
 </html>
