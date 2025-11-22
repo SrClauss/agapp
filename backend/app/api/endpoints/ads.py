@@ -4,7 +4,7 @@ from typing import Optional, List, Literal
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user
 from app.crud.ad_content import get_ad_content_crud
 from app.schemas.ad_content import (
     AdContentCreate,
