@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, HTTPException, Form, status
+from fastapi import APIRouter, Depends, Request, HTTPException, Form, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
@@ -48,9 +48,117 @@ def validate_admin_request(request: Request) -> bool:
     return True
 
 @router.get("/ads", response_class=HTMLResponse)
-async def ads_admin_panel(request: Request):
+async def ads_admin_panel(
+    request: Request,
+    current_user: User = Depends(get_current_user_from_request)
+):
     """Painel de gerenciamento de publicidade"""
-    return templates.TemplateResponse("ads_admin.html", {"request": request})
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return templates.TemplateResponse("admin/ads.html", {
+        "request": request,
+        "current_user": current_user
+    })
+
+@router.post("/api/ads/{ad_type}/upload")
+async def upload_ad_file(
+    ad_type: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """Upload arquivo para anúncio"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+
+    # Validate ad type
+    valid_types = ["publi_client", "publi_professional", "banner_client", "banner_professional"]
+    if ad_type not in valid_types:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ad type")
+
+    # Validate file extension
+    allowed_ext = [".html", ".htm", ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]
+    file_ext = "." + file.filename.split(".")[-1].lower()
+    if file_ext not in allowed_ext:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"File type not allowed: {file_ext}")
+
+    # Create directory
+    import os
+    from pathlib import Path
+
+    ads_dir = Path("./ads") / ad_type
+    ads_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save file
+    file_path = ads_dir / file.filename
+    content = await file.read()
+
+    # Max 5MB
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large (max 5MB)")
+
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    return JSONResponse({"message": "File uploaded successfully", "filename": file.filename})
+
+@router.get("/api/ads/{ad_type}/files")
+async def list_ad_files(
+    ad_type: str,
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """Listar arquivos de um anúncio"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+
+    import os
+    from pathlib import Path
+
+    ads_dir = Path("./ads") / ad_type
+
+    if not ads_dir.exists():
+        return JSONResponse([])
+
+    files = []
+    for file_path in ads_dir.iterdir():
+        if file_path.is_file():
+            ext = file_path.suffix.lower()
+            file_type = "html" if ext in [".html", ".htm"] else \
+                       "css" if ext == ".css" else \
+                       "js" if ext == ".js" else \
+                       "image"
+
+            files.append({
+                "name": file_path.name,
+                "type": file_type,
+                "size": file_path.stat().st_size
+            })
+
+    return JSONResponse(files)
+
+@router.delete("/api/ads/{ad_type}/files/{filename}")
+async def delete_ad_file(
+    ad_type: str,
+    filename: str,
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """Deletar arquivo de um anúncio"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+
+    import os
+    from pathlib import Path
+
+    file_path = Path("./ads") / ad_type / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    os.remove(file_path)
+
+    return JSONResponse({"message": "File deleted successfully"})
 
 @router.get("/", response_class=HTMLResponse)
 async def admin_dashboard(
