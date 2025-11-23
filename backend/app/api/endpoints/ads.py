@@ -21,6 +21,7 @@ router = APIRouter()
 
 @router.post("/ad-contents", response_model=AdContentResponse, status_code=status.HTTP_201_CREATED)
 async def create_ad_content(
+   
     ad_content: AdContentCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
