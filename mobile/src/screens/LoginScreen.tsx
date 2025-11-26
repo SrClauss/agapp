@@ -23,6 +23,61 @@ export default function LoginScreen() {
 
   const { signIn } = useGoogleAuth();
 
+  const checkAdAndNavigate = async (user: any) => {
+    console.log('🔍 Verificando anúncios para usuário:', user.email, 'roles:', user.roles);
+
+    if (!user.is_profile_complete) {
+      console.log('📝 Usuário precisa completar perfil');
+      navigation.navigate('CompleteProfile' as never);
+      return;
+    }
+
+    if (user.roles.includes('client') && user.roles.includes('professional')) {
+      console.log('👥 Usuário tem múltiplos roles, indo para seleção');
+      navigation.navigate('ProfileSelection' as never);
+      return;
+    }
+
+    // Determinar location baseado no role
+    const location = user.roles.includes('client') ? 'publi_screen_client' : 'publi_screen_professional';
+    console.log('📍 Location determinado:', location);
+
+    // Verificar se anúncios estão disponíveis
+    try {
+      const token = useAuthStore.getState().token;
+      console.log('🔑 Verificando anúncios com token presente:', !!token);
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log('📡 Status da verificação de anúncios:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📦 Dados dos anúncios:', data);
+
+        if (data && (data.ads?.length > 0 || data.html_content || data.html)) {
+          console.log('✅ Anúncios encontrados, navegando para AdScreen');
+          navigation.navigate('AdScreen' as never, { location });
+          return;
+        }
+      }
+
+      console.log('ℹ️ Nenhum anúncio disponível, indo para Welcome');
+    } catch (error) {
+      console.error('🚨 Erro ao verificar anúncios:', error);
+    }
+
+    // Se não houver anúncios ou erro, vai direto para Welcome
+    navigation.navigate('Welcome' as never);
+  };
+
   const onEmailLogin = async () => {
     setLoading(true);
     setError(null);
@@ -40,13 +95,8 @@ export default function LoginScreen() {
       } catch (err) {
         console.warn('Failed to register push token', err);
       }
-      if (!user.is_profile_complete) {
-        navigation.navigate('CompleteProfile' as never);
-      } else if (user.roles.includes('client') && user.roles.includes('professional')) {
-        navigation.navigate('ProfileSelection' as never);
-      } else {
-        navigation.navigate('Welcome' as never);
-      }
+
+      await checkAdAndNavigate(user);
     } catch (e: any) {
       setError(e.message || 'Erro no login');
     } finally {
@@ -81,13 +131,7 @@ export default function LoginScreen() {
         console.warn('Failed to register push token', err);
       }
 
-      if (!user.is_profile_complete) {
-        navigation.navigate('CompleteProfile' as never);
-      } else if (user.roles.includes('client') && user.roles.includes('professional')) {
-        navigation.navigate('ProfileSelection' as never);
-      } else {
-        navigation.navigate('Welcome' as never);
-      }
+      await checkAdAndNavigate(user);
     } catch (e: any) {
       console.error('Erro no Google Sign-In:', e);
       setError(e.message || 'Erro ao fazer login com Google');

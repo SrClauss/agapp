@@ -41,3 +41,6 @@ backend/*firebase*.json
 # Development files
 docker-compose.dev.yml
 Dockerfile_dev
+
+# Examples folder
+examples/
