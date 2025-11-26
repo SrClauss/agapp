@@ -195,13 +195,6 @@
 </style>
 
 <script>
-// Auth helper
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-}
-
 function showAlert(message, type = 'success') {
     const alert = document.createElement('div');
     alert.className = `alert alert-${type} alert-dismissible fade show`;
@@ -221,11 +214,7 @@ async function loadFiles(adType) {
     const container = document.getElementById(`files-${adType.replace('_', '-')}`);
 
     try {
-        const response = await fetch(`/system-admin/api/ads/${adType}/files`, {
-            headers: {
-                'Authorization': getCookie('access_token')
-            }
-        });
+        const response = await fetch(`/system-admin/api/ads/${adType}/files`);
 
         if (!response.ok) {
             container.innerHTML = '<small class="text-muted">Nenhum arquivo encontrado</small>';
@@ -264,10 +253,7 @@ async function deleteFile(adType, filename) {
 
     try {
         const response = await fetch(`/system-admin/api/ads/${adType}/files/${filename}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': getCookie('access_token')
-            }
+            method: 'DELETE'
         });
 
         if (!response.ok) throw new Error('Failed to delete');
@@ -308,9 +294,6 @@ document.querySelectorAll('.upload-form').forEach(form => {
             try {
                 const response = await fetch(`/system-admin/api/ads/${adType}/upload`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': getCookie('access_token')
-                    },
                     body: formData
                 });
 
