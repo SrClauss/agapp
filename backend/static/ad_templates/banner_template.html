@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Banner Publicitário</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        .banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .banner:active {
+            transform: scale(0.98);
+        }
+
+        .banner-content {
+            flex: 1;
+        }
+
+        .banner-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .banner-description {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .banner-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 15px;
+            font-size: 30px;
+        }
+
+        .banner-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="banner" onclick="handleBannerClick()">
+        <div class="banner-content">
+            <div class="banner-title">Título do Banner</div>
+            <div class="banner-description">Descrição curta e objetiva do anúncio</div>
+        </div>
+
+        <!-- Opção 1: Usar ícone emoji -->
+        <div class="banner-icon">🎯</div>
+
+        <!-- Opção 2: Usar imagem (descomente se quiser usar) -->
+        <!-- <img src="banner-image.png" alt="Banner" class="banner-image"> -->
+    </div>
+
+    <script>
+        function handleBannerClick() {
+            // Envia mensagem para o React Native
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage('click');
+            }
+
+            console.log('Banner clicado');
+
+            // Aqui você pode adicionar lógica adicional
+            // Por exemplo, abrir um link:
+            // window.open('https://seusite.com', '_blank');
+        }
+
+        // Prevenir zoom
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>
