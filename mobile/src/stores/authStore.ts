@@ -44,38 +44,15 @@ export type AuthState = {
   token: string | null;
   user: User | null;
   activeRole: string | null;
+  isHydrated: boolean;
   setToken: (token: string | null) => Promise<void>;
   setUser: (user: User | null) => void;
   setActiveRole: (role: string) => void;
+  setHydrated: () => void;
   logout: () => Promise<void>;
 };
 
 const SECURE_KEY = 'auth_token_v1';
-
-const secureStorage = {
-  getItem: async (name: string) => {
-    try {
-      const value = await SecureStore.getItemAsync(name);
-      return value;
-    } catch (e) {
-      return null;
-    }
-  },
-  setItem: async (name: string, value: string) => {
-    try {
-      await SecureStore.setItemAsync(name, value);
-    } catch (e) {
-      // noop
-    }
-  },
-  removeItem: async (name: string) => {
-    try {
-      await SecureStore.deleteItemAsync(name);
-    } catch (e) {
-      // noop
-    }
-  },
-};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -83,29 +60,81 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       activeRole: null,
+      isHydrated: false,
       setToken: async (token: string | null) => {
+        console.log(`[AuthStore] setToken chamado com token: ${token ? 'Presente' : 'Null'}`);
         set({ token });
-        if (token) {
-          await secureStorage.setItem(SECURE_KEY, token);
-        } else {
-          await secureStorage.removeItem(SECURE_KEY);
-        }
+        // O middleware persist vai salvar automaticamente no SecureStore
+        console.log(`[AuthStore] Token definido no estado (persistirá automaticamente)`);
       },
       setUser: (user: User | null) => set({ user }),
       setActiveRole: (role: string) => set({ activeRole: role }),
+      setHydrated: () => set({ isHydrated: true }),
       logout: async () => {
+        console.log(`[AuthStore] Fazendo logout`);
         set({ token: null, user: null, activeRole: null });
-        await secureStorage.removeItem(SECURE_KEY);
+        // O middleware persist vai limpar automaticamente do SecureStore
+        console.log(`[AuthStore] Logout completo`);
       },
     }),
     {
       name: 'auth-storage',
-      // override storage to use expo-secure-store
+      // override storage to use expo-secure-store with JSON serialization
       storage: {
-        getItem: (name: string) => secureStorage.getItem(name),
-        setItem: (name: string, value: string) => secureStorage.setItem(name, value),
-        removeItem: (name: string) => secureStorage.removeItem(name),
+        getItem: async (name: string) => {
+          try {
+            console.log(`[AuthStore] Tentando recuperar ${name} do SecureStore`);
+            const value = await SecureStore.getItemAsync(name);
+            if (value) {
+              const parsed = JSON.parse(value);
+              console.log(`[AuthStore] Valor recuperado e parseado:`, {
+                hasToken: !!parsed.state?.token,
+                hasUser: !!parsed.state?.user,
+                activeRole: parsed.state?.activeRole
+              });
+              return parsed;
+            }
+            console.log(`[AuthStore] Nenhum valor encontrado`);
+            return null;
+          } catch (e) {
+            console.error(`[AuthStore] Erro ao recuperar ${name}:`, e);
+            return null;
+          }
+        },
+        setItem: async (name: string, value: any) => {
+          try {
+            console.log(`[AuthStore] Salvando ${name} no SecureStore`);
+            const serialized = JSON.stringify(value);
+            await SecureStore.setItemAsync(name, serialized);
+            console.log(`[AuthStore] ${name} salvo com sucesso`);
+          } catch (e) {
+            console.error(`[AuthStore] Erro ao salvar ${name}:`, e);
+          }
+        },
+        removeItem: async (name: string) => {
+          try {
+            console.log(`[AuthStore] Removendo ${name} do SecureStore`);
+            await SecureStore.deleteItemAsync(name);
+            console.log(`[AuthStore] ${name} removido com sucesso`);
+          } catch (e) {
+            console.error(`[AuthStore] Erro ao remover ${name}:`, e);
+          }
+        },
       } as any,
+      onRehydrateStorage: () => (state) => {
+        console.log(`[AuthStore] Rehidratação iniciada`);
+        if (state) {
+          console.log(`[AuthStore] Estado rehidratado:`, {
+            hasToken: !!state.token,
+            hasUser: !!state.user,
+            activeRole: state.activeRole
+          });
+          state.setHydrated();
+          console.log(`[AuthStore] Hidratação marcada como completa`);
+        } else {
+          console.log(`[AuthStore] Nenhum estado para rehidratar`);
+        }
+      },
     }
   )
 );

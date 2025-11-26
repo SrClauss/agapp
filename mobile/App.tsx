@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { View, ActivityIndicator } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
@@ -10,14 +11,83 @@ import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
 import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
 import PubliScreenWrapper from './src/screens/PubliScreenWrapper';
 import { theme } from './src/theme';
+import { useAuthStore } from './src/stores/authStore';
+import { fetchCurrentUser } from './src/api/auth';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState<string>('Login');
+  const { token, setUser, isHydrated } = useAuthStore();
+
+  console.log(`[App] Componente App renderizado. isHydrated: ${isHydrated}, token: ${!!token}`);
+
+  const checkAuth = async () => {
+    try {
+      console.log(`[App] Verificando autenticação. Token presente: ${!!token}, isHydrated: ${isHydrated}`);
+      if (token) {
+        console.log(`[App] Token encontrado, verificando validade...`);
+        // Verificar se o token ainda é válido
+        try {
+          const currentUser = await fetchCurrentUser(token);
+          console.log(`[App] Token válido, usuário obtido:`, currentUser.email);
+          setUser(currentUser);
+
+          // Determinar rota inicial baseada no estado do usuário
+          if (!currentUser.is_profile_complete) {
+            setInitialRoute('CompleteProfile');
+          } else if (!currentUser.roles || currentUser.roles.length === 0) {
+            setInitialRoute('ProfileSelection');
+          } else {
+            setInitialRoute('Home');
+          }
+        } catch (error) {
+          console.log(`[App] Token inválido, fazendo logout:`, error);
+          // Token inválido ou expirado
+          useAuthStore.getState().logout();
+          setInitialRoute('Login');
+        }
+      } else {
+        console.log(`[App] Nenhum token encontrado, indo para login`);
+        setInitialRoute('Login');
+      }
+    } catch (error) {
+      console.error('[App] Erro ao verificar autenticação:', error);
+      setInitialRoute('Login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    async function initializeApp() {
+      console.log(`[App] Inicializando app...`);
+
+      // Aguardar hidratação do store
+      if (isHydrated) {
+        console.log(`[App] Store hidratado, executando checkAuth`);
+        checkAuth();
+      } else {
+        console.log(`[App] Aguardando hidratação do store...`);
+      }
+    }
+
+    initializeApp();
+  }, [isHydrated, token]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <PaperProvider theme={theme}>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Login">
+        <Stack.Navigator initialRouteName={initialRoute}>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Criar Conta' }} />
           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
