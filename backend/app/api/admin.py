@@ -716,3 +716,102 @@ async def admin_delete_category_permanent(
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
 
     return RedirectResponse(url="/system-admin/categories", status_code=303)
+
+
+# ==================== PUBLIC ADS ENDPOINTS (FOR MOBILE/FRONTEND) ====================
+
+@router.get("/api/public/ads/{ad_type}")
+async def get_public_ad(ad_type: str):
+    """
+    Endpoint público para mobile/frontend buscar anúncios
+    Retorna o conteúdo completo do anúncio (HTML + assets inline)
+
+    Ad types:
+    - publi_client: PubliScreen para clientes
+    - publi_professional: PubliScreen para profissionais
+    - banner_client: Banner home clientes
+    - banner_professional: Banner home profissionais
+    """
+    from pathlib import Path
+    import base64
+
+    # Validate ad type
+    valid_types = ["publi_client", "publi_professional", "banner_client", "banner_professional"]
+    if ad_type not in valid_types:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ad type")
+
+    ads_dir = Path("./ads") / ad_type
+
+    # Check if directory exists
+    if not ads_dir.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ad not found")
+
+    # Check if index.html exists
+    index_file = ads_dir / "index.html"
+    if not index_file.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ad not configured")
+
+    # Read HTML content
+    with open(index_file, "r", encoding="utf-8") as f:
+        html_content = f.read()
+
+    # Collect all assets (CSS, JS, images)
+    assets = {}
+    for file_path in ads_dir.iterdir():
+        if file_path.is_file() and file_path.name != "index.html":
+            ext = file_path.suffix.lower()
+
+            # Read file
+            if ext in [".css", ".js"]:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    assets[file_path.name] = {
+                        "type": "text",
+                        "content": f.read()
+                    }
+            elif ext in [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]:
+                with open(file_path, "rb") as f:
+                    content_b64 = base64.b64encode(f.read()).decode('utf-8')
+                    mime_type = {
+                        ".png": "image/png",
+                        ".jpg": "image/jpeg",
+                        ".jpeg": "image/jpeg",
+                        ".gif": "image/gif",
+                        ".svg": "image/svg+xml",
+                        ".webp": "image/webp"
+                    }.get(ext, "image/png")
+
+                    assets[file_path.name] = {
+                        "type": "image",
+                        "content": f"data:{mime_type};base64,{content_b64}"
+                    }
+
+    return JSONResponse({
+        "ad_type": ad_type,
+        "html": html_content,
+        "assets": assets
+    })
+
+
+@router.get("/api/public/ads/{ad_type}/check")
+async def check_ad_exists(ad_type: str):
+    """
+    Verifica se um anúncio existe e está configurado
+    Endpoint leve para o mobile/frontend verificar antes de carregar
+    """
+    from pathlib import Path
+
+    # Validate ad type
+    valid_types = ["publi_client", "publi_professional", "banner_client", "banner_professional"]
+    if ad_type not in valid_types:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ad type")
+
+    ads_dir = Path("./ads") / ad_type
+    index_file = ads_dir / "index.html"
+
+    exists = ads_dir.exists() and index_file.exists()
+
+    return JSONResponse({
+        "ad_type": ad_type,
+        "exists": exists,
+        "configured": exists
+    })
