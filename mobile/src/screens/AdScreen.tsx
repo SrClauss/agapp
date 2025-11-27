@@ -34,37 +34,37 @@ export default function AdScreen() {
       console.log('🌐 URL:', `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`);
 
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`
       );
 
       console.log('📡 Status HTTP:', response.status);
+
+      // Status 204 = sem anúncio configurado
+      if (response.status === 204) {
+        console.log('ℹ️ Nenhum anúncio configurado para esta location');
+        navigation.navigate('Welcome' as never);
+        return;
+      }
 
       if (response.ok) {
         const data = await response.json();
         console.log('📦 Dados recebidos:', data);
 
-        // Backend retorna { ads: [...] }
-        if (data.ads && data.ads.length > 0) {
-          const ad = data.ads[0]; // Primeiro anúncio
-
+        // Backend agora retorna direto: { id, alias, type, html, css, js, images }
+        if (data && data.html) {
           const adaptedAd: AdContent = {
-            id: ad.id,
-            alias: ad.id,
-            type: location,
-            html: ad.html_content || ad.html || '',
-            css: ad.css || '',
-            js: ad.js || '',
-            images: ad.images || {}
+            id: data.id,
+            alias: data.alias,
+            type: data.type,
+            html: data.html,
+            css: data.css || '',
+            js: data.js || '',
+            images: data.images || {}
           };
 
           setAdContent(adaptedAd);
         } else {
-          console.log('ℹ️ Nenhum anúncio encontrado');
+          console.log('ℹ️ Dados de anúncio inválidos');
           navigation.navigate('Welcome' as never);
         }
       } else {

@@ -44,26 +44,27 @@ export default function LoginScreen() {
 
     // Verificar se anúncios estão disponíveis
     try {
-      const token = useAuthStore.getState().token;
-      console.log('🔑 Verificando anúncios com token presente:', !!token);
+      console.log('🔍 Verificando anúncio para location:', location);
 
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`
       );
 
       console.log('📡 Status da verificação de anúncios:', response.status);
+
+      // Status 204 = sem anúncio configurado
+      if (response.status === 204) {
+        console.log('ℹ️ Nenhum anúncio configurado, indo para Welcome');
+        navigation.navigate('Welcome' as never);
+        return;
+      }
 
       if (response.ok) {
         const data = await response.json();
         console.log('📦 Dados dos anúncios:', data);
 
-        if (data && (data.ads?.length > 0 || data.html_content || data.html)) {
-          console.log('✅ Anúncios encontrados, navegando para AdScreen');
+        if (data && data.html) {
+          console.log('✅ Anúncio encontrado, navegando para AdScreen');
           navigation.navigate('AdScreen' as never, { location });
           return;
         }
