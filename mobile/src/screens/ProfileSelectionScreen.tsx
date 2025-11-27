@@ -11,7 +11,7 @@ export default function ProfileSelectionScreen() {
 
   const handleRoleSelection = (role: string) => {
     setActiveRole(role);
-    navigation.navigate('Home' as never);
+    navigation.navigate('Welcome' as never);
   };
 
   return (

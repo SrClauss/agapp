@@ -9,7 +9,6 @@ import SignUpScreen from './src/screens/SignUpScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
 import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
-import PubliScreenWrapper from './src/screens/PubliScreenWrapper';
 import AdScreen from './src/screens/AdScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
@@ -95,7 +94,6 @@ export default function App() {
           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Home" component={PubliScreenWrapper} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style="auto" />
