@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from typing import Literal
 from pathlib import Path
 import base64
 import shutil
+import os
 
 from app.core.security import get_current_user
 from app.models.user import User
@@ -21,7 +22,10 @@ FIXED_AD_LOCATIONS = [
 ADS_BASE_DIR = Path("./ads")
 
 
-# Helper function to read ad files from disk
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
 def get_ad_files(location: str) -> dict:
     """Read HTML, CSS, JS, and images from ad directory"""
     ad_dir = ADS_BASE_DIR / location
@@ -82,8 +86,12 @@ def get_ad_files(location: str) -> dict:
     }
 
 
-@router.get("/ad-locations")
-async def list_ad_locations(
+# ============================================================================
+# 1. ADMIN - List all ad locations
+# ============================================================================
+
+@router.get("/admin/locations")
+async def admin_list_ad_locations(
     current_user: User = Depends(get_current_user)
 ):
     """List all 4 fixed ad locations (admin only)"""
@@ -97,18 +105,34 @@ async def list_ad_locations(
     for location in FIXED_AD_LOCATIONS:
         ad_dir = ADS_BASE_DIR / location
         has_content = ad_dir.exists() and (ad_dir / "index.html").exists()
+
+        # List all files in the directory
+        files = []
+        if ad_dir.exists():
+            for file in ad_dir.iterdir():
+                if file.is_file():
+                    files.append({
+                        "name": file.name,
+                        "size": file.stat().st_size
+                    })
+
         locations.append({
             "location": location,
             "has_content": has_content,
             "type": "publi_screen" if "publi_screen" in location else "banner",
-            "target": "client" if "client" in location else "professional"
+            "target": "client" if "client" in location else "professional",
+            "files": files
         })
 
     return {"locations": locations}
 
 
-@router.post("/upload-ad-file/{location}")
-async def upload_ad_file(
+# ============================================================================
+# 2. ADMIN - Upload file to ad location (generic upload)
+# ============================================================================
+
+@router.post("/admin/upload/{location}")
+async def admin_upload_ad_file(
     location: Literal[
         "publi_screen_client",
         "publi_screen_professional",
@@ -177,8 +201,12 @@ async def upload_ad_file(
     return {"message": f"File uploaded successfully to {location}", "filename": filename}
 
 
-@router.delete("/delete-ad-files/{location}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_all_ad_files(
+# ============================================================================
+# 3. ADMIN - Delete all files in a location folder
+# ============================================================================
+
+@router.delete("/admin/delete-all/{location}", status_code=status.HTTP_200_OK)
+async def admin_delete_all_files(
     location: Literal[
         "publi_screen_client",
         "publi_screen_professional",
@@ -201,36 +229,191 @@ async def delete_all_ad_files(
 
     if ad_dir.exists():
         shutil.rmtree(ad_dir)
+        return {"message": f"All files deleted from {location}"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location {location} not found"
+        )
 
-    return None
 
+# ============================================================================
+# 4. ADMIN - Delete a specific file in a location
+# ============================================================================
 
-# Public endpoints for mobile app
-@router.get("/public/ads/{location}")
-async def get_ad_for_location(
+@router.delete("/admin/delete-file/{location}/{filename}", status_code=status.HTTP_200_OK)
+async def admin_delete_specific_file(
     location: Literal[
         "publi_screen_client",
         "publi_screen_professional",
         "banner_client_home",
         "banner_professional_home"
-    ]
+    ],
+    filename: str,
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Get ad content for a specific location (public endpoint for mobile app)
-    Returns the full HTML/CSS/JS/images ready to be rendered
-    Returns 204 if no ad is configured for this location
-
-    This is now file-based, no database involved.
+    Delete a specific file from an ad location (admin only)
     """
-    content = get_ad_files(location)
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can delete ad files"
+        )
 
+    ad_dir = ADS_BASE_DIR / location
+    file_path = ad_dir / filename
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File {filename} not found in {location}"
+        )
+
+    # Security check: ensure file is within the ad directory
+    if not str(file_path.resolve()).startswith(str(ad_dir.resolve())):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid file path"
+        )
+
+    os.remove(file_path)
+    return {"message": f"File {filename} deleted from {location}"}
+
+
+# ============================================================================
+# 5-8. ADMIN - Preview ad content for each location (4 hardcoded functions)
+# ============================================================================
+
+@router.get("/admin/preview/publi-screen-client")
+async def admin_preview_publi_screen_client(
+    current_user: User = Depends(get_current_user)
+):
+    """Preview publi_screen_client ad content (admin only)"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can preview ads"
+        )
+
+    content = get_ad_files("publi_screen_client")
     if not content:
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
-
     return content
 
 
-@router.post("/public/ads/{location}/click", status_code=status.HTTP_204_NO_CONTENT)
+@router.get("/admin/preview/publi-screen-professional")
+async def admin_preview_publi_screen_professional(
+    current_user: User = Depends(get_current_user)
+):
+    """Preview publi_screen_professional ad content (admin only)"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can preview ads"
+        )
+
+    content = get_ad_files("publi_screen_professional")
+    if not content:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    return content
+
+
+@router.get("/admin/preview/banner-client-home")
+async def admin_preview_banner_client_home(
+    current_user: User = Depends(get_current_user)
+):
+    """Preview banner_client_home ad content (admin only)"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can preview ads"
+        )
+
+    content = get_ad_files("banner_client_home")
+    if not content:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    return content
+
+
+@router.get("/admin/preview/banner-professional-home")
+async def admin_preview_banner_professional_home(
+    current_user: User = Depends(get_current_user)
+):
+    """Preview banner_professional_home ad content (admin only)"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can preview ads"
+        )
+
+    content = get_ad_files("banner_professional_home")
+    if not content:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    return content
+
+
+# ============================================================================
+# 9-12. PUBLIC - Get ad content for mobile (4 hardcoded functions)
+# ============================================================================
+
+@router.get("/public/publi-screen-client")
+async def get_publi_screen_client():
+    """
+    Get publi_screen_client ad content (public endpoint for mobile app)
+    Returns the full HTML/CSS/JS/images ready to be rendered
+    Returns 204 if no ad is configured
+    """
+    content = get_ad_files("publi_screen_client")
+    if not content:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    return content
+
+
+@router.get("/public/publi-screen-professional")
+async def get_publi_screen_professional():
+    """
+    Get publi_screen_professional ad content (public endpoint for mobile app)
+    Returns the full HTML/CSS/JS/images ready to be rendered
+    Returns 204 if no ad is configured
+    """
+    content = get_ad_files("publi_screen_professional")
+    if not content:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    return content
+
+
+@router.get("/public/banner-client-home")
+async def get_banner_client_home():
+    """
+    Get banner_client_home ad content (public endpoint for mobile app)
+    Returns the full HTML/CSS/JS/images ready to be rendered
+    Returns 204 if no ad is configured
+    """
+    content = get_ad_files("banner_client_home")
+    if not content:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    return content
+
+
+@router.get("/public/banner-professional-home")
+async def get_banner_professional_home():
+    """
+    Get banner_professional_home ad content (public endpoint for mobile app)
+    Returns the full HTML/CSS/JS/images ready to be rendered
+    Returns 204 if no ad is configured
+    """
+    content = get_ad_files("banner_professional_home")
+    if not content:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    return content
+
+
+# ============================================================================
+# 13. PUBLIC - Track ad clicks (placeholder for analytics)
+# ============================================================================
+
+@router.post("/public/click/{location}", status_code=status.HTTP_204_NO_CONTENT)
 async def track_ad_click(
     location: Literal[
         "publi_screen_client",
@@ -246,4 +429,5 @@ async def track_ad_click(
     if needed (e.g., write to a log file)
     """
     # Could log to file here if analytics are needed
+    # Example: append to ads_clicks.log with timestamp and location
     return None

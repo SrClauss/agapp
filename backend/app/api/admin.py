@@ -65,102 +65,13 @@ async def ads_admin_panel(
         "current_user": current_user
     })
 
-@router.post("/api/ads/{ad_type}/upload")
-async def upload_ad_file(
-    ad_type: str,
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user_from_request)
-):
-    """Upload arquivo para anúncio"""
-    if "admin" not in current_user.roles:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
-
-    # Validate ad type
-    valid_types = ["publi_client", "publi_professional", "banner_client", "banner_professional"]
-    if ad_type not in valid_types:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ad type")
-
-    # Validate file extension
-    allowed_ext = [".html", ".htm", ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]
-    file_ext = "." + file.filename.split(".")[-1].lower()
-    if file_ext not in allowed_ext:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"File type not allowed: {file_ext}")
-
-    # Create directory
-    import os
-    from pathlib import Path
-
-    ads_dir = Path("./ads") / ad_type
-    ads_dir.mkdir(parents=True, exist_ok=True)
-
-    # Save file
-    file_path = ads_dir / file.filename
-    content = await file.read()
-
-    # Max 5MB
-    if len(content) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large (max 5MB)")
-
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    return JSONResponse({"message": "File uploaded successfully", "filename": file.filename})
-
-@router.get("/api/ads/{ad_type}/files")
-async def list_ad_files(
-    ad_type: str,
-    current_user: User = Depends(get_current_user_from_request)
-):
-    """Listar arquivos de um anúncio"""
-    if "admin" not in current_user.roles:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
-
-    import os
-    from pathlib import Path
-
-    ads_dir = Path("./ads") / ad_type
-
-    if not ads_dir.exists():
-        return JSONResponse([])
-
-    files = []
-    for file_path in ads_dir.iterdir():
-        if file_path.is_file():
-            ext = file_path.suffix.lower()
-            file_type = "html" if ext in [".html", ".htm"] else \
-                       "css" if ext == ".css" else \
-                       "js" if ext == ".js" else \
-                       "image"
-
-            files.append({
-                "name": file_path.name,
-                "type": file_type,
-                "size": file_path.stat().st_size
-            })
-
-    return JSONResponse(files)
-
-@router.delete("/api/ads/{ad_type}/files/{filename}")
-async def delete_ad_file(
-    ad_type: str,
-    filename: str,
-    current_user: User = Depends(get_current_user_from_request)
-):
-    """Deletar arquivo de um anúncio"""
-    if "admin" not in current_user.roles:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
-
-    import os
-    from pathlib import Path
-
-    file_path = Path("./ads") / ad_type / filename
-
-    if not file_path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
-
-    os.remove(file_path)
-
-    return JSONResponse({"message": "File deleted successfully"})
+# NOTE: Ad management API routes have been moved to app/api/endpoints/ads.py
+# Use the following endpoints instead:
+# - GET /ads/admin/locations - List all ad locations
+# - POST /ads/admin/upload/{location} - Upload files
+# - DELETE /ads/admin/delete-all/{location} - Delete all files
+# - DELETE /ads/admin/delete-file/{location}/{filename} - Delete specific file
+# - GET /ads/admin/preview/{location} - Preview ad content
 
 @router.get("/", response_class=HTMLResponse)
 async def admin_dashboard(
@@ -720,100 +631,10 @@ async def admin_delete_category_permanent(
     return RedirectResponse(url="/system-admin/categories", status_code=303)
 
 
-# ==================== PUBLIC ADS ENDPOINTS (FOR MOBILE/FRONTEND) ====================
-
-@router.get("/api/public/ads/{ad_type}")
-async def get_public_ad(ad_type: str):
-    """
-    Endpoint público para mobile/frontend buscar anúncios
-    Retorna o conteúdo completo do anúncio (HTML + assets inline)
-
-    Ad types:
-    - publi_client: PubliScreen para clientes
-    - publi_professional: PubliScreen para profissionais
-    - banner_client: Banner home clientes
-    - banner_professional: Banner home profissionais
-    """
-    from pathlib import Path
-    import base64
-
-    # Validate ad type
-    valid_types = ["publi_client", "publi_professional", "banner_client", "banner_professional"]
-    if ad_type not in valid_types:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ad type")
-
-    ads_dir = Path("./ads") / ad_type
-
-    # Check if directory exists
-    if not ads_dir.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ad not found")
-
-    # Check if index.html exists
-    index_file = ads_dir / "index.html"
-    if not index_file.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ad not configured")
-
-    # Read HTML content
-    with open(index_file, "r", encoding="utf-8") as f:
-        html_content = f.read()
-
-    # Collect all assets (CSS, JS, images)
-    assets = {}
-    for file_path in ads_dir.iterdir():
-        if file_path.is_file() and file_path.name != "index.html":
-            ext = file_path.suffix.lower()
-
-            # Read file
-            if ext in [".css", ".js"]:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    assets[file_path.name] = {
-                        "type": "text",
-                        "content": f.read()
-                    }
-            elif ext in [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]:
-                with open(file_path, "rb") as f:
-                    content_b64 = base64.b64encode(f.read()).decode('utf-8')
-                    mime_type = {
-                        ".png": "image/png",
-                        ".jpg": "image/jpeg",
-                        ".jpeg": "image/jpeg",
-                        ".gif": "image/gif",
-                        ".svg": "image/svg+xml",
-                        ".webp": "image/webp"
-                    }.get(ext, "image/png")
-
-                    assets[file_path.name] = {
-                        "type": "image",
-                        "content": f"data:{mime_type};base64,{content_b64}"
-                    }
-
-    return JSONResponse({
-        "ad_type": ad_type,
-        "html": html_content,
-        "assets": assets
-    })
-
-
-@router.get("/api/public/ads/{ad_type}/check")
-async def check_ad_exists(ad_type: str):
-    """
-    Verifica se um anúncio existe e está configurado
-    Endpoint leve para o mobile/frontend verificar antes de carregar
-    """
-    from pathlib import Path
-
-    # Validate ad type
-    valid_types = ["publi_client", "publi_professional", "banner_client", "banner_professional"]
-    if ad_type not in valid_types:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ad type")
-
-    ads_dir = Path("./ads") / ad_type
-    index_file = ads_dir / "index.html"
-
-    exists = ads_dir.exists() and index_file.exists()
-
-    return JSONResponse({
-        "ad_type": ad_type,
-        "exists": exists,
-        "configured": exists
-    })
+# NOTE: Public ad endpoints have been moved to app/api/endpoints/ads.py
+# Use the following public endpoints instead:
+# - GET /ads/public/publi-screen-client - Get client full-screen ad
+# - GET /ads/public/publi-screen-professional - Get professional full-screen ad
+# - GET /ads/public/banner-client-home - Get client home banner ad
+# - GET /ads/public/banner-professional-home - Get professional home banner ad
+# - POST /ads/public/click/{location} - Track ad click
