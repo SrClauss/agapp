@@ -18,6 +18,9 @@ from app.models.category import CategoryCreate, CategoryUpdate
 from app.schemas.user import User, Token
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
+from typing import Optional, Literal
+from fastapi import status as http_status
+from app.crud.ad_content import get_ad_content_crud
 
 router = APIRouter()
 
@@ -271,6 +274,72 @@ async def admin_projects(
     if status:
         query_filter["status"] = status
     
+    # Public ad endpoints for mobile/web compatibility
+@router.get("/api/public/ads/{ad_type}")
+async def public_get_ad(
+    ad_type: str,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Public endpoint to get active ad for a location (compatible with mobile/docs)
+
+    Returns full HTML/CSS/JS and base64 images.
+    """
+    crud = get_ad_content_crud(db)
+    # Map public ad types to internal locations
+    type_map = {
+        "publi_client": "publi_screen_client",
+        "publi_professional": "publi_screen_professional",
+        "banner_client": "banner_client_home",
+        "banner_professional": "banner_professional_home",
+    }
+
+    location = type_map.get(ad_type) or type_map.get(ad_type.replace("_client", "_client"))
+    if not location:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=f"Invalid ad type: {ad_type}")
+
+    content = await crud.get_active_ad_for_location(location)
+
+    if not content:
+        # Keep consistent behaviour: return 404 when not configured
+        from fastapi import HTTPException
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Ad not found")
+
+    return content
+
+
+@router.get("/api/public/ads/{ad_type}/check")
+async def public_get_ad_check(
+    ad_type: str,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Quick check to determine if an ad is available for location"""
+    crud = get_ad_content_crud(db)
+    type_map = {
+        "publi_client": "publi_screen_client",
+        "publi_professional": "publi_screen_professional",
+        "banner_client": "banner_client_home",
+        "banner_professional": "banner_professional_home",
+    }
+
+    location = type_map.get(ad_type)
+    if not location:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=f"Invalid ad type: {ad_type}")
+
+    content = await crud.get_active_ad_for_location(location)
+    return {"ad_type": location, "exists": bool(content), "configured": bool(content)}
+
+
+@router.post("/api/public/ads/{ad_id}/click", status_code=http_status.HTTP_204_NO_CONTENT)
+async def public_track_ad_click(
+    ad_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Public endpoint to increment ad click count for analytics"""
+    crud = get_ad_content_crud(db)
+    await crud.increment_clicks(ad_id)
+    return None
     if client_id:
         query_filter["client_id"] = client_id
     
