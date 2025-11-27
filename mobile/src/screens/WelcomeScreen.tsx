@@ -8,6 +8,12 @@ import { commonStyles } from '../theme/styles';
 export default function WelcomeScreen() {
   const navigation = useNavigation();
   const user = useAuthStore((s: AuthState) => s.user);
+  const logout = useAuthStore((s: AuthState) => s.logout);
+
+  const handleLogout = () => {
+    logout();
+    navigation.navigate('Login' as never);
+  };
 
   return (
     <View style={commonStyles.centeredContainer}>
@@ -26,12 +32,19 @@ export default function WelcomeScreen() {
           mode="contained"
           onPress={() => {
             // Aqui você pode navegar para a tela principal do app
-            // navigation.navigate('Home');
             console.log('Continuar para o app');
           }}
           style={commonStyles.button}
         >
           Continuar
+        </Button>
+
+        <Button
+          mode="outlined"
+          onPress={handleLogout}
+          style={[commonStyles.button, { marginTop: 16 }]}
+        >
+          Sair
         </Button>
       </Surface>
     </View>
