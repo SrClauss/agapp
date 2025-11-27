@@ -8,7 +8,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
-from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, announcements, ads
+from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads
 from app.api.admin import router as admin_router
 from app.api.professional import router as professional_router
 from app.api.websockets.routes import router as websocket_router
@@ -78,10 +78,6 @@ tags_metadata = [
     {
         "name": "attendant",
         "description": "Sistema de autenticação e gerenciamento de atendentes do SAC.",
-    },
-    {
-        "name": "announcements",
-        "description": "Sistema de anúncios e novidades da plataforma. Permite criar, gerenciar e exibir anúncios segmentados.",
     },
     {
         "name": "advertisements",
@@ -182,7 +178,6 @@ app.include_router(admin_api.router, tags=["admin-api"])
 app.include_router(websocket_router, tags=["websockets"])
 app.include_router(support.router, prefix="/support", tags=["support"])
 app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"])
-app.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
 app.include_router(ads.router, prefix="/ads", tags=["advertisements"])
 
 @app.on_event("startup")
@@ -226,12 +221,6 @@ async def startup_event():
     await database.support_tickets.create_index("status")
     await database.support_tickets.create_index("category")
     await database.support_tickets.create_index("created_at")
-    await database.announcements.create_index("is_active")
-    await database.announcements.create_index("type")
-    await database.announcements.create_index("target_audience")
-    await database.announcements.create_index("start_date")
-    await database.announcements.create_index("end_date")
-    await database.announcements.create_index([("priority", -1), ("start_date", -1)])
     # Ad content indexes
     await database.ad_contents.create_index("alias", unique=True)
     await database.ad_contents.create_index("type")
