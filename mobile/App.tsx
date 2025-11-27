@@ -40,7 +40,7 @@ export default function App() {
           } else if (!currentUser.roles || currentUser.roles.length === 0) {
             setInitialRoute('ProfileSelection');
           } else {
-            setInitialRoute('Home');
+            setInitialRoute('Welcome');
           }
         } catch (error) {
           console.log(`[App] Token inválido, fazendo logout:`, error);
