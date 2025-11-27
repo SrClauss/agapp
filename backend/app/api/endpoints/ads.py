@@ -281,6 +281,42 @@ async def delete_ad_file(
     return AdContentResponse(**ad.model_dump())
 
 
+# Admin utility endpoint
+@router.post("/fix-aliases")
+async def fix_ad_aliases(
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Fix ad aliases to match location names (admin only)"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+
+    mapping = {
+        "publi_client": "publi_screen_client",
+        "publi_professional": "publi_screen_professional",
+        "banner_client": "banner_client_home",
+        "banner_professional": "banner_professional_home"
+    }
+
+    results = []
+    for old_alias, new_alias in mapping.items():
+        result = await db.ad_contents.update_one(
+            {"alias": old_alias},
+            {
+                "$set": {
+                    "alias": new_alias,
+                    "index_html": f"{new_alias}/index.html"
+                }
+            }
+        )
+        if result.modified_count > 0:
+            results.append(f"✅ {old_alias} → {new_alias}")
+        else:
+            results.append(f"ℹ️ {old_alias} not found")
+
+    return {"message": "Aliases fixed", "results": results}
+
+
 # Public endpoints for mobile app
 @router.get("/public/ads/{location}")
 async def get_ad_for_location(
