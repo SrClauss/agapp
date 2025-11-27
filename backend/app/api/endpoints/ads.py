@@ -1,190 +1,126 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.responses import JSONResponse
-from typing import Optional, List, Literal
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from typing import Literal
+from pathlib import Path
+import base64
+import shutil
 
-from app.core.database import get_database
 from app.core.security import get_current_user
-from app.crud.ad_content import get_ad_content_crud
-from app.schemas.ad_content import (
-    AdContentCreate,
-    AdContentUpdate,
-    AdContentResponse,
-    AdContentWithFiles
-)
 from app.models.user import User
 
 router = APIRouter()
 
+# 4 fixed ad locations - HARDCODED
+FIXED_AD_LOCATIONS = [
+    "publi_screen_client",
+    "publi_screen_professional",
+    "banner_client_home",
+    "banner_professional_home"
+]
 
-@router.post("/ad-contents", response_model=AdContentResponse, status_code=status.HTTP_201_CREATED)
-async def create_ad_content(
-   
-    ad_content: AdContentCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+ADS_BASE_DIR = Path("./ads")
+
+
+# Helper function to read ad files from disk
+def get_ad_files(location: str) -> dict:
+    """Read HTML, CSS, JS, and images from ad directory"""
+    ad_dir = ADS_BASE_DIR / location
+
+    if not ad_dir.exists():
+        return None
+
+    html_file = ad_dir / "index.html"
+    if not html_file.exists():
+        return None
+
+    # Read HTML
+    with open(html_file, "r", encoding="utf-8") as f:
+        html_content = f.read()
+
+    # Read CSS (if exists)
+    css_content = ""
+    css_file = ad_dir / "style.css"
+    if css_file.exists():
+        with open(css_file, "r", encoding="utf-8") as f:
+            css_content = f.read()
+
+    # Read JS (if exists)
+    js_content = ""
+    js_file = ad_dir / "script.js"
+    if js_file.exists():
+        with open(js_file, "r", encoding="utf-8") as f:
+            js_content = f.read()
+
+    # Read all images and convert to base64
+    images = {}
+    for ext in ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.svg", "*.webp"]:
+        for img_file in ad_dir.glob(ext):
+            with open(img_file, "rb") as f:
+                img_data = f.read()
+                img_base64 = base64.b64encode(img_data).decode("utf-8")
+                # Determine MIME type
+                file_ext = img_file.suffix.lower()
+                mime_map = {
+                    ".png": "image/png",
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".gif": "image/gif",
+                    ".svg": "image/svg+xml",
+                    ".webp": "image/webp"
+                }
+                mime = mime_map.get(file_ext, "image/png")
+                images[img_file.name] = f"data:{mime};base64,{img_base64}"
+
+    return {
+        "id": location,
+        "alias": location,
+        "type": "publi_screen" if "publi_screen" in location else "banner",
+        "html": html_content,
+        "css": css_content,
+        "js": js_content,
+        "images": images
+    }
+
+
+@router.get("/ad-locations")
+async def list_ad_locations(
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Create new ad content (admin only)
-    Creates a new advertising content entry and its directory
-    """
-    # Check if user is admin (you'll need to add this role check)
-    # For now, we'll use a simple check - adjust based on your auth system
+    """List all 4 fixed ad locations (admin only)"""
     if "admin" not in current_user.roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create ad content"
+            detail="Only admins can list ad locations"
         )
 
-    crud = get_ad_content_crud(db)
+    locations = []
+    for location in FIXED_AD_LOCATIONS:
+        ad_dir = ADS_BASE_DIR / location
+        has_content = ad_dir.exists() and (ad_dir / "index.html").exists()
+        locations.append({
+            "location": location,
+            "has_content": has_content,
+            "type": "publi_screen" if "publi_screen" in location else "banner",
+            "target": "client" if "client" in location else "professional"
+        })
 
-    try:
-        ad = await crud.create(ad_content)
-        return AdContentResponse(**ad.model_dump())
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@router.get("/ad-contents", response_model=List[AdContentResponse])
-async def list_ad_contents(
-    type: Optional[Literal["publi_screen", "banner"]] = None,
-    target: Optional[Literal["client", "professional", "both"]] = None,
-    is_active: Optional[bool] = None,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    List all ad contents with optional filters (admin only)
-    """
-    if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can list ad contents"
-        )
-
-    crud = get_ad_content_crud(db)
-    ads = await crud.get_all(type=type, target=target, is_active=is_active)
-    return [AdContentResponse(**ad.model_dump()) for ad in ads]
+    return {"locations": locations}
 
 
-@router.get("/ad-contents/{ad_id}", response_model=AdContentResponse)
-async def get_ad_content(
-    ad_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    Get ad content by ID (admin only)
-    """
-    if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can view ad contents"
-        )
-
-    crud = get_ad_content_crud(db)
-    ad = await crud.get_by_id(ad_id)
-
-    if not ad:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ad content not found"
-        )
-
-    return AdContentResponse(**ad.model_dump())
-
-
-@router.get("/ad-contents/alias/{alias}", response_model=AdContentResponse)
-async def get_ad_content_by_alias(
-    alias: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    Get ad content by alias (admin only)
-    """
-    if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can view ad contents"
-        )
-
-    crud = get_ad_content_crud(db)
-    ad = await crud.get_by_alias(alias)
-
-    if not ad:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ad content not found"
-        )
-
-    return AdContentResponse(**ad.model_dump())
-
-
-@router.put("/ad-contents/{ad_id}", response_model=AdContentResponse)
-async def update_ad_content(
-    ad_id: str,
-    ad_update: AdContentUpdate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    Update ad content (admin only)
-    """
-    if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can update ad content"
-        )
-
-    crud = get_ad_content_crud(db)
-    ad = await crud.update(ad_id, ad_update)
-
-    if not ad:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ad content not found"
-        )
-
-    return AdContentResponse(**ad.model_dump())
-
-
-@router.delete("/ad-contents/{ad_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_ad_content(
-    ad_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    Delete ad content (admin only)
-    Deletes the ad content, its files, and all assignments
-    """
-    if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can delete ad content"
-        )
-
-    crud = get_ad_content_crud(db)
-    deleted = await crud.delete(ad_id)
-
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ad content not found"
-        )
-
-
-@router.post("/ad-contents/{ad_id}/files", response_model=AdContentResponse)
+@router.post("/upload-ad-file/{location}")
 async def upload_ad_file(
-    ad_id: str,
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
     file: UploadFile = File(...),
     file_type: Literal["html", "css", "js", "image"] = Form(...),
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Upload a file to ad content (admin only)
+    Upload a file to ad location (admin only)
     Supports HTML, CSS, JS, and image files
     """
     if "admin" not in current_user.roles:
@@ -219,49 +155,41 @@ async def upload_ad_file(
             detail="File size must be less than 5MB"
         )
 
-    crud = get_ad_content_crud(db)
+    # Create ad directory if it doesn't exist
+    ad_dir = ADS_BASE_DIR / location
+    ad_dir.mkdir(parents=True, exist_ok=True)
 
-    # Special handling for HTML (index.html)
+    # Determine filename
     if file_type == "html":
-        ad = await crud.get_by_id(ad_id)
-        if not ad:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Ad content not found"
-            )
+        filename = "index.html"
+    elif file_type == "css":
+        filename = "style.css"
+    elif file_type == "js":
+        filename = "script.js"
+    else:  # image
+        filename = file.filename
 
-        # Save as index.html
-        from pathlib import Path
-        html_path = Path("./ads") / ad.alias / "index.html"
-        html_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(html_path, "wb") as f:
-            f.write(content)
+    # Save file
+    file_path = ad_dir / filename
+    with open(file_path, "wb") as f:
+        f.write(content)
 
-        return AdContentResponse(**ad.model_dump())
-    else:
-        # Add other file types
-        ad = await crud.add_file(ad_id, file.filename, content, file_type)
-
-    if not ad:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ad content not found"
-        )
-
-    return AdContentResponse(**ad.model_dump())
+    return {"message": f"File uploaded successfully to {location}", "filename": filename}
 
 
-@router.delete("/ad-contents/{ad_id}/files/{filename}", response_model=AdContentResponse)
-async def delete_ad_file(
-    ad_id: str,
-    filename: str,
-    file_type: Literal["css", "js", "image"] = Form(...),
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+@router.delete("/delete-ad-files/{location}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_all_ad_files(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Delete a file from ad content (admin only)
-    Cannot delete index.html
+    Delete ALL files for an ad location (admin only)
+    Removes the entire directory
     """
     if "admin" not in current_user.roles:
         raise HTTPException(
@@ -269,52 +197,12 @@ async def delete_ad_file(
             detail="Only admins can delete ad files"
         )
 
-    crud = get_ad_content_crud(db)
-    ad = await crud.remove_file(ad_id, filename, file_type)
+    ad_dir = ADS_BASE_DIR / location
 
-    if not ad:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ad content not found"
-        )
+    if ad_dir.exists():
+        shutil.rmtree(ad_dir)
 
-    return AdContentResponse(**ad.model_dump())
-
-
-# Admin utility endpoint
-@router.post("/fix-aliases")
-async def fix_ad_aliases(
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """Fix ad aliases to match location names (admin only)"""
-    if "admin" not in current_user.roles:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
-
-    mapping = {
-        "publi_client": "publi_screen_client",
-        "publi_professional": "publi_screen_professional",
-        "banner_client": "banner_client_home",
-        "banner_professional": "banner_professional_home"
-    }
-
-    results = []
-    for old_alias, new_alias in mapping.items():
-        result = await db.ad_contents.update_one(
-            {"alias": old_alias},
-            {
-                "$set": {
-                    "alias": new_alias,
-                    "index_html": f"{new_alias}/index.html"
-                }
-            }
-        )
-        if result.modified_count > 0:
-            results.append(f"✅ {old_alias} → {new_alias}")
-        else:
-            results.append(f"ℹ️ {old_alias} not found")
-
-    return {"message": "Aliases fixed", "results": results}
+    return None
 
 
 # Public endpoints for mobile app
@@ -325,32 +213,37 @@ async def get_ad_for_location(
         "publi_screen_professional",
         "banner_client_home",
         "banner_professional_home"
-    ],
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    ]
 ):
     """
-    Get active ad content for a specific location (public endpoint for mobile app)
+    Get ad content for a specific location (public endpoint for mobile app)
     Returns the full HTML/CSS/JS/images ready to be rendered
-    Automatically increments view count
     Returns 204 if no ad is configured for this location
+
+    This is now file-based, no database involved.
     """
-    crud = get_ad_content_crud(db)
-    content = await crud.get_active_ad_for_location(location)
+    content = get_ad_files(location)
 
     if not content:
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
 
-    return AdContentWithFiles(**content)
+    return content
 
 
-@router.post("/public/ads/{ad_id}/click", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/public/ads/{location}/click", status_code=status.HTTP_204_NO_CONTENT)
 async def track_ad_click(
-    ad_id: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ]
 ):
     """
     Track ad click (public endpoint for mobile app)
-    Increments click count for analytics
+
+    For now this is just a placeholder - analytics can be added later
+    if needed (e.g., write to a log file)
     """
-    crud = get_ad_content_crud(db)
-    await crud.increment_clicks(ad_id)
+    # Could log to file here if analytics are needed
+    return None

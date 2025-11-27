@@ -80,16 +80,13 @@ export default function AdScreen() {
   };
 
   const trackClick = async () => {
-    if (!adContent) return;
+    if (!location) return;
 
     try {
       await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${adContent.id}/click`,
+        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}/click`,
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         }
       );
     } catch (error) {
