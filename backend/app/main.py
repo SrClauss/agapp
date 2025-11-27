@@ -227,8 +227,6 @@ async def startup_event():
     await database.ad_contents.create_index("target")
     await database.ad_contents.create_index("is_active")
     await database.ad_contents.create_index([("priority", -1), ("created_at", -1)])
-    await database.ad_assignments.create_index("location", unique=True)
-    await database.ad_assignments.create_index("ad_content_id")
     # A criação do admin é feita via script de inicialização do container (mongo-init)
 
 @app.get("/")

@@ -54,29 +54,3 @@ class AdContent(BaseModel):
                 "priority": 10
             }
         }
-
-
-class AdAssignment(BaseModel):
-    """
-    Maps which ad content should be shown in which location
-    """
-    id: str = Field(default_factory=lambda: str(ULID()))
-    location: Literal[
-        "publi_screen_client",
-        "publi_screen_professional",
-        "banner_client_home",
-        "banner_professional_home"
-    ] = Field(..., description="Where this ad should be displayed")
-    ad_content_id: str = Field(..., description="Reference to AdContent.id")
-
-    # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.now(datetime.timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(datetime.timezone.utc))
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "location": "publi_screen_client",
-                "ad_content_id": "01HQWX2K3M4N5P6Q7R8S9T0V1W"
-            }
-        }

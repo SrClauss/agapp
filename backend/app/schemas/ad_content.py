@@ -50,31 +50,6 @@ class AdContentResponse(BaseModel):
     updated_at: datetime
 
 
-class AdAssignmentCreate(BaseModel):
-    """Schema for creating ad assignment"""
-    location: Literal[
-        "publi_screen_client",
-        "publi_screen_professional",
-        "banner_client_home",
-        "banner_professional_home"
-    ]
-    ad_content_id: str
-
-
-class AdAssignmentResponse(BaseModel):
-    """Schema for ad assignment response"""
-    id: str
-    location: Literal[
-        "publi_screen_client",
-        "publi_screen_professional",
-        "banner_client_home",
-        "banner_professional_home"
-    ]
-    ad_content_id: str
-    created_at: datetime
-    updated_at: datetime
-
-
 class AdContentWithFiles(BaseModel):
     """Schema for ad content with actual file contents"""
     id: str

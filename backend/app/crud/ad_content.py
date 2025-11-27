@@ -1,8 +1,8 @@
 from typing import Optional, List, Literal
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.models.ad_content import AdContent, AdAssignment
-from app.schemas.ad_content import AdContentCreate, AdContentUpdate, AdAssignmentCreate
+from app.models.ad_content import AdContent
+from app.schemas.ad_content import AdContentCreate, AdContentUpdate
 from ulid import ULID
 import os
 import base64
@@ -12,7 +12,6 @@ from pathlib import Path
 class CRUDAdContent:
     def __init__(self, db: AsyncIOMotorDatabase):
         self.collection = db.ad_contents
-        self.assignments_collection = db.ad_assignments
         self.ads_dir = Path("./ads")
         self.ads_dir.mkdir(exist_ok=True)
 
@@ -98,9 +97,6 @@ class CRUDAdContent:
 
         # Delete from database
         result = await self.collection.delete_one({"id": ad_id})
-
-        # Delete any assignments
-        await self.assignments_collection.delete_many({"ad_content_id": ad_id})
 
         return result.deleted_count > 0
 
@@ -259,46 +255,13 @@ class CRUDAdContent:
 
         return result
 
-    # Assignment methods
-    async def create_assignment(self, assignment: AdAssignmentCreate) -> AdAssignment:
-        """Create new ad assignment"""
-        # Check if ad content exists
-        ad = await self.get_by_id(assignment.ad_content_id)
-        if not ad:
-            raise ValueError(f"Ad content with id '{assignment.ad_content_id}' not found")
-
-        # Remove existing assignment for this location
-        await self.assignments_collection.delete_many({"location": assignment.location})
-
-        new_assignment = AdAssignment(**assignment.model_dump())
-        await self.assignments_collection.insert_one(new_assignment.model_dump())
-        return new_assignment
-
-    async def get_assignment(self, location: str) -> Optional[AdAssignment]:
-        """Get ad assignment for a specific location"""
-        doc = await self.assignments_collection.find_one({"location": location})
-        return AdAssignment(**doc) if doc else None
-
-    async def get_all_assignments(self) -> List[AdAssignment]:
-        """Get all ad assignments"""
-        cursor = self.assignments_collection.find({})
-        docs = await cursor.to_list(length=100)
-        return [AdAssignment(**doc) for doc in docs]
-
-    async def delete_assignment(self, location: str) -> bool:
-        """Delete ad assignment"""
-        result = await self.assignments_collection.delete_many({"location": location})
-        return result.deleted_count > 0
-
     async def get_active_ad_for_location(self, location: str) -> Optional[dict]:
-        """Get active ad content with files for a specific location"""
-        # Get assignment
-        assignment = await self.get_assignment(location)
-        if not assignment:
-            return None
+        """Get active ad content with files for a specific location
 
-        # Get ad content
-        ad = await self.get_by_id(assignment.ad_content_id)
+        Location is the alias itself (publi_screen_client, publi_screen_professional, etc)
+        """
+        # Get ad content directly by alias (location = alias)
+        ad = await self.get_by_alias(location)
         if not ad or not ad.is_active:
             return None
 

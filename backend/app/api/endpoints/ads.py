@@ -10,8 +10,6 @@ from app.schemas.ad_content import (
     AdContentCreate,
     AdContentUpdate,
     AdContentResponse,
-    AdAssignmentCreate,
-    AdAssignmentResponse,
     AdContentWithFiles
 )
 from app.models.user import User
@@ -283,78 +281,8 @@ async def delete_ad_file(
     return AdContentResponse(**ad.model_dump())
 
 
-# Assignment endpoints
-@router.post("/ad-assignments", response_model=AdAssignmentResponse, status_code=status.HTTP_201_CREATED)
-async def create_ad_assignment(
-    assignment: AdAssignmentCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    Assign ad content to a location (admin only)
-    Replaces any existing assignment for that location
-    """
-    if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create ad assignments"
-        )
-
-    crud = get_ad_content_crud(db)
-
-    try:
-        assignment_obj = await crud.create_assignment(assignment)
-        return AdAssignmentResponse(**assignment_obj.model_dump())
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@router.get("/ad-assignments", response_model=List[AdAssignmentResponse])
-async def list_ad_assignments(
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    List all ad assignments (admin only)
-    """
-    if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can list ad assignments"
-        )
-
-    crud = get_ad_content_crud(db)
-    assignments = await crud.get_all_assignments()
-    return [AdAssignmentResponse(**a.model_dump()) for a in assignments]
-
-
-@router.delete("/ad-assignments/{location}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_ad_assignment(
-    location: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    Delete ad assignment for a location (admin only)
-    """
-    if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can delete ad assignments"
-        )
-
-    crud = get_ad_content_crud(db)
-    deleted = await crud.delete_assignment(location)
-
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ad assignment not found"
-        )
-
-
 # Public endpoints for mobile app
-@router.get("/public/ads/{location}", response_model=Optional[AdContentWithFiles])
+@router.get("/public/ads/{location}")
 async def get_ad_for_location(
     location: Literal[
         "publi_screen_client",
@@ -362,19 +290,19 @@ async def get_ad_for_location(
         "banner_client_home",
         "banner_professional_home"
     ],
-    current_user: User = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
     Get active ad content for a specific location (public endpoint for mobile app)
     Returns the full HTML/CSS/JS/images ready to be rendered
     Automatically increments view count
+    Returns 204 if no ad is configured for this location
     """
     crud = get_ad_content_crud(db)
     content = await crud.get_active_ad_for_location(location)
 
     if not content:
-        return None
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
 
     return AdContentWithFiles(**content)
 
@@ -382,7 +310,6 @@ async def get_ad_for_location(
 @router.post("/public/ads/{ad_id}/click", status_code=status.HTTP_204_NO_CONTENT)
 async def track_ad_click(
     ad_id: str,
-    current_user: User = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
