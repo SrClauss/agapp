@@ -1,4 +1,4 @@
-const BACKEND_URL = process.env.BACKEND_URL || 'https://agilizapro.cloud';
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'https://agilizapro.cloud';
 
 export interface SignUpData {
   email: string;

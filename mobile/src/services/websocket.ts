@@ -2,7 +2,7 @@ import ReconnectingWebSocket from 'reconnecting-websocket';
 import { AuthState } from '../stores/authStore';
 import useAuthStore from '../stores/authStore';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://agilizapro.cloud';
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'https://agilizapro.cloud';
 
 export function createWebsocket(userId: string) {
   const token = useAuthStore.getState().token;

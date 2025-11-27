@@ -1,10 +1,21 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 import AdBanner from '../components/AdBanner';
 import { colors } from '../theme/colors';
+import useAuthStore from '../stores/authStore';
 
 export default function ProfessionalHomeScreen() {
+  const navigation = useNavigation();
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = async () => {
+    await logout();
+    navigation.navigate('Login' as never);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
@@ -40,6 +51,18 @@ export default function ProfessionalHomeScreen() {
             <Text style={styles.cardTitle}>Perfil</Text>
             <Text style={styles.cardText}>Atualize suas informações e portfolio</Text>
           </View>
+        </View>
+
+        {/* Logout Button */}
+        <View style={styles.logoutContainer}>
+          <Button
+            mode="outlined"
+            onPress={handleLogout}
+            style={styles.logoutButton}
+            textColor={colors.error}
+          >
+            Sair da Conta
+          </Button>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -95,5 +118,12 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  logoutContainer: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  logoutButton: {
+    borderColor: colors.error,
   },
 });
