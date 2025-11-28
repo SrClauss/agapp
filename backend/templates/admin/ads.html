@@ -264,9 +264,15 @@ async function loadFiles(adType) {
                     }
                 });
 
-                if (!response.ok) throw new Error('Delete failed');
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error('Delete failed: ' + text);
+                }
 
                 showAlert(`Conteúdo de ${location} removido com sucesso`, 'success');
+
+                // re-enable buttons if any were disabled
+                document.querySelectorAll('.clear-dir-btn').forEach(btn => btn.disabled = false);
                 // find adType from location and reload files
                 const map = {
                     'publi_screen_client': 'publi_client',
@@ -279,6 +285,7 @@ async function loadFiles(adType) {
             } catch (error) {
                 console.error('Delete error:', error);
                 showAlert('Erro ao limpar diretório', 'danger');
+                document.querySelectorAll('.clear-dir-btn').forEach(btn => btn.disabled = false);
             }
         }
 
@@ -287,16 +294,27 @@ async function loadFiles(adType) {
             const btn = e.currentTarget;
             const adType = btn.dataset.adType;
             if (!confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.')) return;
+            // Disable button while deleting to prevent duplicates
+            btn.disabled = true;
             const location = mapAdTypeToLocation(adType);
             deleteAllFilesByLocation(location);
         }
 
         // Attach handlers once DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
+        // Attach handlers, but if the DOM is already loaded run immediately
+        function attachClearDirHandlers() {
+            console.log('Attaching clear-dir handlers...');
             document.querySelectorAll('.clear-dir-btn').forEach(btn => {
+                btn.removeEventListener('click', clearLocationHandler);
                 btn.addEventListener('click', clearLocationHandler);
             });
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attachClearDirHandlers);
+        } else {
+            attachClearDirHandlers();
+        }
         }
 
         const data = await response.json();
