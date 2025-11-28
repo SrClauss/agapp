@@ -40,24 +40,19 @@
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
                     </div>
-                    <div class="mt-2 text-end">
-                        <form method="POST" action="/ads-admin/delete-all/publi_screen_client" style="display:inline;" onsubmit="return confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.');">
-                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Limpar" aria-label="Limpar">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </form>
-                        <!-- JS-enhanced button (hidden if JS present) -->
-                        <button type="button" class="btn btn-outline-danger btn-sm clear-dir-btn d-none" data-ad-type="publi_client" title="Limpar" aria-label="Limpar" style="margin-left:8px">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                    </div>
                 </form>
 
                 <hr class="my-3">
 
                 <div class="file-list" id="files-publi-client">
                     <small class="text-muted">Carregando arquivos...</small>
+                </div>
+
+                <div class="mt-3 text-center">
+                    <!-- JS-enhanced button (shown when JS enabled) -->
+                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="publi_client">
+                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
+                    </button>
                 </div>
             </div>
         </div>
@@ -88,23 +83,19 @@
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
                     </div>
-                    <div class="mt-2 text-end">
-                        <form method="POST" action="/ads-admin/delete-all/publi_screen_professional" style="display:inline;" onsubmit="return confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.');">
-                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Limpar" aria-label="Limpar">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </form>
-                        <button type="button" class="btn btn-outline-danger btn-sm clear-dir-btn d-none" data-ad-type="publi_professional" title="Limpar" aria-label="Limpar" style="margin-left:8px">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                    </div>
                 </form>
 
                 <hr class="my-3">
 
                 <div class="file-list" id="files-publi-professional">
                     <small class="text-muted">Carregando arquivos...</small>
+                </div>
+
+                <div class="mt-3 text-center">
+                    <!-- JS-enhanced button (shown when JS enabled) -->
+                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="publi_professional">
+                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
+                    </button>
                 </div>
             </div>
         </div>
@@ -135,23 +126,19 @@
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
                     </div>
-                    <div class="mt-2 text-end">
-                        <form method="POST" action="/ads-admin/delete-all/banner_client_home" style="display:inline;" onsubmit="return confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.');">
-                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Limpar" aria-label="Limpar">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </form>
-                        <button type="button" class="btn btn-outline-danger btn-sm clear-dir-btn d-none" data-ad-type="banner_client" title="Limpar" aria-label="Limpar" style="margin-left:8px">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                    </div>
                 </form>
 
                 <hr class="my-3">
 
                 <div class="file-list" id="files-banner-client">
                     <small class="text-muted">Carregando arquivos...</small>
+                </div>
+
+                <div class="mt-3 text-center">
+                    <!-- JS-enhanced button (shown when JS enabled) -->
+                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="banner_client">
+                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
+                    </button>
                 </div>
             </div>
         </div>
@@ -182,23 +169,19 @@
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
                     </div>
-                    <div class="mt-2 text-end">
-                        <form method="POST" action="/ads-admin/delete-all/banner_professional_home" style="display:inline;" onsubmit="return confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.');">
-                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Limpar" aria-label="Limpar">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </form>
-                        <button type="button" class="btn btn-outline-danger btn-sm clear-dir-btn d-none" data-ad-type="banner_professional" title="Limpar" aria-label="Limpar" style="margin-left:8px">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                    </div>
                 </form>
 
                 <hr class="my-3">
 
                 <div class="file-list" id="files-banner-professional">
                     <small class="text-muted">Carregando arquivos...</small>
+                </div>
+
+                <div class="mt-3 text-center">
+                    <!-- JS-enhanced button (shown when JS enabled) -->
+                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="banner_professional">
+                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
+                    </button>
                 </div>
             </div>
         </div>
@@ -335,46 +318,18 @@ async function loadFiles(adType) {
         }
 
         // Attach handlers once DOM is ready
-        // Attach handlers, but if the DOM is already loaded run immediately
         function attachClearDirHandlers() {
-            console.log('Attaching clear-dir handlers...');
             const buttons = document.querySelectorAll('.clear-dir-btn');
             buttons.forEach(btn => {
                 btn.removeEventListener('click', clearLocationHandler);
                 btn.addEventListener('click', clearLocationHandler);
-                // Reveal js button and hide fallback form (if any)
-                btn.classList.remove('d-none');
-                const prev = btn.previousElementSibling;
-                if (prev && prev.tagName === 'FORM') prev.style.display = 'none';
             });
-            // For debugging: add/remove a small badge showing number of clear buttons found
-            const debugBadgeId = 'clear-dir-debug-badge';
-            let badge = document.getElementById(debugBadgeId);
-            if (!badge) {
-                badge = document.createElement('span');
-                badge.id = debugBadgeId;
-                badge.style.fontSize = '0.8rem';
-                badge.style.marginLeft = '0.5rem';
-                badge.style.color = '#6b7280';
-                const header = document.querySelector('.mb-4 h1');
-                if (header) header.appendChild(badge);
-            }
-            badge.innerText = ` (${buttons.length} clear buttons)`;
-            // Set the handler status (visible badge)
-            // handler status debug removed
-        }
-
-        function tryAttachingHandlers(retries = 5, delay = 200) {
-            attachClearDirHandlers();
-            if (document.querySelectorAll('.clear-dir-btn').length === 0 && retries > 0) {
-                setTimeout(() => tryAttachingHandlers(retries - 1, delay), delay);
-            }
         }
 
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => tryAttachingHandlers());
+            document.addEventListener('DOMContentLoaded', attachClearDirHandlers);
         } else {
-            tryAttachingHandlers();
+            attachClearDirHandlers();
         }
         }
 
