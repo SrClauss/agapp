@@ -38,6 +38,9 @@
                         <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('publi_client')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="clearLocation('publi_client')">
+                            <i class="fas fa-trash-alt me-1"></i>Limpar Diretório
+                        </button>
                     </div>
                 </form>
 
@@ -73,6 +76,9 @@
                         </button>
                         <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('publi_professional')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="clearLocation('publi_professional')">
+                            <i class="fas fa-trash-alt me-1"></i>Limpar Diretório
                         </button>
                     </div>
                 </form>
@@ -110,6 +116,9 @@
                         <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('banner_client')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="clearLocation('banner_client')">
+                            <i class="fas fa-trash-alt me-1"></i>Limpar Diretório
+                        </button>
                     </div>
                 </form>
 
@@ -145,6 +154,9 @@
                         </button>
                         <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('banner_professional')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="clearLocation('banner_professional')">
+                            <i class="fas fa-trash-alt me-1"></i>Limpar Diretório
                         </button>
                     </div>
                 </form>
@@ -238,6 +250,41 @@ async function loadFiles(adType) {
         if (!response.ok) {
             container.innerHTML = '<small class="text-muted">Nenhum arquivo encontrado</small>';
             return;
+        // Delete all files in a location (admin only)
+        async function deleteAllFilesByLocation(location) {
+            try {
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`/ads-admin/delete-all/${location}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: {
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    }
+                });
+
+                if (!response.ok) throw new Error('Delete failed');
+
+                showAlert(`Conteúdo de ${location} removido com sucesso`, 'success');
+                // find adType from location and reload files
+                const map = {
+                    'publi_screen_client': 'publi_client',
+                    'publi_screen_professional': 'publi_professional',
+                    'banner_client_home': 'banner_client',
+                    'banner_professional_home': 'banner_professional'
+                };
+                const adType = map[location] || location;
+                loadFiles(adType);
+            } catch (error) {
+                console.error('Delete error:', error);
+                showAlert('Erro ao limpar diretório', 'danger');
+            }
+        }
+
+        function clearLocation(adType) {
+            if (!confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.')) return;
+            const location = mapAdTypeToLocation(adType);
+            deleteAllFilesByLocation(location);
+        }
         }
 
         const data = await response.json();
