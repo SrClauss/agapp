@@ -226,7 +226,15 @@ async function loadFiles(adType) {
 
     try {
         // Use the admin locations endpoint and filter by location
-        const response = await fetch(`/ads/admin/locations`);
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`/ads/admin/locations`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            }
+        });
         if (!response.ok) {
             container.innerHTML = '<small class="text-muted">Nenhum arquivo encontrado</small>';
             return;
@@ -267,8 +275,13 @@ async function deleteFile(adType, filename) {
     const location = mapAdTypeToLocation(adType);
 
     try {
+        const token = localStorage.getItem('access_token');
         const response = await fetch(`/ads/admin/delete-file/${location}/${encodeURIComponent(filename)}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            }
         });
 
         if (!response.ok) throw new Error('Failed to delete');
@@ -320,10 +333,15 @@ document.querySelectorAll('.upload-form').forEach(form => {
                 formData.append('file_type', fileType);
 
             try {
+                    const token = localStorage.getItem('access_token');
                     const response = await fetch(`/ads/admin/upload/${location}`, {
-                        method: 'POST',
-                        body: formData
-                    });
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            },
+                            body: formData
+                        });
 
                 if (!response.ok) throw new Error('Upload failed');
 
