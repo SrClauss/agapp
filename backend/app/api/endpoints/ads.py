@@ -238,6 +238,20 @@ async def admin_delete_all_files(
         )
 
 
+@admin_router.post("/delete-all/{location}", status_code=status.HTTP_200_OK)
+async def admin_delete_all_files_post(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """POST fallback for delete-all to support forms without JS"""
+    return await admin_delete_all_files(location, current_user)
+
+
 # ============================================================================
 # 4. ADMIN - Delete a specific file in a location
 # ============================================================================
