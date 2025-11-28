@@ -149,6 +149,8 @@ app.add_middleware(SlowAPIMiddleware)
 # Configurar templates e static files
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount ad static files so that /ads/<location>/index.html can be served directly
+app.mount("/ads", StaticFiles(directory="ads"), name="ads")
 
 # CORS
 app.add_middleware(

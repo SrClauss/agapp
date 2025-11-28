@@ -476,6 +476,61 @@ async def get_banner_professional_home():
 
 
 # ============================================================================
+# Serve raw ad files publicly (e.g. /ads/publi_screen_client/index.html)
+# ============================================================================
+@router.get("/{location}/{filename:path}")
+async def serve_ad_file(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home",
+    ],
+    filename: str,
+):
+    """Serve raw files (index.html, style.css, script.js, images) for a given ad location"""
+    ad_dir = ADS_BASE_DIR / location
+    file_path = ad_dir / filename
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    return FileResponse(file_path)
+
+
+@router.get("/raw/{location}/{path:path}")
+async def serve_ad_file_raw(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home",
+    ],
+    path: str,
+):
+    """Serve raw files under /ads/raw/<location>/<path>"""
+    file_path = ADS_BASE_DIR / location / path
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    return FileResponse(file_path)
+
+
+@router.get("/{location}/index.html")
+async def serve_ad_index_html(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home",
+    ]
+):
+    """Serve index.html for a location to support legacy /ads/<location>/index.html URLs"""
+    file_path = ADS_BASE_DIR / location / "index.html"
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Index HTML not found")
+    return FileResponse(file_path)
+
+
+# ============================================================================
 # 13. PUBLIC - Track ad clicks (placeholder for analytics)
 # ============================================================================
 
