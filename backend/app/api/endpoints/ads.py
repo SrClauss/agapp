@@ -19,7 +19,7 @@ FIXED_AD_LOCATIONS = [
     "banner_professional_home"
 ]
 
-ADS_BASE_DIR = Path("./ads")
+ADS_BASE_DIR = Path(__file__).resolve().parents[3] / "ads"
 
 
 # ============================================================================
