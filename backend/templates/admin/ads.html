@@ -269,68 +269,6 @@ async function loadFiles(adType) {
         if (!response.ok) {
             container.innerHTML = '<small class="text-muted">Nenhum arquivo encontrado</small>';
             return;
-        // Delete all files in a location (admin only)
-        async function deleteAllFilesByLocation(location) {
-            try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch(`/ads-admin/delete-all/${location}`, {
-                    method: 'DELETE',
-                    credentials: 'include',
-                    headers: {
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                    }
-                });
-
-                if (!response.ok) {
-                    const text = await response.text();
-                    throw new Error('Delete failed: ' + text);
-                }
-
-                showAlert(`Conteúdo de ${location} removido com sucesso`, 'success');
-
-                // re-enable buttons if any were disabled
-                document.querySelectorAll('.clear-dir-btn').forEach(btn => btn.disabled = false);
-                // find adType from location and reload files
-                const map = {
-                    'publi_screen_client': 'publi_client',
-                    'publi_screen_professional': 'publi_professional',
-                    'banner_client_home': 'banner_client',
-                    'banner_professional_home': 'banner_professional'
-                };
-                const adType = map[location] || location;
-                loadFiles(adType);
-            } catch (error) {
-                console.error('Delete error:', error);
-                showAlert('Erro ao limpar diretório', 'danger');
-                document.querySelectorAll('.clear-dir-btn').forEach(btn => btn.disabled = false);
-            }
-        }
-
-        // Attach clear directory event handlers to buttons
-        function clearLocationHandler(e) {
-            const btn = e.currentTarget;
-            const adType = btn.dataset.adType;
-            if (!confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.')) return;
-            // Disable button while deleting to prevent duplicates
-            btn.disabled = true;
-            const location = mapAdTypeToLocation(adType);
-            deleteAllFilesByLocation(location);
-        }
-
-        // Attach handlers once DOM is ready
-        function attachClearDirHandlers() {
-            const buttons = document.querySelectorAll('.clear-dir-btn');
-            buttons.forEach(btn => {
-                btn.removeEventListener('click', clearLocationHandler);
-                btn.addEventListener('click', clearLocationHandler);
-            });
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', attachClearDirHandlers);
-        } else {
-            attachClearDirHandlers();
-        }
         }
 
         const data = await response.json();
@@ -384,6 +322,69 @@ async function deleteFile(adType, filename) {
     } catch (error) {
         showAlert('Erro ao deletar arquivo', 'danger');
     }
+}
+
+// Delete all files in a location (admin only)
+async function deleteAllFilesByLocation(location) {
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`/ads-admin/delete-all/${location}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            }
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error('Delete failed: ' + text);
+        }
+
+        showAlert(`Conteúdo de ${location} removido com sucesso`, 'success');
+
+        // re-enable buttons if any were disabled
+        document.querySelectorAll('.clear-dir-btn').forEach(btn => btn.disabled = false);
+        // find adType from location and reload files
+        const map = {
+            'publi_screen_client': 'publi_client',
+            'publi_screen_professional': 'publi_professional',
+            'banner_client_home': 'banner_client',
+            'banner_professional_home': 'banner_professional'
+        };
+        const adType = map[location] || location;
+        loadFiles(adType);
+    } catch (error) {
+        console.error('Delete error:', error);
+        showAlert('Erro ao limpar diretório', 'danger');
+        document.querySelectorAll('.clear-dir-btn').forEach(btn => btn.disabled = false);
+    }
+}
+
+// Attach clear directory event handlers to buttons
+function clearLocationHandler(e) {
+    const btn = e.currentTarget;
+    const adType = btn.dataset.adType;
+    if (!confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.')) return;
+    // Disable button while deleting to prevent duplicates
+    btn.disabled = true;
+    const location = mapAdTypeToLocation(adType);
+    deleteAllFilesByLocation(location);
+}
+
+// Attach handlers once DOM is ready
+function attachClearDirHandlers() {
+    const buttons = document.querySelectorAll('.clear-dir-btn');
+    buttons.forEach(btn => {
+        btn.removeEventListener('click', clearLocationHandler);
+        btn.addEventListener('click', clearLocationHandler);
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachClearDirHandlers);
+} else {
+    attachClearDirHandlers();
 }
 
 // Determine file_type from filename extension
