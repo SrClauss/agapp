@@ -31,10 +31,10 @@ export default function AdScreen() {
     try {
       console.log('🔍 Buscando anúncio para:', location);
       console.log('🔑 Token presente:', !!token);
-      console.log('🌐 URL:', `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`);
+      console.log('🌐 URL:', `${process.env.EXPO_PUBLIC_API_URL}/ads/${location}/index.html`);
 
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`
+        `${process.env.EXPO_PUBLIC_API_URL}/ads/${location}/index.html`
       );
 
       console.log('📡 Status HTTP:', response.status);

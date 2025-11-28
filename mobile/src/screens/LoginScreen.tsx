@@ -47,7 +47,7 @@ export default function LoginScreen() {
       console.log('🔍 Verificando anúncio para location:', location);
 
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`
+        `${process.env.EXPO_PUBLIC_API_URL}/ads/${location}/index.html`
       );
 
       console.log('📡 Status da verificação de anúncios:', response.status);
