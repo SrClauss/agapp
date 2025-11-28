@@ -342,6 +342,10 @@ async function loadFiles(adType) {
             buttons.forEach(btn => {
                 btn.removeEventListener('click', clearLocationHandler);
                 btn.addEventListener('click', clearLocationHandler);
+                // Reveal js button and hide fallback form (if any)
+                btn.classList.remove('d-none');
+                const prev = btn.previousElementSibling;
+                if (prev && prev.tagName === 'FORM') prev.style.display = 'none';
             });
             // For debugging: add/remove a small badge showing number of clear buttons found
             const debugBadgeId = 'clear-dir-debug-badge';
