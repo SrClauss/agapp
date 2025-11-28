@@ -379,7 +379,44 @@ async def admin_preview_html(
     with open(html_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
+    # Inject <base> tag into head to allow relative assets to be served from admin assets endpoint
+    if '<head' in content.lower():
+        # Find the <head> tag and inject base immediately after it
+        import re
+        def replace_head(match):
+            tag = match.group(0)
+            return tag + f"\n<base href='/ads/admin/assets/{location}/' />\n"
+        content = re.sub(r"<head[^>]*>", replace_head, content, flags=re.IGNORECASE)
+    else:
+        # fallback: prepend base tag
+        content = f"<base href='/ads/admin/assets/{location}/' />\n" + content
+
     return HTMLResponse(content=content)
+
+
+@router.get("/admin/assets/{location}/{filename}")
+async def admin_serve_asset(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    filename: str,
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """Serve image/css/js assets for admin preview or download"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can access ad assets"
+        )
+
+    asset_path = ADS_BASE_DIR / location / filename
+    if not asset_path.exists() or not asset_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
+
+    return FileResponse(asset_path)
 
 
 # ============================================================================
