@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Request
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from typing import Literal
 from pathlib import Path
@@ -488,6 +488,65 @@ async def get_banner_professional_home():
     if not content:
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
     return content
+
+
+# ============================================================================
+# Get ad metadata as JSON (for mobile app)
+# ============================================================================
+@router.get("/{location}/index.html", response_class=JSONResponse)
+async def get_ad_json(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home",
+    ],
+    request: Request,
+):
+    """Get ad content as JSON for mobile app"""
+    file_path = ADS_BASE_DIR / location / "index.html"
+
+    # Check Accept header to determine response type
+    accept = request.headers.get("accept", "")
+
+    # If client wants JSON, return JSON with all files
+    if "application/json" in accept:
+        if not file_path.exists() or not file_path.is_file():
+            return JSONResponse(status_code=204)  # No content
+
+        html_content = file_path.read_text()
+
+        # Read CSS and JS if they exist
+        css_path = ADS_BASE_DIR / location / "style.css"
+        js_path = ADS_BASE_DIR / location / "script.js"
+
+        css_content = css_path.read_text() if css_path.exists() else ""
+        js_content = js_path.read_text() if js_path.exists() else ""
+
+        # Find all image files
+        images = {}
+        ad_dir = ADS_BASE_DIR / location
+        if ad_dir.exists():
+            for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
+                for img_file in ad_dir.glob(f"*.{ext}"):
+                    with open(img_file, "rb") as f:
+                        img_base64 = base64.b64encode(f.read()).decode()
+                        images[img_file.name] = f"data:image/{ext};base64,{img_base64}"
+
+        return JSONResponse({
+            "id": location,
+            "alias": location,
+            "type": "html",
+            "html": html_content,
+            "css": css_content,
+            "js": js_content,
+            "images": images
+        })
+
+    # Otherwise return the HTML file directly
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Index HTML not found")
+    return FileResponse(file_path)
 
 
 # ============================================================================
