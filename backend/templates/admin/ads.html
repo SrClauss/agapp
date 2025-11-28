@@ -304,16 +304,37 @@ async function loadFiles(adType) {
         // Attach handlers, but if the DOM is already loaded run immediately
         function attachClearDirHandlers() {
             console.log('Attaching clear-dir handlers...');
-            document.querySelectorAll('.clear-dir-btn').forEach(btn => {
+            const buttons = document.querySelectorAll('.clear-dir-btn');
+            buttons.forEach(btn => {
                 btn.removeEventListener('click', clearLocationHandler);
                 btn.addEventListener('click', clearLocationHandler);
             });
+            // For debugging: add/remove a small badge showing number of clear buttons found
+            const debugBadgeId = 'clear-dir-debug-badge';
+            let badge = document.getElementById(debugBadgeId);
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.id = debugBadgeId;
+                badge.style.fontSize = '0.8rem';
+                badge.style.marginLeft = '0.5rem';
+                badge.style.color = '#6b7280';
+                const header = document.querySelector('.mb-4 h1');
+                if (header) header.appendChild(badge);
+            }
+            badge.innerText = ` (${buttons.length} clear buttons)`;
+        }
+
+        function tryAttachingHandlers(retries = 5, delay = 200) {
+            attachClearDirHandlers();
+            if (document.querySelectorAll('.clear-dir-btn').length === 0 && retries > 0) {
+                setTimeout(() => tryAttachingHandlers(retries - 1, delay), delay);
+            }
         }
 
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', attachClearDirHandlers);
+            document.addEventListener('DOMContentLoaded', () => tryAttachingHandlers());
         } else {
-            attachClearDirHandlers();
+            tryAttachingHandlers();
         }
         }
 
