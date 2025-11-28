@@ -6,7 +6,7 @@ import base64
 import shutil
 import os
 
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_current_user_from_request
 from app.models.user import User
 
 router = APIRouter()
@@ -92,7 +92,7 @@ def get_ad_files(location: str) -> dict:
 
 @router.get("/admin/locations")
 async def admin_list_ad_locations(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_request)
 ):
     """List all 4 fixed ad locations (admin only)"""
     if "admin" not in current_user.roles:
@@ -141,7 +141,7 @@ async def admin_upload_ad_file(
     ],
     file: UploadFile = File(...),
     file_type: Literal["html", "css", "js", "image"] = Form(...),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_request)
 ):
     """
     Upload a file to ad location (admin only)
@@ -213,7 +213,7 @@ async def admin_delete_all_files(
         "banner_client_home",
         "banner_professional_home"
     ],
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_request)
 ):
     """
     Delete ALL files for an ad location (admin only)
@@ -250,7 +250,7 @@ async def admin_delete_specific_file(
         "banner_professional_home"
     ],
     filename: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_request)
 ):
     """
     Delete a specific file from an ad location (admin only)
@@ -287,7 +287,7 @@ async def admin_delete_specific_file(
 
 @router.get("/admin/preview/publi-screen-client")
 async def admin_preview_publi_screen_client(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_request)
 ):
     """Preview publi_screen_client ad content (admin only)"""
     if "admin" not in current_user.roles:
@@ -304,7 +304,7 @@ async def admin_preview_publi_screen_client(
 
 @router.get("/admin/preview/publi-screen-professional")
 async def admin_preview_publi_screen_professional(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_request)
 ):
     """Preview publi_screen_professional ad content (admin only)"""
     if "admin" not in current_user.roles:
@@ -321,7 +321,7 @@ async def admin_preview_publi_screen_professional(
 
 @router.get("/admin/preview/banner-client-home")
 async def admin_preview_banner_client_home(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_request)
 ):
     """Preview banner_client_home ad content (admin only)"""
     if "admin" not in current_user.roles:
@@ -338,7 +338,7 @@ async def admin_preview_banner_client_home(
 
 @router.get("/admin/preview/banner-professional-home")
 async def admin_preview_banner_professional_home(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_request)
 ):
     """Preview banner_professional_home ad content (admin only)"""
     if "admin" not in current_user.roles:
