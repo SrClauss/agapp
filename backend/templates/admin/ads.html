@@ -190,8 +190,9 @@
 
 <style>
 .file-list {
-    max-height: 200px;
+    height: 120px;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .file-item {
@@ -363,41 +364,29 @@ async function deleteAllFilesByLocation(location) {
 
 // Attach clear directory event handlers to buttons
 function clearLocationHandler(e) {
-    console.log('Clear location handler called!', e);
     const btn = e.currentTarget;
     const adType = btn.dataset.adType;
-    console.log('Ad type:', adType);
     if (!confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.')) {
-        console.log('User cancelled');
         return;
     }
-    console.log('User confirmed, deleting...');
     // Disable button while deleting to prevent duplicates
     btn.disabled = true;
     const location = mapAdTypeToLocation(adType);
-    console.log('Mapped location:', location);
     deleteAllFilesByLocation(location);
 }
 
 // Attach handlers once DOM is ready
 function attachClearDirHandlers() {
-    console.log('Attaching clear dir handlers...');
     const buttons = document.querySelectorAll('.clear-dir-btn');
-    console.log('Found', buttons.length, 'clear-dir-btn buttons');
-    buttons.forEach((btn, index) => {
-        console.log('Attaching handler to button', index, 'with ad-type:', btn.dataset.adType);
+    buttons.forEach((btn) => {
         btn.removeEventListener('click', clearLocationHandler);
         btn.addEventListener('click', clearLocationHandler);
     });
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('DOM loaded, attaching handlers');
-        attachClearDirHandlers();
-    });
+    document.addEventListener('DOMContentLoaded', attachClearDirHandlers);
 } else {
-    console.log('DOM already loaded, attaching handlers immediately');
     attachClearDirHandlers();
 }
 
