@@ -386,12 +386,13 @@ function closePreview() {
 
 function openPreviewLocation(adType) {
     const location = mapAdTypeToLocation(adType);
-    openPreview(`/ads/${location}/index.html`);
+    openPreview(`/ads/admin/preview-html/${location}`);
 }
 
 function openDesktopPreviewLocation(adType) {
     const location = mapAdTypeToLocation(adType);
-    openDesktopPreview(`/ads/${location}/index.html`);
+    // Open the admin preview HTML route in a new tab/window for desktop preview
+    openDesktopPreview(`/ads/admin/preview-html/${location}`);
 }
 
 // Load files on page load

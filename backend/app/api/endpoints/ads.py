@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from typing import Literal
 from pathlib import Path
 import base64
@@ -351,6 +351,35 @@ async def admin_preview_banner_professional_home(
     if not content:
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
     return content
+
+
+# Admin raw HTML preview - returns the HTML file to be embedded in an iframe
+@router.get("/admin/preview-html/{location}")
+async def admin_preview_html(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """Return the raw HTML of an ad's index.html for use in an iframe preview."""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can preview ads"
+        )
+
+    ad_dir = ADS_BASE_DIR / location
+    html_path = ad_dir / "index.html"
+    if not html_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Index HTML not found")
+
+    with open(html_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    return HTMLResponse(content=content)
 
 
 # ============================================================================
