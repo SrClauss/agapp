@@ -32,10 +32,10 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-upload me-1"></i>Fazer Upload
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreview('/ads/publi_client/index.html')">
+                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('publi_client')">
                             <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
                         </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreview('/ads/publi_client/index.html')">
+                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('publi_client')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
                     </div>
@@ -68,10 +68,10 @@
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-upload me-1"></i>Fazer Upload
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreview('/ads/publi_professional/index.html')">
+                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('publi_professional')">
                             <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
                         </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreview('/ads/publi_professional/index.html')">
+                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('publi_professional')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
                     </div>
@@ -104,10 +104,10 @@
                         <button type="submit" class="btn btn-info">
                             <i class="fas fa-upload me-1"></i>Fazer Upload
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreview('/ads/banner_client/index.html')">
+                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('banner_client')">
                             <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
                         </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreview('/ads/banner_client/index.html')">
+                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('banner_client')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
                     </div>
@@ -140,10 +140,10 @@
                         <button type="submit" class="btn btn-warning">
                             <i class="fas fa-upload me-1"></i>Fazer Upload
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreview('/ads/banner_professional/index.html')">
+                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('banner_professional')">
                             <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
                         </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreview('/ads/banner_professional/index.html')">
+                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('banner_professional')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
                     </div>
@@ -210,18 +210,32 @@ function showAlert(message, type = 'success') {
 }
 
 // Load files for each ad type
+function mapAdTypeToLocation(adType) {
+    const map = {
+        'publi_client': 'publi_screen_client',
+        'publi_professional': 'publi_screen_professional',
+        'banner_client': 'banner_client_home',
+        'banner_professional': 'banner_professional_home'
+    };
+    return map[adType] || adType;
+}
+
 async function loadFiles(adType) {
     const container = document.getElementById(`files-${adType.replace('_', '-')}`);
+    const location = mapAdTypeToLocation(adType);
 
     try {
-        const response = await fetch(`/system-admin/api/ads/${adType}/files`);
-
+        // Use the admin locations endpoint and filter by location
+        const response = await fetch(`/ads/admin/locations`);
         if (!response.ok) {
             container.innerHTML = '<small class="text-muted">Nenhum arquivo encontrado</small>';
             return;
         }
 
-        const files = await response.json();
+        const data = await response.json();
+        const locations = data.locations || [];
+        const loc = locations.find(l => l.location === location);
+        const files = loc && loc.files ? loc.files : [];
 
         if (files.length === 0) {
             container.innerHTML = '<small class="text-muted">Nenhum arquivo enviado ainda</small>';
@@ -232,8 +246,8 @@ async function loadFiles(adType) {
             <div class="file-item">
                 <div>
                     <span class="file-name">${file.name}</span>
-                    <span class="badge badge-file ${file.type === 'html' ? 'bg-primary' : file.type === 'css' ? 'bg-info' : file.type === 'js' ? 'bg-warning' : 'bg-secondary'} ms-2">
-                        ${file.type.toUpperCase()}
+                    <span class="badge badge-file ${file.name.endsWith('.html') ? 'bg-primary' : file.name.endsWith('.css') ? 'bg-info' : file.name.endsWith('.js') ? 'bg-warning' : 'bg-secondary'} ms-2">
+                        ${file.name.split('.').pop().toUpperCase()}
                     </span>
                 </div>
                 <button class="btn btn-sm btn-danger" onclick="deleteFile('${adType}', '${file.name}')">
@@ -250,9 +264,10 @@ async function loadFiles(adType) {
 // Delete file
 async function deleteFile(adType, filename) {
     if (!confirm(`Deseja deletar ${filename}?`)) return;
+    const location = mapAdTypeToLocation(adType);
 
     try {
-        const response = await fetch(`/system-admin/api/ads/${adType}/files/${filename}`, {
+        const response = await fetch(`/ads/admin/delete-file/${location}/${encodeURIComponent(filename)}`, {
             method: 'DELETE'
         });
 
@@ -263,6 +278,15 @@ async function deleteFile(adType, filename) {
     } catch (error) {
         showAlert('Erro ao deletar arquivo', 'danger');
     }
+}
+
+// Determine file_type from filename extension
+function getFileTypeFromFilename(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['html', 'htm'].includes(ext)) return 'html';
+    if (ext === 'css') return 'css';
+    if (ext === 'js') return 'js';
+    return 'image';
 }
 
 // Handle form submissions
@@ -287,15 +311,19 @@ document.querySelectorAll('.upload-form').forEach(form => {
         let successCount = 0;
         let errorCount = 0;
 
+        const location = mapAdTypeToLocation(adType);
         for (const file of files) {
             const formData = new FormData();
             formData.append('file', file);
+                // append file_type for the new admin endpoint
+                const fileType = getFileTypeFromFilename(file.name);
+                formData.append('file_type', fileType);
 
             try {
-                const response = await fetch(`/system-admin/api/ads/${adType}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
+                    const response = await fetch(`/ads/admin/upload/${location}`, {
+                        method: 'POST',
+                        body: formData
+                    });
 
                 if (!response.ok) throw new Error('Upload failed');
 
@@ -336,6 +364,16 @@ function closePreview() {
     const iframe = document.getElementById('preview-iframe');
     modal.style.display = 'none';
     iframe.src = '';
+}
+
+function openPreviewLocation(adType) {
+    const location = mapAdTypeToLocation(adType);
+    openPreview(`/ads/${location}/index.html`);
+}
+
+function openDesktopPreviewLocation(adType) {
+    const location = mapAdTypeToLocation(adType);
+    openDesktopPreview(`/ads/${location}/index.html`);
 }
 
 // Load files on page load
