@@ -8,7 +8,7 @@
     <h1 class="h3 mb-1 text-gray-800 fw-bold">Gerenciamento de Publicidade</h1>
     <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel</p>
 </div>
-<div id="clear-dir-handler-status" style="font-size:0.9rem;color:#6b7280;margin-left:0.5rem"></div>
+<!-- debug status removed -->
 
 <!-- Alert Container -->
 <div id="alert-container"></div>
@@ -361,8 +361,7 @@ async function loadFiles(adType) {
             }
             badge.innerText = ` (${buttons.length} clear buttons)`;
             // Set the handler status (visible badge)
-            const status = document.getElementById('clear-dir-handler-status');
-            if (status) status.innerText = `Handlers: OK (${buttons.length})`;
+            // handler status debug removed
         }
 
         function tryAttachingHandlers(retries = 5, delay = 200) {
