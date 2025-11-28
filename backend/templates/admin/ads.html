@@ -227,7 +227,7 @@ async function loadFiles(adType) {
     try {
         // Use the admin locations endpoint and filter by location
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`/ads/admin/locations`, {
+        const response = await fetch(`/ads-admin/locations`, {
             method: 'GET',
             credentials: 'include',
             headers: {
@@ -276,7 +276,7 @@ async function deleteFile(adType, filename) {
 
     try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`/ads/admin/delete-file/${location}/${encodeURIComponent(filename)}`, {
+        const response = await fetch(`/ads-admin/delete-file/${location}/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
             credentials: 'include',
             headers: {
@@ -334,7 +334,7 @@ document.querySelectorAll('.upload-form').forEach(form => {
 
             try {
                     const token = localStorage.getItem('access_token');
-                    const response = await fetch(`/ads/admin/upload/${location}`, {
+                    const response = await fetch(`/ads-admin/upload/${location}`, {
                             method: 'POST',
                             credentials: 'include',
                             headers: {
@@ -386,13 +386,13 @@ function closePreview() {
 
 function openPreviewLocation(adType) {
     const location = mapAdTypeToLocation(adType);
-    openPreview(`/ads/admin/preview-html/${location}`);
+    openPreview(`/ads-admin/preview-html/${location}`);
 }
 
 function openDesktopPreviewLocation(adType) {
     const location = mapAdTypeToLocation(adType);
     // Open the admin preview HTML route in a new tab/window for desktop preview
-    openDesktopPreview(`/ads/admin/preview-html/${location}`);
+    openDesktopPreview(`/ads-admin/preview-html/${location}`);
 }
 
 // Load files on page load

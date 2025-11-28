@@ -10,6 +10,7 @@ from app.core.security import get_current_user, get_current_user_from_request
 from app.models.user import User
 
 router = APIRouter()
+admin_router = APIRouter()
 
 # 4 fixed ad locations - HARDCODED
 FIXED_AD_LOCATIONS = [
@@ -90,7 +91,7 @@ def get_ad_files(location: str) -> dict:
 # 1. ADMIN - List all ad locations
 # ============================================================================
 
-@router.get("/admin/locations")
+@admin_router.get("/locations")
 async def admin_list_ad_locations(
     current_user: User = Depends(get_current_user_from_request)
 ):
@@ -131,7 +132,7 @@ async def admin_list_ad_locations(
 # 2. ADMIN - Upload file to ad location (generic upload)
 # ============================================================================
 
-@router.post("/admin/upload/{location}")
+@admin_router.post("/upload/{location}")
 async def admin_upload_ad_file(
     location: Literal[
         "publi_screen_client",
@@ -205,7 +206,7 @@ async def admin_upload_ad_file(
 # 3. ADMIN - Delete all files in a location folder
 # ============================================================================
 
-@router.delete("/admin/delete-all/{location}", status_code=status.HTTP_200_OK)
+@admin_router.delete("/delete-all/{location}", status_code=status.HTTP_200_OK)
 async def admin_delete_all_files(
     location: Literal[
         "publi_screen_client",
@@ -241,7 +242,7 @@ async def admin_delete_all_files(
 # 4. ADMIN - Delete a specific file in a location
 # ============================================================================
 
-@router.delete("/admin/delete-file/{location}/{filename}", status_code=status.HTTP_200_OK)
+@admin_router.delete("/delete-file/{location}/{filename}", status_code=status.HTTP_200_OK)
 async def admin_delete_specific_file(
     location: Literal[
         "publi_screen_client",
@@ -285,7 +286,7 @@ async def admin_delete_specific_file(
 # 5-8. ADMIN - Preview ad content for each location (4 hardcoded functions)
 # ============================================================================
 
-@router.get("/admin/preview/publi-screen-client")
+@admin_router.get("/preview/publi-screen-client")
 async def admin_preview_publi_screen_client(
     current_user: User = Depends(get_current_user_from_request)
 ):
@@ -302,7 +303,7 @@ async def admin_preview_publi_screen_client(
     return content
 
 
-@router.get("/admin/preview/publi-screen-professional")
+@admin_router.get("/preview/publi-screen-professional")
 async def admin_preview_publi_screen_professional(
     current_user: User = Depends(get_current_user_from_request)
 ):
@@ -319,7 +320,7 @@ async def admin_preview_publi_screen_professional(
     return content
 
 
-@router.get("/admin/preview/banner-client-home")
+@admin_router.get("/preview/banner-client-home")
 async def admin_preview_banner_client_home(
     current_user: User = Depends(get_current_user_from_request)
 ):
@@ -336,7 +337,7 @@ async def admin_preview_banner_client_home(
     return content
 
 
-@router.get("/admin/preview/banner-professional-home")
+@admin_router.get("/preview/banner-professional-home")
 async def admin_preview_banner_professional_home(
     current_user: User = Depends(get_current_user_from_request)
 ):
@@ -354,7 +355,7 @@ async def admin_preview_banner_professional_home(
 
 
 # Admin raw HTML preview - returns the HTML file to be embedded in an iframe
-@router.get("/admin/preview-html/{location}")
+@admin_router.get("/preview-html/{location}")
 async def admin_preview_html(
     location: Literal[
         "publi_screen_client",
@@ -385,16 +386,16 @@ async def admin_preview_html(
         import re
         def replace_head(match):
             tag = match.group(0)
-            return tag + f"\n<base href='/ads/admin/assets/{location}/' />\n"
+            return tag + f"\n<base href='/ads-admin/assets/{location}/' />\n"
         content = re.sub(r"<head[^>]*>", replace_head, content, flags=re.IGNORECASE)
     else:
         # fallback: prepend base tag
-        content = f"<base href='/ads/admin/assets/{location}/' />\n" + content
+        content = f"<base href='/ads-admin/assets/{location}/' />\n" + content
 
     return HTMLResponse(content=content)
 
 
-@router.get("/admin/assets/{location}/{filename}")
+@admin_router.get("/assets/{location}/{filename}")
 async def admin_serve_asset(
     location: Literal[
         "publi_screen_client",

@@ -180,6 +180,7 @@ app.include_router(websocket_router, tags=["websockets"])
 app.include_router(support.router, prefix="/support", tags=["support"])
 app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"])
 app.include_router(ads.router, prefix="/ads", tags=["advertisements"])
+app.include_router(ads.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
 
 @app.on_event("startup")
 async def startup_event():

@@ -67,11 +67,11 @@ async def ads_admin_panel(
 
 # NOTE: Ad management API routes have been moved to app/api/endpoints/ads.py
 # Use the following endpoints instead:
-# - GET /ads/admin/locations - List all ad locations
-# - POST /ads/admin/upload/{location} - Upload files
-# - DELETE /ads/admin/delete-all/{location} - Delete all files
-# - DELETE /ads/admin/delete-file/{location}/{filename} - Delete specific file
-# - GET /ads/admin/preview/{location} - Preview ad content
+# - GET /ads-admin/locations - List all ad locations
+# - POST /ads-admin/upload/{location} - Upload files
+# - DELETE /ads-admin/delete-all/{location} - Delete all files
+# - DELETE /ads-admin/delete-file/{location}/{filename} - Delete specific file
+# - GET /ads-admin/preview/{location} - Preview ad content
 
 @router.get("/", response_class=HTMLResponse)
 async def admin_dashboard(
