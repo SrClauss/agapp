@@ -1,8 +1,9 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from bson import ObjectId
 from datetime import datetime
 from app.models.category import Category, CategoryCreate, CategoryUpdate
+import re
 
 async def get_categories(
     db: AsyncIOMotorDatabase,
@@ -49,7 +50,8 @@ async def create_category(db: AsyncIOMotorDatabase, category_data: CategoryCreat
     """Criar uma nova categoria"""
     category_dict = {
         "name": category_data.name,
-        "subcategories": category_data.subcategories,
+        "tags": category_data.tags,
+        "subcategories": [sub.dict() for sub in category_data.subcategories],
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
         "is_active": True,
@@ -142,3 +144,68 @@ async def remove_subcategory(
         return None
     except Exception:
         return None
+
+async def search_categories_by_tags(
+    db: AsyncIOMotorDatabase,
+    search_query: str,
+    limit: int = 20
+) -> List[Dict[str, Any]]:
+    """
+    Buscar categorias e subcategorias por tags.
+    Retorna resultados ordenados por número de tags em comum (ranking).
+
+    Exemplo: Se buscar "conserto televisão", retorna:
+    - Categoria com tags ["conserto", "televisão"] = 2 matches (primeiro)
+    - Categoria com tags ["conserto"] = 1 match (segundo)
+    """
+    # Normalizar e dividir a query em termos de busca
+    search_terms = [term.strip().lower() for term in re.split(r'\s+', search_query) if term.strip()]
+
+    if not search_terms:
+        return []
+
+    # Buscar todas as categorias ativas
+    cursor = db.categories.find({"is_active": True})
+    results = []
+
+    async for category in cursor:
+        category_id = str(category["_id"])
+        category_name = category.get("name", "")
+        category_tags = [tag.lower() for tag in category.get("tags", [])]
+
+        # Calcular matches nas tags da categoria principal
+        category_matches = sum(1 for term in search_terms if any(term in tag for tag in category_tags))
+
+        if category_matches > 0:
+            results.append({
+                "type": "category",
+                "id": category_id,
+                "name": category_name,
+                "tags": category.get("tags", []),
+                "match_count": category_matches,
+                "parent_category": None
+            })
+
+        # Verificar subcategorias
+        for subcategory in category.get("subcategories", []):
+            if isinstance(subcategory, dict):
+                sub_name = subcategory.get("name", "")
+                sub_tags = [tag.lower() for tag in subcategory.get("tags", [])]
+
+                # Calcular matches nas tags da subcategoria
+                sub_matches = sum(1 for term in search_terms if any(term in tag for tag in sub_tags))
+
+                if sub_matches > 0:
+                    results.append({
+                        "type": "subcategory",
+                        "id": category_id,
+                        "name": sub_name,
+                        "tags": subcategory.get("tags", []),
+                        "match_count": sub_matches,
+                        "parent_category": category_name
+                    })
+
+    # Ordenar por número de matches (decrescente)
+    results.sort(key=lambda x: x["match_count"], reverse=True)
+
+    return results[:limit]

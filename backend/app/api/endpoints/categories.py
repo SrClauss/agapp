@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import List, Dict, Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.database import get_database
 from app.core.security import get_current_user
@@ -13,7 +13,8 @@ from app.crud.category import (
     update_category,
     delete_category,
     add_subcategory,
-    remove_subcategory
+    remove_subcategory,
+    search_categories_by_tags
 )
 
 router = APIRouter()
@@ -181,3 +182,37 @@ async def remove_subcategory_endpoint(
         )
 
     return category
+
+@router.get("/search", response_model=List[Dict[str, Any]])
+async def search_categories(
+    q: str = Query(..., description="Termo de busca (ex: 'conserto televisão')"),
+    limit: int = Query(20, ge=1, le=100, description="Limite de resultados"),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Buscar categorias e subcategorias por tags.
+
+    Retorna resultados ordenados por relevância (número de tags em comum).
+
+    Exemplo: Buscar "conserto televisão" retorna:
+    - Categorias/subcategorias com tags ["conserto", "televisão"] primeiro (2 matches)
+    - Categorias/subcategorias com tags ["conserto"] ou ["televisão"] depois (1 match)
+
+    Cada resultado contém:
+    - type: "category" ou "subcategory"
+    - name: Nome da categoria/subcategoria
+    - tags: Lista de tags
+    - match_count: Número de tags que deram match
+    - parent_category: Nome da categoria pai (apenas para subcategorias)
+    """
+    if not q or not q.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Termo de busca não pode estar vazio"
+        )
+
+    results = await search_categories_by_tags(db, q, limit)
+    return results
+
+
+

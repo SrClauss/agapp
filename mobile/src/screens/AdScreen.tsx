@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Button } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -95,8 +95,30 @@ export default function AdScreen() {
     }
   };
 
+  // Navigate based on the user's role (client vs professional)
+  const user = useAuthStore((state) => state.user);
   const handleContinue = () => {
-    navigation.navigate('Welcome' as never);
+    const isClient = user?.roles?.includes('client');
+    const isProfessional = user?.roles?.includes('professional');
+
+    // If user has both roles, send them to profile selection
+    if (isClient && isProfessional) {
+      navigation.navigate('ProfileSelection' as never);
+      return;
+    }
+
+    if (isClient) {
+      navigation.navigate('WelcomeCustomer' as never);
+      return;
+    }
+
+    if (isProfessional) {
+      navigation.navigate('ProfessionalHome' as never);
+      return;
+    }
+
+    // Fallback
+    navigation.navigate('WelcomeCustomer' as never);
   };
 
   const handleMessage = (event: any) => {
@@ -143,26 +165,34 @@ export default function AdScreen() {
 </html>
   `;
 
+  const handleClose = () => {
+    // Close the ad and continue
+    handleContinue();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <WebView
-        source={{ html: fullHTML }}
-        style={styles.webview}
-        onMessage={handleMessage}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        startInLoadingState={true}
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#667eea" />
-          </View>
-        )}
-      />
-      <View style={styles.buttonContainer}>
-        <Button mode="contained" onPress={handleContinue} style={styles.button}>
-          Continuar
-        </Button>
+      {/* WebView occupies full available height */}
+      <View style={styles.webviewContainer}>
+        <WebView
+          source={{ html: fullHTML }}
+          style={styles.webview}
+          onMessage={handleMessage}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#667eea" />
+            </View>
+          )}
+        />
       </View>
+
+      {/* Overlay close button at the top-right corner (independent of ad template) */}
+      <TouchableOpacity style={styles.closeButton} onPress={handleClose} accessibilityLabel="Fechar anúncio">
+        <Text style={styles.closeButtonText}>✕</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -178,13 +208,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
+  webviewContainer: {
+    flex: 1, // WebView takes full screen height
+    width: '100%',
+  },
   webview: {
     flex: 1,
   },
-  buttonContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
+  closeButton: {
+    position: 'absolute',
+    top: 66, // increase top margin to keep inside the container
+    right: 22, // increase right margin to keep inside the container
+    width: 34,
+    height: 34,
+    borderRadius: 34 / 2,
+    backgroundColor: 'rgba(255,255,255,0.1)', // glass/semi-transparent
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    elevation: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    paddingTop: 1,
+    paddingRight: 0,
   },
+  closeButtonText: {
+    color: '#111', // discreet black 'X'
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  // The bottom button is removed in favor of a top-right overlay close button
   button: {
     width: '100%',
   },

@@ -556,23 +556,41 @@ async def admin_categories(
 async def admin_create_category(
     request: Request,
     name: str = Form(...),
-    subcategories: str = Form(""),
+    tags: str = Form(""),
+    subcategories_data: str = Form(""),
     default_remote_execution: bool = Form(False),
     current_user: User = Depends(get_current_user_from_request),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Criar uma nova categoria via formulário"""
-    # Processar subcategorias (uma por linha)
-    subcategories_list = [s.strip() for s in subcategories.split('\n') if s.strip()]
+    from app.models.category import Subcategory
+    import json
+
+    # Processar tags da categoria principal
+    tags_list = [t.strip() for t in tags.split(',') if t.strip()]
+
+    # Processar subcategorias com tags (formato JSON)
+    subcategories_list = []
+    if subcategories_data:
+        try:
+            subs_json = json.loads(subcategories_data)
+            for sub in subs_json:
+                subcategories_list.append(Subcategory(
+                    name=sub.get("name", ""),
+                    tags=sub.get("tags", [])
+                ))
+        except:
+            pass
 
     category_data = CategoryCreate(
         name=name,
+        tags=tags_list,
         subcategories=subcategories_list
     )
 
     # Create category
     category = await create_category(db, category_data)
-    
+
     # Update with default_remote_execution if set
     if default_remote_execution:
         await update_category(db, category.id, CategoryUpdate(default_remote_execution=True))
@@ -584,17 +602,35 @@ async def admin_edit_category(
     request: Request,
     category_id: str,
     name: str = Form(...),
-    subcategories: str = Form(""),
+    tags: str = Form(""),
+    subcategories_data: str = Form(""),
     default_remote_execution: bool = Form(False),
     current_user: User = Depends(get_current_user_from_request),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Editar uma categoria existente via formulário"""
-    # Processar subcategorias (uma por linha)
-    subcategories_list = [s.strip() for s in subcategories.split('\n') if s.strip()]
+    from app.models.category import Subcategory
+    import json
+
+    # Processar tags da categoria principal
+    tags_list = [t.strip() for t in tags.split(',') if t.strip()]
+
+    # Processar subcategorias com tags (formato JSON)
+    subcategories_list = []
+    if subcategories_data:
+        try:
+            subs_json = json.loads(subcategories_data)
+            for sub in subs_json:
+                subcategories_list.append(Subcategory(
+                    name=sub.get("name", ""),
+                    tags=sub.get("tags", [])
+                ))
+        except:
+            pass
 
     category_data = CategoryUpdate(
         name=name,
+        tags=tags_list,
         subcategories=subcategories_list,
         default_remote_execution=default_remote_execution
     )

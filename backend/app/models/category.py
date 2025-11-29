@@ -1,11 +1,16 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
+
+class Subcategory(BaseModel):
+    name: str
+    tags: List[str] = []  # Tags de busca para a subcategoria
 
 class Category(BaseModel):
     id: str = Field(alias="_id")
     name: str  # Nome da categoria principal (ex: "Programação", "Serviços Jurídicos")
-    subcategories: List[str] = []  # Lista de subcategorias (ex: ["Desenvolvimento Web", "App Mobile"])
+    tags: List[str] = []  # Tags de busca para a categoria principal
+    subcategories: List[Subcategory] = []  # Lista de subcategorias com suas tags
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = True
@@ -17,10 +22,12 @@ class Category(BaseModel):
 
 class CategoryCreate(BaseModel):
     name: str
-    subcategories: List[str] = []
+    tags: List[str] = []
+    subcategories: List[Subcategory] = []
 
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
-    subcategories: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    subcategories: Optional[List[Subcategory]] = None
     is_active: Optional[bool] = None
     default_remote_execution: Optional[bool] = None

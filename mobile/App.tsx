@@ -6,10 +6,11 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
-import WelcomeScreen from './src/screens/WelcomeScreen';
+import WelcomeCustomerScreen from './src/screens/WelcomeCustomerScreen';
 import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
 import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
 import AdScreen from './src/screens/AdScreen';
+import ProfessionalHomeScreen from './src/screens/ProfessionalHomeScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
 import { fetchCurrentUser } from './src/api/auth';
@@ -40,7 +41,7 @@ export default function App() {
           } else if (!currentUser.roles || currentUser.roles.length === 0) {
             setInitialRoute('ProfileSelection');
           } else {
-            setInitialRoute('Welcome');
+            setInitialRoute('WelcomeCustomer');
           }
         } catch (error) {
           console.log(`[App] Token inválido, fazendo logout:`, error);
@@ -91,7 +92,8 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Criar Conta' }} />
           <Stack.Screen name="AdScreen" component={AdScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="WelcomeCustomer" component={WelcomeCustomerScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ProfessionalHome" component={ProfessionalHomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />
         </Stack.Navigator>

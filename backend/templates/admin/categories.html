@@ -30,6 +30,7 @@
                 <thead>
                     <tr>
                         <th>Categoria Principal</th>
+                        <th>Tags</th>
                         <th>Subcategorias</th>
                         <th>Execução Remota</th>
                         <th>Status</th>
@@ -43,11 +44,23 @@
                         <td><strong>{{ category.name }}</strong></td>
                         <td>
                             <div class="d-flex flex-wrap gap-1">
+                                {% for tag in category.tags %}
+                                <span class="badge bg-primary">{{ tag }}</span>
+                                {% endfor %}
+                                {% if not category.tags %}
+                                <span class="text-muted small">Sem tags</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
                                 {% for sub in category.subcategories %}
-                                <span class="badge bg-secondary">{{ sub }}</span>
+                                <span class="badge bg-secondary" title="Tags: {{ sub.tags|join(', ') if sub.tags else 'Sem tags' }}">
+                                    {{ sub.name if sub.name is string else sub }}
+                                </span>
                                 {% endfor %}
                                 {% if not category.subcategories %}
-                                <span class="text-muted">Nenhuma subcategoria</span>
+                                <span class="text-muted small">Nenhuma subcategoria</span>
                                 {% endif %}
                             </div>
                         </td>
@@ -70,6 +83,7 @@
                             <button class="btn btn-sm btn-info js-category-edit"
                                     data-id='{{ category.id|tojson }}'
                                     data-name='{{ category.name|tojson }}'
+                                    data-tags='{{ category.tags|tojson }}'
                                     data-subcategories='{{ category.subcategories|tojson }}'
                                     data-default-remote='{{ category.default_remote_execution|tojson }}'>
                                 <i class="fas fa-edit"></i>
@@ -77,6 +91,7 @@
                             <button class="btn btn-sm btn-outline-secondary ms-1 js-category-info"
                                     data-id='{{ category.id|tojson }}'
                                     data-name='{{ category.name|tojson }}'
+                                    data-tags='{{ category.tags|tojson }}'
                                     data-subcategories='{{ category.subcategories|tojson }}'
                                     data-default-remote='{{ category.default_remote_execution|tojson }}'
                                     data-is-active='{{ category.is_active|tojson }}'
@@ -93,7 +108,7 @@
                     {% endfor %}
                     {% if not categories %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             Nenhuma categoria encontrada.
                         </td>
                     </tr>
@@ -106,29 +121,52 @@
 
 <!-- Modal: Adicionar Categoria -->
 <div class="modal fade" id="addCategoryModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Nova Categoria</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="/system-admin/categories/create">
+            <form method="POST" action="/system-admin/categories/create" id="addCategoryForm">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="categoryName" class="form-label">Nome da Categoria Principal</label>
-                        <input type="text" class="form-control" id="categoryName" name="name" required placeholder="Ex: Programação">
+                        <input type="text" class="form-control" id="categoryName" name="name" required placeholder="Ex: Reparos Eletrônicos">
                     </div>
                     <div class="mb-3">
-                        <label for="subcategories" class="form-label">Subcategorias (uma por linha)</label>
-                        <textarea class="form-control" id="subcategories" name="subcategories" rows="5" placeholder="Ex:&#10;Desenvolvimento Web&#10;App Mobile&#10;Backend"></textarea>
-                        <small class="text-muted">Digite cada subcategoria em uma nova linha</small>
+                        <label for="categoryTags" class="form-label">Tags da Categoria (separadas por vírgula)</label>
+                        <input type="text" class="form-control" id="categoryTags" name="tags" placeholder="Ex: reparo, conserto, eletrônica, manutenção">
+                        <small class="text-muted">Essas tags ajudam na busca. Separe por vírgulas.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Subcategorias com Tags</label>
+                        <div id="subcategoriesContainer">
+                            <div class="subcategory-item mb-3 border rounded p-3">
+                                <div class="row">
+                                    <div class="col-md-5">
+                                        <input type="text" class="form-control subcategory-name" placeholder="Nome da subcategoria">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control subcategory-tags" placeholder="Tags (separadas por vírgula)">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-danger btn-sm remove-subcategory">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="addSubcategoryBtn">
+                            <i class="fas fa-plus me-1"></i>Adicionar Subcategoria
+                        </button>
+                        <input type="hidden" name="subcategories_data" id="subcategoriesData">
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="defaultRemoteExecution" name="default_remote_execution">
                         <label class="form-check-label" for="defaultRemoteExecution">
                             Projetos desta categoria permitem execução remota por padrão
                         </label>
-                        <small class="form-text text-muted d-block">Categorias como Programação, Design, Tradução geralmente podem ser executadas remotamente</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -142,7 +180,7 @@
 
 <!-- Modal: Editar Categoria -->
 <div class="modal fade" id="editCategoryModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Editar Categoria</h5>
@@ -155,16 +193,24 @@
                         <input type="text" class="form-control" id="editCategoryName" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editSubcategories" class="form-label">Subcategorias (uma por linha)</label>
-                        <textarea class="form-control" id="editSubcategories" name="subcategories" rows="5"></textarea>
-                        <small class="text-muted">Digite cada subcategoria em uma nova linha</small>
+                        <label for="editCategoryTags" class="form-label">Tags da Categoria (separadas por vírgula)</label>
+                        <input type="text" class="form-control" id="editCategoryTags" name="tags">
+                        <small class="text-muted">Essas tags ajudam na busca. Separe por vírgulas.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Subcategorias com Tags</label>
+                        <div id="editSubcategoriesContainer">
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="editAddSubcategoryBtn">
+                            <i class="fas fa-plus me-1"></i>Adicionar Subcategoria
+                        </button>
+                        <input type="hidden" name="subcategories_data" id="editSubcategoriesData">
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="editDefaultRemoteExecution" name="default_remote_execution">
                         <label class="form-check-label" for="editDefaultRemoteExecution">
                             Projetos desta categoria permitem execução remota por padrão
                         </label>
-                        <small class="form-text text-muted d-block">Categorias como Programação, Design, Tradução geralmente podem ser executadas remotamente</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -178,7 +224,7 @@
 
 <!-- Modal: Category Info -->
 <div class="modal fade" id="categoryInfoModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Informações da Categoria</h5>
@@ -186,7 +232,9 @@
             </div>
             <div class="modal-body">
                 <p><strong>Nome:</strong> <span id="infoCategoryName"></span></p>
-                <p><strong>Subcategorias:</strong> <span id="infoCategorySubcategories"></span></p>
+                <p><strong>Tags:</strong> <span id="infoCategoryTags"></span></p>
+                <p><strong>Subcategorias:</strong></p>
+                <div id="infoCategorySubcategories" class="ms-3"></div>
                 <p><strong>Execução remota:</strong> <span id="infoCategoryDefaultRemote"></span></p>
                 <p><strong>Status:</strong> <span id="infoCategoryStatus"></span></p>
                 <p><strong>Criado em:</strong> <span id="infoCategoryCreatedAt"></span></p>
@@ -207,11 +255,119 @@
 
 {% block scripts %}
 <script>
-function editCategory(id, name, subcategories, defaultRemoteExecution) {
+// Add subcategory field (CREATE)
+document.getElementById('addSubcategoryBtn').addEventListener('click', function() {
+    const container = document.getElementById('subcategoriesContainer');
+    const newItem = document.createElement('div');
+    newItem.className = 'subcategory-item mb-3 border rounded p-3';
+    newItem.innerHTML = `
+        <div class="row">
+            <div class="col-md-5">
+                <input type="text" class="form-control subcategory-name" placeholder="Nome da subcategoria">
+            </div>
+            <div class="col-md-6">
+                <input type="text" class="form-control subcategory-tags" placeholder="Tags (separadas por vírgula)">
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-danger btn-sm remove-subcategory">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(newItem);
+});
+
+// Add subcategory field (EDIT)
+document.getElementById('editAddSubcategoryBtn').addEventListener('click', function() {
+    const container = document.getElementById('editSubcategoriesContainer');
+    const newItem = document.createElement('div');
+    newItem.className = 'subcategory-item mb-3 border rounded p-3';
+    newItem.innerHTML = `
+        <div class="row">
+            <div class="col-md-5">
+                <input type="text" class="form-control subcategory-name" placeholder="Nome da subcategoria">
+            </div>
+            <div class="col-md-6">
+                <input type="text" class="form-control subcategory-tags" placeholder="Tags (separadas por vírgula)">
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-danger btn-sm remove-subcategory">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(newItem);
+});
+
+// Remove subcategory
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-subcategory')) {
+        e.target.closest('.subcategory-item').remove();
+    }
+});
+
+// Process form data before submit (CREATE)
+document.getElementById('addCategoryForm').addEventListener('submit', function(e) {
+    const subcategories = [];
+    document.querySelectorAll('#subcategoriesContainer .subcategory-item').forEach(item => {
+        const name = item.querySelector('.subcategory-name').value.trim();
+        const tags = item.querySelector('.subcategory-tags').value.split(',').map(t => t.trim()).filter(t => t);
+        if (name) {
+            subcategories.push({ name, tags });
+        }
+    });
+    document.getElementById('subcategoriesData').value = JSON.stringify(subcategories);
+});
+
+// Process form data before submit (EDIT)
+document.getElementById('editCategoryForm').addEventListener('submit', function(e) {
+    const subcategories = [];
+    document.querySelectorAll('#editSubcategoriesContainer .subcategory-item').forEach(item => {
+        const name = item.querySelector('.subcategory-name').value.trim();
+        const tags = item.querySelector('.subcategory-tags').value.split(',').map(t => t.trim()).filter(t => t);
+        if (name) {
+            subcategories.push({ name, tags });
+        }
+    });
+    document.getElementById('editSubcategoriesData').value = JSON.stringify(subcategories);
+});
+
+// Edit category
+function editCategory(id, name, tags, subcategories, defaultRemoteExecution) {
     document.getElementById('editCategoryName').value = name;
-    document.getElementById('editSubcategories').value = subcategories.join('\n');
+    document.getElementById('editCategoryTags').value = tags.join(', ');
     document.getElementById('editDefaultRemoteExecution').checked = defaultRemoteExecution || false;
     document.getElementById('editCategoryForm').action = '/system-admin/categories/' + id + '/edit';
+
+    // Clear and populate subcategories
+    const container = document.getElementById('editSubcategoriesContainer');
+    container.innerHTML = '';
+
+    subcategories.forEach(sub => {
+        const subName = typeof sub === 'string' ? sub : (sub.name || '');
+        const subTags = typeof sub === 'object' && sub.tags ? sub.tags : [];
+
+        const newItem = document.createElement('div');
+        newItem.className = 'subcategory-item mb-3 border rounded p-3';
+        newItem.innerHTML = `
+            <div class="row">
+                <div class="col-md-5">
+                    <input type="text" class="form-control subcategory-name" placeholder="Nome da subcategoria" value="${subName}">
+                </div>
+                <div class="col-md-6">
+                    <input type="text" class="form-control subcategory-tags" placeholder="Tags (separadas por vírgula)" value="${subTags.join(', ')}">
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-danger btn-sm remove-subcategory">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newItem);
+    });
 
     var modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
     modal.show();
@@ -219,40 +375,52 @@ function editCategory(id, name, subcategories, defaultRemoteExecution) {
 
 // Show category info modal
 document.addEventListener('click', (event) => {
-        const btn = event.target.closest('.js-category-info');
-        if (!btn) return;
+    const btn = event.target.closest('.js-category-info');
+    if (!btn) return;
 
-        const id = JSON.parse(btn.dataset.id);
-        const name = JSON.parse(btn.dataset.name);
-        const subcategories = JSON.parse(btn.dataset.subcategories);
-        const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
-        const isActive = JSON.parse(btn.dataset.isActive);
-        const createdAt = JSON.parse(btn.dataset.createdAt);
+    const id = JSON.parse(btn.dataset.id);
+    const name = JSON.parse(btn.dataset.name);
+    const tags = JSON.parse(btn.dataset.tags);
+    const subcategories = JSON.parse(btn.dataset.subcategories);
+    const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
+    const isActive = JSON.parse(btn.dataset.isActive);
+    const createdAt = JSON.parse(btn.dataset.createdAt);
 
-        document.getElementById('infoCategoryName').textContent = name;
-        document.getElementById('infoCategorySubcategories').textContent = subcategories.join(', ');
-        document.getElementById('infoCategoryDefaultRemote').textContent = defaultRemote ? 'Sim' : 'Não';
-        document.getElementById('infoCategoryStatus').textContent = isActive ? 'Ativa' : 'Inativa';
-        document.getElementById('infoCategoryCreatedAt').textContent = createdAt || '-';
+    document.getElementById('infoCategoryName').textContent = name;
+    document.getElementById('infoCategoryTags').innerHTML = tags.map(t => `<span class="badge bg-primary me-1">${t}</span>`).join('') || '<span class="text-muted">Sem tags</span>';
 
-        const deleteForm = document.getElementById('deletePermanentForm');
-        if (deleteForm) deleteForm.action = '/system-admin/categories/' + id + '/delete-permanent';
+    // Display subcategories with their tags
+    const subsHtml = subcategories.map(sub => {
+        const subName = typeof sub === 'string' ? sub : (sub.name || '');
+        const subTags = typeof sub === 'object' && sub.tags ? sub.tags : [];
+        const tagsHtml = subTags.map(t => `<span class="badge bg-secondary me-1">${t}</span>`).join('');
+        return `<div class="mb-2"><strong>${subName}</strong>: ${tagsHtml || '<span class="text-muted small">sem tags</span>'}</div>`;
+    }).join('') || '<span class="text-muted">Nenhuma subcategoria</span>';
+    document.getElementById('infoCategorySubcategories').innerHTML = subsHtml;
 
-        var modal = new bootstrap.Modal(document.getElementById('categoryInfoModal'));
-        modal.show();
+    document.getElementById('infoCategoryDefaultRemote').textContent = defaultRemote ? 'Sim' : 'Não';
+    document.getElementById('infoCategoryStatus').textContent = isActive ? 'Ativa' : 'Inativa';
+    document.getElementById('infoCategoryCreatedAt').textContent = createdAt || '-';
+
+    const deleteForm = document.getElementById('deletePermanentForm');
+    if (deleteForm) deleteForm.action = '/system-admin/categories/' + id + '/delete-permanent';
+
+    var modal = new bootstrap.Modal(document.getElementById('categoryInfoModal'));
+    modal.show();
 });
 
-// Edit category: use data attributes instead of inline onclick
+// Edit category: use data attributes
 document.addEventListener('click', (event) => {
     const btn = event.target.closest('.js-category-edit');
     if (!btn) return;
 
     const id = JSON.parse(btn.dataset.id);
     const name = JSON.parse(btn.dataset.name);
+    const tags = JSON.parse(btn.dataset.tags);
     const subcategories = JSON.parse(btn.dataset.subcategories);
     const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
 
-    editCategory(id, name, subcategories, defaultRemote);
+    editCategory(id, name, tags, subcategories, defaultRemote);
 });
 </script>
 {% endblock %}
