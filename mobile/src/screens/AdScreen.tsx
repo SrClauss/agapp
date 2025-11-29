@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Button } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import useAuthStore from '../stores/authStore';
 import client from '../api/axiosClient';
+import ImageAdCarousel from '../components/ImageAdCarousel';
+
+interface ImageItem {
+  uri: string;
+  link?: string | null;
+}
 
 interface AdContent {
   id: string;
   alias: string;
-  type: string;
-  html: string;
-  css: string;
-  js: string;
-  images: { [key: string]: string };
+  type: 'html' | 'image';
+  html?: string;
+  css?: string;
+  js?: string;
+  images?: { [key: string]: string };
+  imagesList?: ImageItem[];
 }
 
 export default function AdScreen() {
@@ -52,22 +58,55 @@ export default function AdScreen() {
 
   const fetchAdContent = async () => {
     try {
-      console.log('🔍 Buscando anúncio para:', location);
+      console.log('🔍 Buscando anúncio para location:', location);
       console.log('🔑 Token presente:', !!token);
 
-      const response = await client.get(`/ads/public/render/${location}`);
+      // Converter location para adType (formato mobile)
+      const adTypeMap: { [key: string]: string } = {
+        'publi_screen_client': 'publi_client',
+        'publi_screen_professional': 'publi_professional',
+        'banner_client_home': 'banner_client',
+        'banner_professional_home': 'banner_professional',
+      };
+      const adType = adTypeMap[location] || location;
+
+      const response = await client.get(`/system-admin/api/public/ads/${adType}`);
 
       console.log('📡 Status HTTP:', response.status);
 
       const data = response.data;
-      console.log('📦 Dados recebidos:', data);
+      console.log('📦 Dados recebidos:', JSON.stringify(data).substring(0, 200) + '...');
 
-      // Backend returns: { id, alias, type, html, css, js, images }
-      if (data && data.html) {
+      // Se for tipo imagem, processar imagens
+      if (data && data.type === 'image' && data.images && Array.isArray(data.images)) {
+        console.log('🖼️ Anúncio do tipo imagem, processando', data.images.length, 'imagens');
+        const imagesList: ImageItem[] = data.images.map((img: any) => ({
+          uri: img.content || '',
+          link: img.link || null,
+        })).filter((img: ImageItem) => img.uri); // Filtrar imagens sem URI
+
+        if (imagesList.length === 0) {
+          console.log('⚠️ Nenhuma imagem válida encontrada');
+          handleContinue();
+          return;
+        }
+
+        const adaptedAd: AdContent = {
+          id: data.ad_type || data.id,
+          alias: data.ad_type || data.alias,
+          type: 'image',
+          imagesList,
+        };
+
+        setAdContent(adaptedAd);
+      }
+      // Se for tipo HTML, processar HTML
+      else if (data && data.html) {
+        console.log('📄 Anúncio do tipo HTML');
         const adaptedAd: AdContent = {
           id: data.id,
           alias: data.alias,
-          type: data.type,
+          type: 'html',
           html: data.html,
           css: data.css || '',
           js: data.js || '',
@@ -76,7 +115,7 @@ export default function AdScreen() {
 
         setAdContent(adaptedAd);
       } else {
-        console.log('ℹ️ Dados de anúncio inválidos');
+        console.log('ℹ️ Dados de anúncio inválidos ou vazios');
         handleContinue();
       }
     } catch (error: any) {
@@ -129,59 +168,75 @@ export default function AdScreen() {
     return null;
   }
 
-  // Build complete HTML with injected CSS, JS, and images
-  const fullHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    ${adContent.css}
-  </style>
-</head>
-<body>
-  ${adContent.html.replace(/src="([^"]+)"/g, (match, filename) => {
-    const imageName = filename.split('/').pop();
-    const base64Image = adContent.images[imageName];
-    return base64Image ? `src="${base64Image}"` : match;
-  })}
-  <script>
-    ${adContent.js}
-  </script>
-</body>
-</html>
-  `;
-
   const handleClose = () => {
     // Close the ad and continue
     handleContinue();
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* WebView occupies full available height */}
-      <View style={styles.webviewContainer}>
-        <WebView
-          source={{ html: fullHTML }}
-          style={styles.webview}
-          onMessage={handleMessage}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          startInLoadingState={true}
-          renderLoading={() => (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#667eea" />
-            </View>
-          )}
-        />
-      </View>
+  // Se for anúncio de imagem, usar o componente ImageAdCarousel
+  if (adContent.type === 'image' && adContent.imagesList && adContent.imagesList.length > 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ImageAdCarousel images={adContent.imagesList} onClose={handleClose} />
+      </SafeAreaView>
+    );
+  }
 
-      {/* Overlay close button at the top-right corner (independent of ad template) */}
-      <TouchableOpacity style={styles.closeButton} onPress={handleClose} accessibilityLabel="Fechar anúncio">
-        <Text style={styles.closeButtonText}>✕</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
-  );
+  // Se for anúncio HTML, usar WebView
+  if (adContent.type === 'html' && adContent.html) {
+    // Build complete HTML with injected CSS, JS, and images
+    const fullHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    ${adContent.css || ''}
+  </style>
+</head>
+<body>
+  ${adContent.html.replace(/src="([^"]+)"/g, (match, filename) => {
+    const imageName = filename.split('/').pop();
+    const base64Image = adContent.images?.[imageName];
+    return base64Image ? `src="${base64Image}"` : match;
+  })}
+  <script>
+    ${adContent.js || ''}
+  </script>
+</body>
+</html>
+    `;
+
+    return (
+      <SafeAreaView style={styles.container}>
+        {/* WebView occupies full available height */}
+        <View style={styles.webviewContainer}>
+          <WebView
+            source={{ html: fullHTML }}
+            style={styles.webview}
+            onMessage={handleMessage}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#667eea" />
+              </View>
+            )}
+          />
+        </View>
+
+        {/* Overlay close button at the top-right corner (independent of ad template) */}
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose} accessibilityLabel="Fechar anúncio">
+          <Text style={styles.closeButtonText}>✕</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  // Fallback: se não for nem imagem nem HTML, redirecionar
+  handleClose();
+  return null;
 }
 
 const styles = StyleSheet.create({
