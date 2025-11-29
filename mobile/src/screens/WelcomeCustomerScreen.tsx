@@ -56,6 +56,7 @@ export default function WelcomeCustomerScreen() {
         (s.tags || []).some(tag => tag.toLowerCase().includes(q))
       );
     });
+    // Search debug logs removed to reduce console noise
     setFilteredSubcategories(results);
   };
 

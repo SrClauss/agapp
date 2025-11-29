@@ -13,8 +13,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
     const initials = user?.full_name ? user.full_name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'U';
     const [neigbhorhood, setNeigbhorhood] = useState<string>('');
     // Debug: log user photo
-    console.log('🖼️ LocationAvatar - user.photo:', user?.photo);
-    console.log('👤 LocationAvatar - user.full_name:', user?.full_name);
+    // Debug logs removed to avoid verbose output in production
 
     useEffect(() => {
         if (showLocation) {
