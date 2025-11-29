@@ -7,6 +7,7 @@
 <div class="mb-4">
     <h1 class="h3 mb-1 text-gray-800 fw-bold">Gerenciamento de Publicidade</h1>
     <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel</p>
+    <div class="mt-2"><span class="badge bg-secondary">ADS ADMIN UI: versão 67abdea (debug)</span></div>
 </div>
 <!-- debug status removed -->
 
@@ -273,6 +274,7 @@ async function loadFiles(adType) {
         }
 
         const data = await response.json();
+        console.log('ADS_ADMIN: loadFiles response', data);
         const locations = data.locations || [];
         const loc = locations.find(l => l.location === location);
         const files = loc && loc.files ? loc.files : [];
