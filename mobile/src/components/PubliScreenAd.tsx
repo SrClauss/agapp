@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Modal,
   View,
@@ -7,6 +7,10 @@ import {
   TouchableOpacity,
   Text,
   SafeAreaView,
+  Image,
+  FlatList,
+  Linking,
+  useWindowDimensions,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
@@ -29,7 +33,10 @@ interface PubliScreenAdProps {
  */
 export function PubliScreenAd({ userType, onClose, autoShow = true }: PubliScreenAdProps) {
   const adType = userType === 'client' ? 'publi_client' : 'publi_professional';
-  const { adHtml, loading, exists } = useAd(adType);
+  const { adHtml, images, loading, exists } = useAd(adType);
+  const { width } = useWindowDimensions();
+  const flatListRef = useRef<FlatList<any> | null>(null);
+  const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(autoShow);
 
   const handleClose = () => {
@@ -82,15 +89,46 @@ export function PubliScreenAd({ userType, onClose, autoShow = true }: PubliScree
         </TouchableOpacity>
 
         {/* WebView com o anúncio */}
-        <WebView
-          source={{ html: adHtml || '' }}
-          style={styles.webview}
-          onMessage={handleMessage}
-          scrollEnabled={true}
-          showsVerticalScrollIndicator={false}
-          javaScriptEnabled
-          domStorageEnabled
-        />
+        {images && images.length > 0 ? (
+          <FlatList
+            ref={flatListRef}
+            data={images}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, idx) => `${item.uri}-${idx}`}
+            onMomentumScrollEnd={(ev) => {
+              const newIndex = Math.round(ev.nativeEvent.contentOffset.x / width);
+              setIndex(newIndex);
+            }}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (item.link) {
+                    Linking.openURL(item.link).catch(() => {});
+                  }
+                }}
+              >
+                <Image
+                  source={{ uri: item.uri }}
+                  style={[styles.image, { width, height: '100%' }]}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
+          />
+        ) : (
+          <WebView
+            source={{ html: adHtml || '' }}
+            style={styles.webview}
+            onMessage={handleMessage}
+            scrollEnabled={true}
+            showsVerticalScrollIndicator={false}
+            javaScriptEnabled
+            domStorageEnabled
+          />
+        )}
       </SafeAreaView>
     </Modal>
   );
@@ -133,4 +171,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
+  image: {
+    height: '100%'
+  }
 });

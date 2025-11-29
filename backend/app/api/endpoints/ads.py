@@ -609,7 +609,16 @@ async def mobile_check_ad_exists(ad_type: str):
         return JSONResponse(status_code=404, content={"ad_type": ad_type, "exists": False, "configured": False})
 
     ad_dir = ADS_BASE_DIR / location
-    has_content = ad_dir.exists() and (ad_dir / "index.html").exists()
+    has_content = False
+    if ad_dir.exists():
+        if (ad_dir / "index.html").exists():
+            has_content = True
+        else:
+            # if no html, check if image files exist in folder
+            for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
+                if any(ad_dir.glob(f"*.{ext}")):
+                    has_content = True
+                    break
     return JSONResponse({"ad_type": ad_type, "exists": has_content, "configured": has_content})
 
 
@@ -621,8 +630,28 @@ async def mobile_get_ad(ad_type: str):
         return JSONResponse(status_code=404, content={"ad_type": ad_type, "html": "", "assets": {}})
 
     ad_dir = ADS_BASE_DIR / location
-    if not ad_dir.exists() or not (ad_dir / "index.html").exists():
+    # If no HTML file, but images exist, still return image-only response
+    if not ad_dir.exists():
         return JSONResponse(status_code=204, content=None)
+    if not (ad_dir / "index.html").exists():
+        # if no index.html, but images exist, build image-only response
+        images_only = {}
+        for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
+            for img_file in ad_dir.glob(f"*.{ext}"):
+                with open(img_file, "rb") as f:
+                    img_base64 = base64.b64encode(f.read()).decode()
+                    images_only[img_file.name] = f"data:image/{ext};base64,{img_base64}"
+
+        # Build images list
+        images_list = []
+        for name, content in images_only.items():
+            images_list.append({"filename": name, "content": content, "link": None})
+
+        return JSONResponse({
+            "ad_type": ad_type,
+            "type": "image",
+            "images": images_list,
+        })
 
     # Rendered HTML to be embedded
     rendered = render_ad_template(location)
@@ -641,11 +670,22 @@ async def mobile_get_ad(ad_type: str):
             with open(img_file, "rb") as f:
                 img_base64 = base64.b64encode(f.read()).decode()
                 assets[img_file.name] = {"type": "image", "content": f"data:image/{ext};base64,{img_base64}"}
+    # Build images array for clients that prefer a list
+    images_list = []
+    for key, asset in assets.items():
+        if asset.get("type") == "image":
+            images_list.append({
+                "filename": key,
+                "content": asset.get("content"),
+                # optional link not present by default
+                "link": None,
+            })
 
     return JSONResponse({
         "ad_type": ad_type,
         "html": rendered,
         "assets": assets,
+        "images": images_list,
     })
 
 
@@ -670,7 +710,28 @@ async def get_ad_json(
 
     # If client wants JSON, return JSON with all files
     if "application/json" in accept:
+        # If index.html is missing but images exist, return an image-only JSON
         if not file_path.exists() or not file_path.is_file():
+            # check for images in dir
+            ad_dir = ADS_BASE_DIR / location
+            if ad_dir.exists():
+                images_only = {}
+                for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
+                    for img_file in ad_dir.glob(f"*.{ext}"):
+                        with open(img_file, "rb") as f:
+                            img_base64 = base64.b64encode(f.read()).decode()
+                            images_only[img_file.name] = f"data:image/{ext};base64,{img_base64}"
+                if images_only:
+                    images_list = []
+                    for name, content in images_only.items():
+                        images_list.append({"filename": name, "content": content, "link": None})
+                    return JSONResponse({
+                        "id": location,
+                        "alias": location,
+                        "type": "image",
+                        "images": images_only,
+                        "images_list": images_list,
+                    })
             return JSONResponse(status_code=204)  # No content
 
         html_content = file_path.read_text()
@@ -691,6 +752,10 @@ async def get_ad_json(
                     with open(img_file, "rb") as f:
                         img_base64 = base64.b64encode(f.read()).decode()
                         images[img_file.name] = f"data:image/{ext};base64,{img_base64}"
+        # Build images array for clients that prefer a list
+        images_list = []
+        for name, content in images.items():
+            images_list.append({"filename": name, "content": content, "link": None})
 
         return JSONResponse({
             "id": location,
@@ -699,7 +764,8 @@ async def get_ad_json(
             "html": html_content,
             "css": css_content,
             "js": js_content,
-            "images": images
+            "images": images,
+            "images_list": images_list,
         })
 
     # Otherwise return the HTML file directly

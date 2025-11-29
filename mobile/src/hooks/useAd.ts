@@ -11,16 +11,24 @@ interface AdAsset {
   content: string;
 }
 
+interface ImageItem {
+  filename: string;
+  content: string; // data URI or URL
+  link?: string; // optional click-through link
+}
+
 interface AdData {
   ad_type: string;
-  html: string;
-  assets: {
+  html?: string | null;
+  assets?: {
     [key: string]: AdAsset;
   };
+  images?: ImageItem[];
 }
 
 interface UseAdReturn {
   adHtml: string | null;
+  images: Array<{ uri: string; link?: string }> | null;
   loading: boolean;
   error: Error | null;
   exists: boolean;
@@ -50,16 +58,19 @@ export function useAd(
   useCache: boolean = true
 ): UseAdReturn {
   const [adHtml, setAdHtml] = useState<string | null>(null);
+  const [images, setImages] = useState<Array<{ uri: string; link?: string }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [exists, setExists] = useState(false);
 
   const buildHtmlWithAssets = (data: AdData): string => {
-    let html = data.html;
+    let html = data.html || '';
 
     // Processar assets
-    Object.keys(data.assets).forEach(filename => {
-      const asset = data.assets[filename];
+    const assetKeys = data.assets ? Object.keys(data.assets) : [];
+    assetKeys.forEach(filename => {
+      const asset = data.assets?.[filename];
+      if (!asset) return;
 
       if (asset.type === 'text' && filename.endsWith('.css')) {
         // Injetar CSS inline
@@ -144,6 +155,15 @@ export function useAd(
       // Tentar carregar do cache primeiro
       const cachedAd = await loadAdFromCache();
       if (cachedAd) {
+        // If cached includes images, prefer them
+        if (cachedAd.images && cachedAd.images.length > 0) {
+          const imgs = cachedAd.images.map(i => ({ uri: i.content, link: i.link }));
+          setImages(imgs);
+          setExists(true);
+          setLoading(false);
+          return;
+        }
+
         const html = buildHtmlWithAssets(cachedAd);
         setAdHtml(html);
         setExists(true);
@@ -171,6 +191,19 @@ export function useAd(
 
       const adData: AdData = adResponse.data;
 
+      // If the payload includes images, set them and skip building HTML
+      if (adData.images && adData.images.length > 0) {
+        const imgs = adData.images.map(i => ({ uri: i.content, link: i.link }));
+
+        // Salvar no cache com o mesmo formato que o objeto completo
+        await saveAdToCache(adData as AdData);
+
+        setImages(imgs);
+        setExists(true);
+        setLoading(false);
+        return;
+      }
+
       // Processar HTML com assets
       const html = buildHtmlWithAssets(adData);
 
@@ -194,6 +227,7 @@ export function useAd(
 
   return {
     adHtml,
+    images,
     loading,
     error,
     exists,
