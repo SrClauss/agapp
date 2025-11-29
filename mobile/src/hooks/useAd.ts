@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import client from '../api/axiosClient';
 import { AxiosError } from 'axios';
+import * as FileSystem from 'expo-file-system';
 
 const AD_CACHE_KEY = 'ad_cache_';
 const AD_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas
@@ -25,6 +26,58 @@ interface AdData {
   };
   images?: ImageItem[];
 }
+
+// Helper: map adType to location used in backend URLs
+const adTypeToLocation = (adTypeParam: string): string | null => {
+  const map: { [k: string]: string } = {
+    publi_client: 'publi_screen_client',
+    publi_professional: 'publi_screen_professional',
+    banner_client: 'banner_client_home',
+    banner_professional: 'banner_professional_home',
+    banner_cliente_home: 'banner_client_home',
+  };
+  return map[adTypeParam] || null;
+};
+
+// Ensure image is saved locally; returns local URI (file://) or an empty string
+const ensureImageLocal = async (img: ImageItem, adTypeParam: string): Promise<string> => {
+  if (!img) return '';
+  const folder = `${FileSystem.cacheDirectory}ads/${adTypeParam}/`;
+  try {
+    await FileSystem.makeDirectoryAsync(folder, { intermediates: true });
+  } catch (e) {
+    // ignore
+  }
+  const filename = img.filename || `${Date.now()}.png`;
+  const localPath = `${folder}${filename}`;
+
+  const info = await FileSystem.getInfoAsync(localPath);
+  if (info.exists) return localPath;
+
+  if (img.content && img.content.startsWith('data:image')) {
+    const base64 = img.content.split(',')[1];
+    await FileSystem.writeAsStringAsync(localPath, base64, { encoding: FileSystem.EncodingType.Base64 });
+    return localPath;
+  }
+
+  // If URL or relative path, download
+  if (img.content && (img.content.startsWith('http://') || img.content.startsWith('https://'))) {
+    const result = await FileSystem.downloadAsync(img.content, localPath);
+    if (result.status === 200) return result.uri;
+    throw new Error('Download failed');
+  }
+
+  // If null or a relative filename, derive from backend path
+  const location = adTypeToLocation(adTypeParam);
+  if (location && img.filename) {
+    const base = client.defaults.baseURL?.replace(/\/$/, '') || '';
+    const url = `${base}/ads/${location}/${encodeURIComponent(img.filename)}`;
+    const result = await FileSystem.downloadAsync(url, localPath);
+    if (result.status === 200) return result.uri;
+  }
+
+  return img.content || '';
+};
 
 interface UseAdReturn {
   adHtml: string | null;
@@ -213,9 +266,17 @@ export function useAd(
 
       // If the payload includes images, set them and skip building HTML
       if (adData.images && adData.images.length > 0) {
-        const imgs = adData.images.map(i => ({ uri: i.content, link: i.link }));
+        const imgs: Array<{ uri: string; link?: string }> = [];
+        for (const i of adData.images) {
+          try {
+            const local = await ensureImageLocal(i, adType);
+            imgs.push({ uri: local || i.content, link: i.link });
+          } catch (err) {
+            imgs.push({ uri: i.content, link: i.link });
+          }
+        }
 
-        // Salvar no cache com o mesmo formato que o objeto completo
+        // Salvar no cache com o mesmo formato que o objeto completo (but not base64 content)
         await saveAdToCache(adData as AdData);
 
         setImages(imgs);
@@ -265,11 +326,31 @@ export function useClearAdCache() {
         // Limpar cache de um anúncio específico
         const cacheKey = `${AD_CACHE_KEY}${adType}`;
         await AsyncStorage.removeItem(cacheKey);
+        // Remove local cached images for this adType
+        try {
+          const folder = `${FileSystem.cacheDirectory}ads/${adType}`;
+          const info = await FileSystem.getInfoAsync(folder);
+          if (info.exists) {
+            await FileSystem.deleteAsync(folder, { idempotent: true });
+          }
+        } catch (e) {
+          // ignore errors
+        }
       } else {
         // Limpar cache de todos os anúncios
         const keys = await AsyncStorage.getAllKeys();
         const adKeys = keys.filter((key: string) => key.startsWith(AD_CACHE_KEY));
         await AsyncStorage.multiRemove(adKeys);
+        // Delete all ad images in local cache
+        try {
+          const root = `${FileSystem.cacheDirectory}ads`;
+          const info = await FileSystem.getInfoAsync(root);
+          if (info.exists) {
+            await FileSystem.deleteAsync(root, { idempotent: true });
+          }
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (err) {
       console.error('Erro ao limpar cache de anúncios:', err);
