@@ -23,10 +23,32 @@ export default function AdScreen() {
   const [adContent, setAdContent] = useState<AdContent | null>(null);
   const [loading, setLoading] = useState(true);
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
 
-  useEffect(() => {
-    fetchAdContent();
-  }, [location]);
+  // Navigate based on the user's role (client vs professional)
+  const handleContinue = () => {
+    const isClient = user?.roles?.includes('client');
+    const isProfessional = user?.roles?.includes('professional');
+
+    // If user has both roles, send them to profile selection
+    if (isClient && isProfessional) {
+      navigation.navigate('ProfileSelection' as never);
+      return;
+    }
+
+    if (isClient) {
+      navigation.navigate('WelcomeCustomer' as never);
+      return;
+    }
+
+    if (isProfessional) {
+      navigation.navigate('ProfessionalHome' as never);
+      return;
+    }
+
+    // Fallback
+    navigation.navigate('WelcomeCustomer' as never);
+  };
 
   const fetchAdContent = async () => {
     try {
@@ -55,22 +77,26 @@ export default function AdScreen() {
         setAdContent(adaptedAd);
       } else {
         console.log('ℹ️ Dados de anúncio inválidos');
-        navigation.navigate('Welcome' as never);
+        handleContinue();
       }
     } catch (error: any) {
       // Status 204 = sem anúncio configurado
       if (error.response?.status === 204) {
         console.log('ℹ️ Nenhum anúncio configurado para esta location');
-        navigation.navigate('Welcome' as never);
+        handleContinue();
         return;
       }
 
       console.error('🚨 Erro ao buscar anúncio:', error);
-      navigation.navigate('Welcome' as never);
+      handleContinue();
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchAdContent();
+  }, [location]);
 
   const trackClick = async () => {
     if (!location) return;
@@ -80,32 +106,6 @@ export default function AdScreen() {
     } catch (error) {
       console.error('Error tracking click:', error);
     }
-  };
-
-  // Navigate based on the user's role (client vs professional)
-  const user = useAuthStore((state) => state.user);
-  const handleContinue = () => {
-    const isClient = user?.roles?.includes('client');
-    const isProfessional = user?.roles?.includes('professional');
-
-    // If user has both roles, send them to profile selection
-    if (isClient && isProfessional) {
-      navigation.navigate('ProfileSelection' as never);
-      return;
-    }
-
-    if (isClient) {
-      navigation.navigate('WelcomeCustomer' as never);
-      return;
-    }
-
-    if (isProfessional) {
-      navigation.navigate('ProfessionalHome' as never);
-      return;
-    }
-
-    // Fallback
-    navigation.navigate('WelcomeCustomer' as never);
   };
 
   const handleMessage = (event: any) => {

@@ -11,7 +11,9 @@ export default function ProfileSelectionScreen() {
 
   const handleRoleSelection = (role: string) => {
     setActiveRole(role);
-    navigation.navigate('Welcome' as never);
+    // Navigate to the appropriate screen based on role
+    const destination = role === 'client' ? 'WelcomeCustomer' : 'ProfessionalHome';
+    navigation.navigate(destination as never);
   };
 
   return (

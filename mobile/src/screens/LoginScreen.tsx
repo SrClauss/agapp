@@ -65,19 +65,21 @@ export default function LoginScreen() {
         return;
       }
 
-      console.log('ℹ️ Nenhum anúncio disponível, indo para Welcome');
+      console.log('ℹ️ Nenhum anúncio disponível, indo para tela principal');
     } catch (error: any) {
       // Status 204 = sem anúncio configurado
       if (error.response?.status === 204) {
-        console.log('ℹ️ Nenhum anúncio configurado, indo para Welcome');
-        navigation.navigate('Welcome' as never);
+        console.log('ℹ️ Nenhum anúncio configurado, indo para tela principal');
+        const destination = user.roles.includes('client') ? 'WelcomeCustomer' : 'ProfessionalHome';
+        navigation.navigate(destination as never);
         return;
       }
       console.error('🚨 Erro ao verificar anúncios:', error);
     }
 
-    // Se não houver anúncios ou erro, vai direto para Welcome
-    navigation.navigate('Welcome' as never);
+    // Se não houver anúncios ou erro, vai direto para tela principal
+    const destination = user.roles.includes('client') ? 'WelcomeCustomer' : 'ProfessionalHome';
+    navigation.navigate(destination as never);
   };
 
   const onEmailLogin = async () => {

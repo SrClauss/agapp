@@ -759,6 +759,16 @@ async def mobile_get_ad(ad_type: str):
         return JSONResponse(status_code=404, content={"ad_type": ad_type, "html": "", "assets": {}})
 
     ad_dir = ADS_BASE_DIR / location
+
+    # Load metadata for images (meta.json)
+    meta_file = ad_dir / 'meta.json'
+    images_meta = {}
+    if meta_file.exists():
+        try:
+            images_meta = json.loads(meta_file.read_text(encoding='utf-8') or '{}').get('images', {})
+        except Exception:
+            images_meta = {}
+
     # If no HTML file, but images exist, still return image-only response
     if not ad_dir.exists():
         return JSONResponse(status_code=204, content=None)
@@ -774,7 +784,8 @@ async def mobile_get_ad(ad_type: str):
         # Build images list
         images_list = []
         for name, content in images_only.items():
-            images_list.append({"filename": name, "content": content, "link": None})
+            link = images_meta.get(name, {}).get('link') if isinstance(images_meta, dict) else None
+            images_list.append({"filename": name, "content": content, "link": link})
 
         return JSONResponse({
             "ad_type": ad_type,

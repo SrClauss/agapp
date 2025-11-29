@@ -52,7 +52,9 @@ export default function CompleteProfileScreen() {
       // Atualizar user com photo se disponível
       const userWithPhoto = { ...updatedUser, photo: user.photo };
       setUser(userWithPhoto);
-      navigation.navigate('Welcome' as never);
+      // Navigate based on user roles
+      const destination = updatedUser.roles.includes('client') ? 'WelcomeCustomer' : 'ProfessionalHome';
+      navigation.navigate(destination as never);
     } catch (e: any) {
       console.error('Erro ao completar perfil:', e);
       setError(e.message || 'Erro ao completar perfil');
