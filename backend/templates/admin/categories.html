@@ -64,18 +64,20 @@
     }
 
     .btn-sm {
-        padding: 0.375rem 0.75rem;
+        padding: 0.5rem;
         font-size: 0.875rem;
         border-radius: 6px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 36px;
+        width: 36px;
+        height: 36px;
         transition: all 0.2s ease;
     }
 
     .btn-sm i {
         font-size: 0.875rem;
+        margin: 0;
     }
 
     .btn-info {
@@ -128,15 +130,11 @@
     /* Action buttons alignment */
     .table tbody td:last-child {
         white-space: nowrap;
+        text-align: center;
     }
 
-    .table tbody td:last-child .btn-sm {
-        margin-right: 0.25rem;
-    }
-
-    .table tbody td:last-child .btn-sm:last-child,
-    .table tbody td:last-child form {
-        margin-right: 0;
+    .table tbody td:last-child .d-flex {
+        justify-content: center;
     }
 
     /* Card improvements */
@@ -203,6 +201,36 @@
 
     h1 i {
         color: #667eea;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .table tbody td:last-child .d-flex {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn-sm {
+            width: 100%;
+            margin-bottom: 0.25rem;
+        }
+
+        .btn-sm:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    /* Table responsive wrapper improvements */
+    .table-responsive {
+        border-radius: 8px;
+        overflow-x: auto;
+    }
+
+    @media (min-width: 769px) {
+        .table tbody td:last-child .d-flex {
+            flex-direction: row;
+            flex-wrap: nowrap;
+        }
     }
 </style>
 {% endblock %}
@@ -287,29 +315,36 @@
                         </td>
                         <td>{{ category.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                         <td>
-                            <button class="btn btn-sm btn-info js-category-edit"
-                                    data-id='{{ category._id|tojson }}'
-                                    data-name='{{ category.name|tojson }}'
-                                    data-tags='{{ category.tags|tojson }}'
-                                    data-subcategories='{{ category.subcategories|tojson }}'
-                                    data-default-remote='{{ category.default_remote_execution|tojson }}'>
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary ms-1 js-category-info"
-                                    data-id='{{ category._id|tojson }}'
-                                    data-name='{{ category.name|tojson }}'
-                                    data-tags='{{ category.tags|tojson }}'
-                                    data-subcategories='{{ category.subcategories|tojson }}'
-                                    data-default-remote='{{ category.default_remote_execution|tojson }}'
-                                    data-is-active='{{ category.is_active|tojson }}'
-                                    data-created-at='{{ category.created_at.strftime('%d/%m/%Y %H:%M')|tojson }}'>
-                                <i class="fas fa-info-circle"></i>
-                            </button>
-                            <form method="POST" action="/system-admin/categories/{{ category._id }}/delete" style="display: inline;">
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir esta categoria?')">
-                                    <i class="fas fa-trash"></i>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-info js-category-edit"
+                                        data-id='{{ category._id|tojson }}'
+                                        data-name='{{ category.name|tojson }}'
+                                        data-tags='{{ category.tags|tojson }}'
+                                        data-subcategories='{{ category.subcategories|tojson }}'
+                                        data-default-remote='{{ category.default_remote_execution|tojson }}'
+                                        title="Editar">
+                                    <i class="fas fa-edit"></i>
                                 </button>
-                            </form>
+                                <button class="btn btn-sm btn-outline-secondary js-category-info"
+                                        data-id='{{ category._id|tojson }}'
+                                        data-name='{{ category.name|tojson }}'
+                                        data-tags='{{ category.tags|tojson }}'
+                                        data-subcategories='{{ category.subcategories|tojson }}'
+                                        data-default-remote='{{ category.default_remote_execution|tojson }}'
+                                        data-is-active='{{ category.is_active|tojson }}'
+                                        data-created-at='{{ category.created_at.strftime('%d/%m/%Y %H:%M')|tojson }}'
+                                        title="Informações">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                                <form method="POST" action="/system-admin/categories/{{ category._id }}/delete" style="display: inline; margin: 0;">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Tem certeza que deseja excluir esta categoria?')"
+                                            title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
