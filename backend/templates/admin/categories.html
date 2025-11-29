@@ -592,7 +592,9 @@ document.addEventListener('click', function(e) {
 });
 
 // Process form data before submit (CREATE)
-document.getElementById('addCategoryForm').addEventListener('submit', function(e) {
+const addCategoryFormEl = document.getElementById('addCategoryForm');
+if (addCategoryFormEl) {
+    addCategoryFormEl.addEventListener('submit', function(e) {
     const subcategories = [];
     document.querySelectorAll('#subcategoriesContainer .subcategory-item').forEach(item => {
         const name = item.querySelector('.subcategory-name').value.trim();
@@ -602,10 +604,13 @@ document.getElementById('addCategoryForm').addEventListener('submit', function(e
         }
     });
     document.getElementById('subcategoriesData').value = JSON.stringify(subcategories);
-});
+    });
+}
 
 // Process form data before submit (EDIT)
-document.getElementById('editCategoryForm').addEventListener('submit', function(e) {
+const editCategoryFormEl = document.getElementById('editCategoryForm');
+if (editCategoryFormEl) {
+    editCategoryFormEl.addEventListener('submit', function(e) {
     const subcategories = [];
     document.querySelectorAll('#editSubcategoriesContainer .subcategory-item').forEach(item => {
         const name = item.querySelector('.subcategory-name').value.trim();
@@ -615,14 +620,16 @@ document.getElementById('editCategoryForm').addEventListener('submit', function(
         }
     });
     document.getElementById('editSubcategoriesData').value = JSON.stringify(subcategories);
-});
+    });
+}
 
 // Edit category
 function editCategory(id, name, tags, subcategories, defaultRemoteExecution) {
     document.getElementById('editCategoryName').value = name;
     document.getElementById('editCategoryTags').value = tags.join(', ');
     document.getElementById('editDefaultRemoteExecution').checked = defaultRemoteExecution || false;
-    document.getElementById('editCategoryForm').action = '/system-admin/categories/' + id + '/edit';
+    const formEl = document.getElementById('editCategoryForm');
+    if (formEl) formEl.action = '/system-admin/categories/' + id + '/edit';
 
     // Clear and populate subcategories
     const container = document.getElementById('editSubcategoriesContainer');
@@ -718,7 +725,8 @@ document.addEventListener('click', (event) => {
     const defaultRemote = JSON.parse(btn.dataset.defaultRemote || 'false');
 
     // Populate modal fields
-    document.getElementById('tagsManagerForm').action = '/system-admin/categories/' + id + '/edit';
+    const tagsManagerEl = document.getElementById('tagsManagerForm');
+    if (tagsManagerEl) tagsManagerEl.action = '/system-admin/categories/' + id + '/edit';
     document.getElementById('tagsManagerCategoryName').value = name;
     document.getElementById('tagsManagerCategoryTagsHidden').value = (tags || []).join(', ');
     document.getElementById('tagsManagerCategoryTagInput').value = '';
@@ -826,7 +834,8 @@ document.addEventListener('click', (event) => {
 
     // On submit, prepare hidden fields and submit
     const tagsForm = document.getElementById('tagsManagerForm');
-    tagsForm.onsubmit = function(e) {
+    if (tagsForm) {
+        tagsForm.onsubmit = function(e) {
         e.preventDefault();
         document.getElementById('tagsManagerCategoryTagsHidden').value = categoryTags.join(', ');
         // Build subcategories payload
@@ -848,7 +857,8 @@ document.addEventListener('click', (event) => {
         document.getElementById('tagsManagerCategoryName').value = name;
         // Submit the form
         tagsForm.submit();
-    };
+        };
+    }
 
     var modal = new bootstrap.Modal(document.getElementById('tagsManagerModal'));
     modal.show();
