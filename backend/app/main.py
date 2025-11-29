@@ -150,7 +150,8 @@ app.add_middleware(SlowAPIMiddleware)
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 # Mount ad static files so that /ads/<location>/index.html can be served directly
-app.mount("/ads", StaticFiles(directory="ads"), name="ads")
+# NOTE: the mount for /ads is added after the ads router so dynamic routes
+# (rendering endpoints) take precedence over static file serving.
 
 # CORS
 app.add_middleware(
@@ -181,6 +182,11 @@ app.include_router(support.router, prefix="/support", tags=["support"])
 app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"])
 app.include_router(ads.router, prefix="/ads", tags=["advertisements"])
 app.include_router(ads.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
+app.include_router(ads.mobile_router, prefix="/system-admin/api/public/ads")
+
+# Mount ad static files after including the ads router so the router's
+# dynamic endpoints are evaluated before the StaticFiles handler.
+app.mount("/ads", StaticFiles(directory="ads"), name="ads")
 
 @app.on_event("startup")
 async def startup_event():

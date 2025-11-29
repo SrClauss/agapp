@@ -5,12 +5,15 @@ from pathlib import Path
 import base64
 import shutil
 import os
+import tempfile
+import jinja2
 
 from app.core.security import get_current_user, get_current_user_from_request
 from app.models.user import User
 
 router = APIRouter()
 admin_router = APIRouter()
+mobile_router = APIRouter()
 
 # 4 fixed ad locations - HARDCODED
 FIXED_AD_LOCATIONS = [
@@ -85,6 +88,50 @@ def get_ad_files(location: str) -> dict:
         "js": js_content,
         "images": images
     }
+
+
+def render_ad_template(location: str, context: dict | None = None) -> str:
+    """Read the index.html for `location`, inject a public base href, render with Jinja2 and return HTML string.
+
+    This reads the file from disk each time (no template cache) so uploads are visible immediately.
+    Render is done with an empty or explicit context only (do not pass untrusted request data).
+    """
+    ad_dir = ADS_BASE_DIR / location
+    html_path = ad_dir / "index.html"
+    if not html_path.exists() or not html_path.is_file():
+        raise FileNotFoundError("Index HTML not found")
+
+    content = html_path.read_text(encoding='utf-8')
+
+    # Inject public base tag so relative assets resolve to /ads/<location>/...
+    if '<head' in content.lower():
+        import re
+        def replace_head(match):
+            tag = match.group(0)
+            return tag + f"\n<base href='/ads/{location}/' />\n"
+        content = re.sub(r"<head[^>]*>", replace_head, content, flags=re.IGNORECASE)
+    else:
+        content = f"<base href='/ads/{location}/' />\n" + content
+
+    tmpl = jinja2.Template(content)
+    return tmpl.render(context or {})
+
+
+def ad_type_to_location(ad_type: str) -> str | None:
+        """Map mobile adType to internal folder name.
+        Mobile ad types:
+            - publi_client -> publi_screen_client
+            - publi_professional -> publi_screen_professional
+            - banner_client -> banner_client_home
+            - banner_professional -> banner_professional_home
+        """
+        mapping = {
+                "publi_client": "publi_screen_client",
+                "publi_professional": "publi_screen_professional",
+                "banner_client": "banner_client_home",
+                "banner_professional": "banner_professional_home",
+        }
+        return mapping.get(ad_type)
 
 
 # ============================================================================
@@ -196,8 +243,19 @@ async def admin_upload_ad_file(
 
     # Save file
     file_path = ad_dir / filename
-    with open(file_path, "wb") as f:
-        f.write(content)
+    # Write atomically: write to a temp file then replace
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=str(ad_dir))
+    try:
+        with os.fdopen(tmp_fd, "wb") as tmpf:
+            tmpf.write(content)
+        os.replace(tmp_path, str(file_path))
+    finally:
+        # Ensure tmp file removed if something went wrong
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
 
     return {"message": f"File uploaded successfully to {location}", "filename": filename}
 
@@ -490,6 +548,107 @@ async def get_banner_professional_home():
     return content
 
 
+@router.get("/public/render/{location}")
+async def get_rendered_ad_for_mobile(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home",
+    ]
+):
+    """Return rendered HTML (via Jinja2) and assets as JSON for mobile clients.
+
+    Response example:
+    {
+      "id": "publi_screen_client",
+      "html": "<html>...</html>",
+      "css": "...",
+      "js": "...",
+      "images": {"foo.png": "data:image/png;base64,..."}
+    }
+    """
+    try:
+        rendered = render_ad_template(location)
+    except FileNotFoundError:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+
+    # Read CSS and JS if they exist
+    css_path = ADS_BASE_DIR / location / "style.css"
+    js_path = ADS_BASE_DIR / location / "script.js"
+
+    css_content = css_path.read_text() if css_path.exists() else ""
+    js_content = js_path.read_text() if js_path.exists() else ""
+
+    # Find all image files and base64 encode
+    images = {}
+    ad_dir = ADS_BASE_DIR / location
+    if ad_dir.exists():
+        for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
+            for img_file in ad_dir.glob(f"*.{ext}"):
+                with open(img_file, "rb") as f:
+                    img_base64 = base64.b64encode(f.read()).decode()
+                    images[img_file.name] = f"data:image/{ext};base64,{img_base64}"
+
+    return JSONResponse({
+        "id": location,
+        "alias": location,
+        "type": "html",
+        "html": rendered,
+        "css": css_content,
+        "js": js_content,
+        "images": images,
+    })
+
+
+@mobile_router.get("/{ad_type}/check")
+async def mobile_check_ad_exists(ad_type: str):
+    """Compatibility: mobile check endpoint. Returns whether ad is configured."""
+    location = ad_type_to_location(ad_type)
+    if not location:
+        return JSONResponse(status_code=404, content={"ad_type": ad_type, "exists": False, "configured": False})
+
+    ad_dir = ADS_BASE_DIR / location
+    has_content = ad_dir.exists() and (ad_dir / "index.html").exists()
+    return JSONResponse({"ad_type": ad_type, "exists": has_content, "configured": has_content})
+
+
+@mobile_router.get("/{ad_type}")
+async def mobile_get_ad(ad_type: str):
+    """Compatibility: mobile ad endpoint. Returns HTML and assets in the mobile JSON format."""
+    location = ad_type_to_location(ad_type)
+    if not location:
+        return JSONResponse(status_code=404, content={"ad_type": ad_type, "html": "", "assets": {}})
+
+    ad_dir = ADS_BASE_DIR / location
+    if not ad_dir.exists() or not (ad_dir / "index.html").exists():
+        return JSONResponse(status_code=204, content=None)
+
+    # Rendered HTML to be embedded
+    rendered = render_ad_template(location)
+
+    # Build assets: style.css, script.js, and images as {type: 'text'|'image', content: '...'}
+    assets = {}
+    css_path = ad_dir / "style.css"
+    js_path = ad_dir / "script.js"
+    if css_path.exists():
+        assets["style.css"] = {"type": "text", "content": css_path.read_text(encoding='utf-8')}
+    if js_path.exists():
+        assets["script.js"] = {"type": "text", "content": js_path.read_text(encoding='utf-8')}
+
+    for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
+        for img_file in ad_dir.glob(f"*.{ext}"):
+            with open(img_file, "rb") as f:
+                img_base64 = base64.b64encode(f.read()).decode()
+                assets[img_file.name] = {"type": "image", "content": f"data:image/{ext};base64,{img_base64}"}
+
+    return JSONResponse({
+        "ad_type": ad_type,
+        "html": rendered,
+        "assets": assets,
+    })
+
+
 # ============================================================================
 # Get ad metadata as JSON (for mobile app)
 # ============================================================================
@@ -598,10 +757,12 @@ async def serve_ad_index_html(
     ]
 ):
     """Serve index.html for a location to support legacy /ads/<location>/index.html URLs"""
-    file_path = ADS_BASE_DIR / location / "index.html"
-    if not file_path.exists() or not file_path.is_file():
+    # Return rendered page (Jinja2) so uploads are exposed as rendered templates
+    try:
+        rendered = render_ad_template(location)
+    except FileNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Index HTML not found")
-    return FileResponse(file_path)
+    return HTMLResponse(content=rendered, media_type="text/html")
 
 
 # ============================================================================

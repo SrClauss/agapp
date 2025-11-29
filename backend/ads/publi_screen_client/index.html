@@ -3,39 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bem-vindo Cliente!</title>
+    <title>Exemplo de Anúncio - AgilizaPro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .ad-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ad-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .highlight {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        p {
+            color: #666;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .feature-text {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            color: #666;
+            transition: background 0.3s, color 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-button:hover {
+            background: rgba(0, 0, 0, 0.2);
+            color: #333;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #ffd700;
+            color: #333;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .ad-container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            p {
+                font-size: 16px;
+            }
+
+            .features {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="fullscreen-ad">
-        <div class="content">
-            <img src="logo.png" alt="Logo" class="logo" />
-            <h1>Bem-vindo ao Agiliza!</h1>
-            <p class="subtitle">Encontre os melhores profissionais para seus projetos</p>
+    <div class="ad-container">
 
-            <div class="features">
-                <div class="feature">
-                    <div class="icon">🔍</div>
-                    <h3>Busca Inteligente</h3>
-                    <p>Encontre profissionais qualificados perto de você</p>
-                </div>
+        <img src="./ichigo-vs-yusuke-who-wins-v0-8naawear6xm91.webp" alt="AgilizaPro Logo" style="width: 100px; margin-bottom: 20px;">
+        <button class="close-button" onclick="closeAd()">✕</button>
 
-                <div class="feature">
-                    <div class="icon">💬</div>
-                    <h3>Chat em Tempo Real</h3>
-                    <p>Comunique-se diretamente com profissionais</p>
-                </div>
+        <div class="badge">🎉 OFERTA ESPECIAL</div>
 
-                <div class="feature">
-                    <div class="icon">⭐</div>
-                    <h3>Avaliações</h3>
-                    <p>Veja avaliações de outros clientes</p>
-                </div>
+        <h1>Transforme seu <span class="highlight">Negócio</span> Hoje!</h1>
+
+        <p>Conecte-se com os melhores profissionais e clientes. Aumente sua produtividade em até 300%!</p>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-text">Rápido</div>
             </div>
-
-            <button class="cta-button" onclick="window.ReactNativeWebView?.postMessage('close')">
-                Começar Agora
-            </button>
+            <div class="feature">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-text">Seguro</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">💎</div>
+                <div class="feature-text">Premium</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <div class="feature-text">Mobile</div>
+            </div>
         </div>
+
+        <button class="cta-button" onclick="trackClick()">
+            Começar Agora
+        </button>
     </div>
+
+    <script>
+        // Função para fechar o anúncio
+        function closeAd() {
+            // Envia mensagem para o React Native
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage('close');
+            } else {
+                // Para teste em navegador
+                if (window.parent !== window) {
+                    window.parent.postMessage('close', '*');
+                }
+                console.log('Anúncio fechado');
+            }
+        }
+
+        // Função para rastrear cliques
+        function trackClick() {
+            // Envia mensagem para o React Native
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage('click');
+            } else {
+                console.log('Clique rastreado');
+            }
+
+            // Aqui você pode adicionar lógica adicional
+            alert('Obrigado pelo interesse! Em breve você será redirecionado.');
+
+            // Fechar após o clique (opcional)
+            setTimeout(closeAd, 2000);
+        }
+
+        // Prevenir zoom no mobile
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+    </script>
 </body>
 </html>

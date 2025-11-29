@@ -20,8 +20,8 @@ import bcrypt
 from datetime import datetime
 
 # Configurações do banco
-MONGO_URL = os.getenv('MONGODB_URL', 'mongodb://admin:AG%40ar1401al2312@127.0.0.1:27017/agiliza_database?authSource=admin')
-DB_NAME = os.getenv('DATABASE_NAME', 'agiliza_database')
+MONGO_URL = os.getenv('MONGODB_URL', 'mongodb://admin:your_secure_mongodb_password@127.0.0.1:27017/agiliza?authSource=admin')
+DB_NAME = os.getenv('DATABASE_NAME', 'agiliza')
 
 def reset_database():
     """Reseta completamente o banco de dados"""
