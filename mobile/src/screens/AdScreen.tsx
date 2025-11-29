@@ -4,6 +4,7 @@ import { WebView } from 'react-native-webview';
 import { Button } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import useAuthStore from '../stores/authStore';
+import client from '../api/axiosClient';
 
 interface AdContent {
   id: string;
@@ -31,49 +32,40 @@ export default function AdScreen() {
     try {
       console.log('🔍 Buscando anúncio para:', location);
       console.log('🔑 Token presente:', !!token);
-      // Use the JSON render endpoint (returns html, css, js, images)
-      console.log('🌐 URL:', `${process.env.EXPO_PUBLIC_API_URL}/ads/public/render/${location}`);
 
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/render/${location}`
-      );
+      const response = await client.get(`/ads/public/render/${location}`);
 
       console.log('📡 Status HTTP:', response.status);
 
+      const data = response.data;
+      console.log('📦 Dados recebidos:', data);
+
+      // Backend returns: { id, alias, type, html, css, js, images }
+      if (data && data.html) {
+        const adaptedAd: AdContent = {
+          id: data.id,
+          alias: data.alias,
+          type: data.type,
+          html: data.html,
+          css: data.css || '',
+          js: data.js || '',
+          images: data.images || {}
+        };
+
+        setAdContent(adaptedAd);
+      } else {
+        console.log('ℹ️ Dados de anúncio inválidos');
+        navigation.navigate('Welcome' as never);
+      }
+    } catch (error: any) {
       // Status 204 = sem anúncio configurado
-      if (response.status === 204) {
+      if (error.response?.status === 204) {
         console.log('ℹ️ Nenhum anúncio configurado para esta location');
         navigation.navigate('Welcome' as never);
         return;
       }
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📦 Dados recebidos:', data);
-
-        // Backend returns: { id, alias, type, html, css, js, images }
-        if (data && data.html) {
-          const adaptedAd: AdContent = {
-            id: data.id,
-            alias: data.alias,
-            type: data.type,
-            html: data.html,
-            css: data.css || '',
-            js: data.js || '',
-            images: data.images || {}
-          };
-
-          setAdContent(adaptedAd);
-        } else {
-          console.log('ℹ️ Dados de anúncio inválidos');
-          navigation.navigate('Welcome' as never);
-        }
-      } else {
-        console.error('❌ Erro HTTP:', response.status, response.statusText);
-        navigation.navigate('Welcome' as never);
-      }
-    } catch (error) {
-      console.error('🚨 Erro de rede:', error);
+      console.error('🚨 Erro ao buscar anúncio:', error);
       navigation.navigate('Welcome' as never);
     } finally {
       setLoading(false);
@@ -84,12 +76,7 @@ export default function AdScreen() {
     if (!location) return;
 
     try {
-      await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}/click`,
-        {
-          method: 'POST',
-        }
-      );
+      await client.post(`/ads/public/ads/${location}/click`);
     } catch (error) {
       console.error('Error tracking click:', error);
     }

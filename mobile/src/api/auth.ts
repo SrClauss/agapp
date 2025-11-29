@@ -1,4 +1,5 @@
-import { BACKEND_URL } from './config';
+import client from './axiosClient';
+import { AxiosError } from 'axios';
 
 export interface SignUpData {
   email: string;
@@ -10,91 +11,85 @@ export interface SignUpData {
 }
 
 export async function loginWithEmail(email: string, password: string) {
-  const res = await fetch(`${BACKEND_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
+  try {
+    const params = new URLSearchParams({
       username: email,
       password: password,
-    }),
-  });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Login failed');
+    });
+
+    const { data } = await client.post('/auth/login', params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+
+    // Buscar dados do usuário se não vieram no token
+    if (!data.user) {
+      const user = await fetchCurrentUser(data.access_token);
+      return { token: data.access_token, user };
+    }
+    return { token: data.access_token, user: data.user };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ detail?: string }>;
+    throw new Error(axiosError.response?.data?.detail || 'Login failed');
   }
-  const data = await res.json();
-  // Buscar dados do usuário se não vieram no token
-  if (!data.user) {
-    const user = await fetchCurrentUser(data.access_token);
-    return { token: data.access_token, user };
-  }
-  return { token: data.access_token, user: data.user };
 }
 
 export async function signUpWithEmail(signUpData: SignUpData) {
-  const res = await fetch(`${BACKEND_URL}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(signUpData),
-  });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Signup failed');
+  try {
+    const { data } = await client.post('/auth/register', signUpData);
+    return data; // Returns User object
+  } catch (error) {
+    const axiosError = error as AxiosError<{ detail?: string }>;
+    throw new Error(axiosError.response?.data?.detail || 'Signup failed');
   }
-  return res.json(); // Returns User object
 }
 
 export async function loginWithGoogle(idToken: string) {
-  const res = await fetch(`${BACKEND_URL}/auth/google`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
-  });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Google login failed');
+  try {
+    const { data } = await client.post('/auth/google', { idToken });
+    return { token: data.access_token, user: data.user };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ detail?: string }>;
+    throw new Error(axiosError.response?.data?.detail || 'Google login failed');
   }
-  const data = await res.json();
-  return { token: data.access_token, user: data.user };
 }
 
 export async function fetchCurrentUser(token: string) {
-  const res = await fetch(`${BACKEND_URL}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed fetching user');
-  return res.json();
+  try {
+    const { data } = await client.get('/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return data;
+  } catch (error) {
+    throw new Error('Failed fetching user');
+  }
 }
 
 export async function registerFcmToken(token: string, fcmToken: string, deviceId?: string, deviceName?: string) {
-  const res = await fetch(`${BACKEND_URL}/users/me/fcm-token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ fcm_token: fcmToken, device_id: deviceId, device_name: deviceName }),
-  });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Register FCM token failed');
+  try {
+    const { data } = await client.post(
+      '/users/me/fcm-token',
+      { fcm_token: fcmToken, device_id: deviceId, device_name: deviceName },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ detail?: string }>;
+    throw new Error(axiosError.response?.data?.detail || 'Register FCM token failed');
   }
-  return res.json();
 }
 
 export async function completeProfile(token: string, profileData: { phone: string; cpf: string; full_name: string; password: string; roles: string[] }) {
-  const res = await fetch(`${BACKEND_URL}/auth/complete-profile`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(profileData),
-  });
-  if (!res.ok) {
-    let errorMessage = 'Complete profile failed';
-    try {
-      const error = await res.json();
-      errorMessage = error.detail || errorMessage;
-    } catch (e) {
-      // Se não conseguir parsear JSON, usar status text
-      errorMessage = `Erro ${res.status}: ${res.statusText}`;
-    }
+  try {
+    const { data } = await client.put(
+      '/auth/complete-profile',
+      profileData,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ detail?: string }>;
+    const errorMessage = axiosError.response?.data?.detail ||
+      (axiosError.response?.status ? `Erro ${axiosError.response.status}: ${axiosError.response.statusText}` : 'Complete profile failed');
     throw new Error(errorMessage);
   }
-  return res.json();
 }

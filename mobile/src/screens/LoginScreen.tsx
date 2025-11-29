@@ -9,6 +9,8 @@ import SocialButton from '../components/SocialButton';
 import NotificationsService from '../services/notifications';
 import { transparent } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import client from '../api/axiosClient';
+import axios from 'axios';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -46,37 +48,31 @@ export default function LoginScreen() {
     try {
       console.log('🔍 Verificando anúncio para location:', location);
 
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/${location}/index.html`,
-        {
-          headers: {
-            'Accept': 'application/json',
-          },
-        }
-      );
+      const response = await client.get(`/ads/${location}/index.html`, {
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
 
       console.log('📡 Status da verificação de anúncios:', response.status);
 
+      const data = response.data;
+      console.log('📦 Dados dos anúncios:', data);
+
+      if (data && data.html) {
+        console.log('✅ Anúncio encontrado, navegando para AdScreen');
+        navigation.navigate('AdScreen' as never, { location });
+        return;
+      }
+
+      console.log('ℹ️ Nenhum anúncio disponível, indo para Welcome');
+    } catch (error: any) {
       // Status 204 = sem anúncio configurado
-      if (response.status === 204) {
+      if (error.response?.status === 204) {
         console.log('ℹ️ Nenhum anúncio configurado, indo para Welcome');
         navigation.navigate('Welcome' as never);
         return;
       }
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📦 Dados dos anúncios:', data);
-
-        if (data && data.html) {
-          console.log('✅ Anúncio encontrado, navegando para AdScreen');
-          navigation.navigate('AdScreen' as never, { location });
-          return;
-        }
-      }
-
-      console.log('ℹ️ Nenhum anúncio disponível, indo para Welcome');
-    } catch (error) {
       console.error('🚨 Erro ao verificar anúncios:', error);
     }
 
@@ -138,16 +134,13 @@ export default function LoginScreen() {
         } else if (accessToken) {
           // Fallback: fetch from Google Userinfo endpoint using accessToken
           try {
-            const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            const { data: googleProfile } = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
               headers: {
                 Authorization: `Bearer ${accessToken}`,
               },
             });
-            if (res.ok) {
-              const googleProfile = await res.json();
-              if (googleProfile?.picture) {
-                user = { ...user, photo: googleProfile.picture };
-              }
+            if (googleProfile?.picture) {
+              user = { ...user, photo: googleProfile.picture };
             }
           } catch (err) {
             console.warn('Erro ao buscar foto do Google via API userinfo', err);

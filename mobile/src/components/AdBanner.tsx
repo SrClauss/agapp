@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import useAuthStore from '../stores/authStore';
+import client from '../api/axiosClient';
 
 interface AdBannerProps {
   location: 'banner_client_home' | 'banner_professional_home';
@@ -29,20 +30,14 @@ export default function AdBanner({ location }: AdBannerProps) {
 
   const fetchAdContent = async () => {
     try {
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${location}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const { data } = await client.get(`/ads/public/ads/${location}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data) {
-          setAdContent(data);
-        }
+      if (data) {
+        setAdContent(data);
       }
     } catch (error) {
       console.error('Error fetching banner content:', error);
@@ -55,15 +50,11 @@ export default function AdBanner({ location }: AdBannerProps) {
     if (!adContent) return;
 
     try {
-      await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/ads/${adContent.id}/click`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await client.post(`/ads/public/ads/${adContent.id}/click`, null, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
     } catch (error) {
       console.error('Error tracking click:', error);
     }

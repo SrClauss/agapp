@@ -32,8 +32,11 @@ const configureGoogleSignin = async () => {
       offlineAccess: true,
       scopes: ['openid', 'profile', 'email'],
       forceCodeForRefreshToken: true, // Força refresh token
+      // O google-services.json automaticamente configura o androidClientId
+      // Não é necessário especificar manualmente
     });
     console.log('Google Sign-In configurado com sucesso');
+    console.log('Web Client ID:', GOOGLE_CLIENT_ID_WEB);
   } catch (error) {
     console.error('Erro ao configurar Google Sign-In:', error);
   }

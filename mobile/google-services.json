@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "756816795062-eu15hkv4i7r15vn4rvqavv9ujrnl8d2p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.agilizapro.agapp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
           "client_id": "756816795062-0sj0423v6lqbaacrbij1fefc4fg9mk8g.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "756816795062-0sj0423v6lqbaacrbij1fefc4fg9mk8g.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "756816795062-72731fr9ri0pgp33qv9mer2sro74r0gu.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.agilizapro.agapp"
+              }
             }
           ]
         }

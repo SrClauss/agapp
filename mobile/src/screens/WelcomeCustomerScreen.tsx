@@ -112,7 +112,7 @@ export default function WelcomeCustomerScreen() {
       <View style={styles.containerWelcome}>
         <LocationAvatar />
 
-        <BannerAd adType="banner_cliente_home" height={90} />
+        <BannerAd adType="banner_client" height={90} />
 
         <TextInput
           style={styles.textInput}
