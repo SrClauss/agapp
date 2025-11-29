@@ -4,7 +4,7 @@ import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
 
 interface BannerAdProps {
-  userType: 'client' | 'professional';
+  adType: string;
   height?: number;
   onPress?: () => void;
 }
@@ -16,11 +16,11 @@ interface BannerAdProps {
  * @example
  * ```tsx
  * // Na tela home
- * <BannerAd userType="client" height={120} />
+ * <BannerAd adType="banner_client" height={120} />
  * ```
  */
-export function BannerAd({ userType, height = 120, onPress }: BannerAdProps) {
-  const adType = userType === 'client' ? 'banner_client' : 'banner_professional';
+export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
+
   const { adHtml, loading, exists } = useAd(adType);
 
   const handleMessage = (event: any) => {

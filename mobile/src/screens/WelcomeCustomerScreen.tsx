@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, memo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, FlatList, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator } from 'react-native-paper';
@@ -8,6 +8,8 @@ import { getSubcategoriesWithParent, SubcategoryWithParent } from '../api/catego
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import LocationAvatar from '../components/LocationAvatar';
+import { BannerAd } from '../components/BannerAd';
+import { colors } from '../theme/colors';
 
 // Interface for Category endpoint: GET /categories
 interface Subcategory {
@@ -108,51 +110,67 @@ export default function WelcomeCustomerScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.containerWelcome}>
-      <LocationAvatar />
+        <LocationAvatar />
 
-      <TextInput
-        style={styles.textInput}
-        label="O que você está procurando hoje?"
-        mode='outlined'
-        value={searchQuery}
-        onChangeText={text => setSearchQuery(text)}
-        onSubmitEditing={handleSearch}
-        left={<TextInput.Icon icon="magnify" />}
+        <BannerAd adType="banner_cliente_home" height={90} />
 
-      />
-      <Button onPress={handleSearch} mode="contained" style={{ marginTop: 20 }}>
-        Buscar
-      </Button>
+        <TextInput
+          style={styles.textInput}
+          label="O que você está procurando hoje?"
+          mode='outlined'
+          value={searchQuery}
+          onChangeText={text => setSearchQuery(text)}
+          onSubmitEditing={handleSearch}
+          left={<TextInput.Icon icon="magnify" />}
 
+        />
+        <Button onPress={handleSearch} mode="contained" style={{ marginTop: 20 }}>
+          Buscar
+        </Button>
+    {Array.isArray(filteredSubcategories) && filteredSubcategories.length > 0 && (
+          <>
+            <View style={styles.listWrapper}>
+              <Text style={{ fontWeight: 'bold', marginBottom: 12 }}>Subcategorias</Text>
+              <FlatList
+                data={filteredSubcategories}
+                keyExtractor={keyExtractor}
+                renderItem={renderItem}
+                initialNumToRender={8}
+                maxToRenderPerBatch={12}
+                windowSize={21}
+                style={styles.flatList}
+                contentContainerStyle={styles.flatListContent}
+              />
+            </View>
 
+            <Button
+              mode="contained"
+              labelStyle={{ color: 'white' }}
+              onPress={handlerClearSearch}
+              disabled={searchQuery === ''}
+              style={styles.clearButton}
+            >
+              Limpar Busca
+            </Button>
+          </>
+        )}
 
-      {filteredSubcategories && filteredSubcategories.length > 0 && (
-        <View style={styles.listWrapper}>
-          <Text style={{ fontWeight: 'bold', marginBottom: 12 }}>Subcategorias</Text>
-          <FlatList
-            data={filteredSubcategories || []}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            initialNumToRender={8}
-            maxToRenderPerBatch={12}
-            windowSize={21}
-            style={styles.flatList}
-            contentContainerStyle={styles.flatListContent}
-          />
-        </View>
-      )}
-      <Button onPress={handlerClearSearch} disabled={searchQuery === ''} style={{ marginTop: 12 }}>
-        Limpar Busca
-      </Button>
-      <Button mode="outlined" onPress={handleLogout} loading={loading} style={{ marginTop: 12 }}>
-        Sair
-      </Button> 
+        <Button mode="outlined" onPress={handleLogout} loading={loading} style={{ marginTop: 12 }}>
+          Sair
+        </Button>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  clearButton: {
+
+    marginTop: 12,
+    backgroundColor: colors.error,
+
+
+  },
   safeArea: {
     flex: 1,
   },
