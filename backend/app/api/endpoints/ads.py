@@ -749,6 +749,7 @@ async def mobile_get_ad(ad_type: str):
 
     return JSONResponse({
         "ad_type": ad_type,
+        "type": "html",
         "html": rendered,
         "assets": assets,
         "images": images_list,
@@ -832,6 +833,7 @@ async def get_ad_json(
             "js": js_content,
             "images": images,
             "images_list": images_list,
+            "images_meta": images_meta,
         })
 
     # Otherwise return the HTML file directly
