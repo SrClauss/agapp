@@ -497,8 +497,6 @@
     </div>
 </div>
 
-{% endblock %}
-
 <!-- Modal: Manage Tags -->
 <div class="modal fade" id="tagsManagerModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -533,8 +531,9 @@
             </form>
         </div>
     </div>
-    
 </div>
+
+{% endblock %}
 
 {% block scripts %}
 <script>
@@ -727,12 +726,22 @@ document.addEventListener('click', (event) => {
     // Populate modal fields
     const tagsManagerEl = document.getElementById('tagsManagerForm');
     if (tagsManagerEl) tagsManagerEl.action = '/system-admin/categories/' + id + '/edit';
-    document.getElementById('tagsManagerCategoryName').value = name;
-    document.getElementById('tagsManagerCategoryTagsHidden').value = (tags || []).join(', ');
-    document.getElementById('tagsManagerCategoryTagInput').value = '';
+
+    const nameInput = document.getElementById('tagsManagerCategoryName');
+    if (nameInput) nameInput.value = name;
+
+    const tagsHidden = document.getElementById('tagsManagerCategoryTagsHidden');
+    if (tagsHidden) tagsHidden.value = (tags || []).join(', ');
+
+    const tagInput = document.getElementById('tagsManagerCategoryTagInput');
+    if (tagInput) tagInput.value = '';
 
     // Render category tags
     const categoryTagsContainer = document.getElementById('tagsManagerCategoryTags');
+    if (!categoryTagsContainer) {
+        console.error('Element tagsManagerCategoryTags not found');
+        return;
+    }
     categoryTagsContainer.innerHTML = '';
     const categoryTags = tags || [];
     function addCategoryTagBadge(tag) {
@@ -755,6 +764,10 @@ document.addEventListener('click', (event) => {
 
     // Render subcategories and their tags
     const subsContainer = document.getElementById('tagsManagerSubcategories');
+    if (!subsContainer) {
+        console.error('Element tagsManagerSubcategories not found');
+        return;
+    }
     subsContainer.innerHTML = '';
     const localSubs = (subcategories || []).map(s => {
         if (typeof s === 'string') return { name: s, tags: [] };
@@ -818,29 +831,38 @@ document.addEventListener('click', (event) => {
     localSubs.forEach((s, idx) => createSubEntry(s, idx));
 
     // Category add tag handler
-    document.getElementById('tagsManagerCategoryAddBtn').onclick = function() {
-        const input = document.getElementById('tagsManagerCategoryTagInput');
-        const value = input.value.trim();
-        if (!value) return;
-        const parts = value.split(',').map(p => p.trim()).filter(p => p);
-        parts.forEach(p => {
-            if (!categoryTags.includes(p)) {
-                categoryTags.push(p);
-                addCategoryTagBadge(p);
-            }
-        });
-        input.value = '';
-    };
+    const addBtn = document.getElementById('tagsManagerCategoryAddBtn');
+    if (addBtn) {
+        addBtn.onclick = function() {
+            const input = document.getElementById('tagsManagerCategoryTagInput');
+            if (!input) return;
+            const value = input.value.trim();
+            if (!value) return;
+            const parts = value.split(',').map(p => p.trim()).filter(p => p);
+            parts.forEach(p => {
+                if (!categoryTags.includes(p)) {
+                    categoryTags.push(p);
+                    addCategoryTagBadge(p);
+                }
+            });
+            input.value = '';
+        };
+    }
 
     // On submit, prepare hidden fields and submit
     const tagsForm = document.getElementById('tagsManagerForm');
     if (tagsForm) {
         tagsForm.onsubmit = function(e) {
         e.preventDefault();
-        document.getElementById('tagsManagerCategoryTagsHidden').value = categoryTags.join(', ');
+
+        const tagsHiddenEl = document.getElementById('tagsManagerCategoryTagsHidden');
+        if (tagsHiddenEl) tagsHiddenEl.value = categoryTags.join(', ');
+
         // Build subcategories payload
         const subsPayload = localSubs.map(s => ({ name: s.name, tags: s.tags }));
-        document.getElementById('tagsManagerSubcategoriesDataHidden').value = JSON.stringify(subsPayload);
+        const subsHiddenEl = document.getElementById('tagsManagerSubcategoriesDataHidden');
+        if (subsHiddenEl) subsHiddenEl.value = JSON.stringify(subsPayload);
+
         // default_remote_execution remains unchanged: submit with the existing value
         // Create a dynamic hidden input with default_remote_execution if provided
         if (typeof defaultRemote !== 'undefined') {
@@ -854,7 +876,9 @@ document.addEventListener('click', (event) => {
             el.value = defaultRemote ? 'true' : 'false';
         }
         // Set the name field
-        document.getElementById('tagsManagerCategoryName').value = name;
+        const nameFieldEl = document.getElementById('tagsManagerCategoryName');
+        if (nameFieldEl) nameFieldEl.value = name;
+
         // Submit the form
         tagsForm.submit();
         };
