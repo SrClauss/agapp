@@ -40,40 +40,28 @@ export default function LoginScreen() {
       return;
     }
 
-    // Determinar location baseado no role
-    const location = user.roles.includes('client') ? 'publi_screen_client' : 'publi_screen_professional';
-    console.log('📍 Location determinado:', location);
+    // Determinar adType baseado no role (formato mobile)
+    const adType = user.roles.includes('client') ? 'publi_client' : 'publi_professional';
+    console.log('📍 AdType determinado:', adType);
 
     // Verificar se anúncios estão disponíveis
     try {
-      console.log('🔍 Verificando anúncio para location:', location);
+      console.log('🔍 Verificando anúncio para adType:', adType);
 
-      const response = await client.get(`/ads/${location}/index.html`, {
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
+      const checkResponse = await client.get(`/system-admin/api/public/ads/${adType}/check`);
+      console.log('📡 Status da verificação de anúncios:', checkResponse.status);
+      console.log('📦 Check data:', checkResponse.data);
 
-      console.log('📡 Status da verificação de anúncios:', response.status);
-
-      const data = response.data;
-      console.log('📦 Dados dos anúncios:', data);
-
-      if (data && data.html) {
+      if (checkResponse.data.exists) {
         console.log('✅ Anúncio encontrado, navegando para AdScreen');
+        // Converter adType para location para compatibilidade com AdScreen
+        const location = adType === 'publi_client' ? 'publi_screen_client' : 'publi_screen_professional';
         navigation.navigate('AdScreen' as never, { location });
         return;
       }
 
       console.log('ℹ️ Nenhum anúncio disponível, indo para tela principal');
     } catch (error: any) {
-      // Status 204 = sem anúncio configurado
-      if (error.response?.status === 204) {
-        console.log('ℹ️ Nenhum anúncio configurado, indo para tela principal');
-        const destination = user.roles.includes('client') ? 'WelcomeCustomer' : 'ProfessionalHome';
-        navigation.navigate(destination as never);
-        return;
-      }
       console.error('🚨 Erro ao verificar anúncios:', error);
     }
 
