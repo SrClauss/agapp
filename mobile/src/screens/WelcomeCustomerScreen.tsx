@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, memo } from 'react';
 import { StyleSheet, View, FlatList, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator } from 'react-native-paper';
+import type { ListRenderItemInfo } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import { getSubcategoriesWithParent, SubcategoryWithParent } from '../api/categories';
 import { useNavigation } from '@react-navigation/native';
@@ -29,7 +32,8 @@ export default function WelcomeCustomerScreen() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [subcategories, setSubcategories] = useState<SubcategoryWithParent[]>([]);
-  const [filteredSubcategories, setFilteredSubcategories] = useState<SubcategoryWithParent[]>([]);
+  // null === not searched yet; [] === searched but no results
+  const [filteredSubcategories, setFilteredSubcategories] = useState<SubcategoryWithParent[] | null>(null);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
   const handleLogout = async () => {
@@ -46,7 +50,8 @@ export default function WelcomeCustomerScreen() {
   const handleSearch = () => {
     const q = searchQuery.trim().toLowerCase();
     if (q === '') {
-      setFilteredSubcategories(subcategories);
+      // Keep the list hidden until user searches explicitly
+      setFilteredSubcategories(null);
       return;
     }
     const results = subcategories.filter(s => {
@@ -59,6 +64,10 @@ export default function WelcomeCustomerScreen() {
     // Search debug logs removed to reduce console noise
     setFilteredSubcategories(results);
   };
+  const handlerClearSearch = () => {
+    setSearchQuery('');
+    setFilteredSubcategories(null);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -68,7 +77,8 @@ export default function WelcomeCustomerScreen() {
         const subs = await getSubcategoriesWithParent();
         if (!mounted) return;
         setSubcategories(subs);
-        setFilteredSubcategories(subs);
+        // Do not pre-populate filtered list: wait for user search
+        setFilteredSubcategories(null);
       } catch (err) {
         console.warn('Erro buscando subcategorias', err);
       } finally {
@@ -79,9 +89,25 @@ export default function WelcomeCustomerScreen() {
     return () => { mounted = false; };
   }, []);
 
+  // Memoized renderItem — avoids recreating function on every render
+  const handleItemPress = useCallback((item: SubcategoryWithParent) => {
+    // TODO: navegação – passar para a tela de resultados filtrando por subcategoria
+    // navigation.navigate('SearchResults' as never, { subcategory: item.name } as never);
+  }, [navigation]);
+
+  const renderItem = useCallback(({ item }: ListRenderItemInfo<SubcategoryWithParent>) => (
+    <TouchableOpacity style={styles.subcategoryItem} onPress={() => handleItemPress(item)}>
+      <Text style={styles.subcategoryName}>{item.name}</Text>
+      <Text style={styles.subcategoryParent}>{item.parent.name}</Text>
+    </TouchableOpacity>
+  ), [handleItemPress]);
+
+  const keyExtractor = useCallback((item: SubcategoryWithParent) => `${item.parent.id}-${item.name}`, []);
+
 
   return (
-    <View style={styles.containerWelcome}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.containerWelcome}>
       <LocationAvatar />
 
       <TextInput
@@ -92,40 +118,49 @@ export default function WelcomeCustomerScreen() {
         onChangeText={text => setSearchQuery(text)}
         onSubmitEditing={handleSearch}
         left={<TextInput.Icon icon="magnify" />}
-        
+
       />
       <Button onPress={handleSearch} mode="contained" style={{ marginTop: 20 }}>
         Buscar
       </Button>
-      
-      <Button mode="outlined" onPress={handleLogout} loading={loading} style={{ marginTop: 12 }}>
-        Sair
-      </Button>
-      
-      {filteredSubcategories.length > 0 && (
-        <View style={{ marginTop: 24 }}>
+
+
+
+      {filteredSubcategories && filteredSubcategories.length > 0 && (
+        <View style={styles.listWrapper}>
           <Text style={{ fontWeight: 'bold', marginBottom: 12 }}>Subcategorias</Text>
           <FlatList
-            data={filteredSubcategories}
-            keyExtractor={(item) => `${item.parent.id}-${item.name}`}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.subcategoryItem} onPress={() => { /* TODO: navegar para tela de resultados */ }}>
-                <Text style={styles.subcategoryName}>{item.name}</Text>
-                <Text style={styles.subcategoryParent}>{item.parent.name}</Text>
-              </TouchableOpacity>
-            )}
+            data={filteredSubcategories || []}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            initialNumToRender={8}
+            maxToRenderPerBatch={12}
+            windowSize={21}
+            style={styles.flatList}
+            contentContainerStyle={styles.flatListContent}
           />
         </View>
       )}
-    </View>
+      <Button onPress={handlerClearSearch} disabled={searchQuery === ''} style={{ marginTop: 12 }}>
+        Limpar Busca
+      </Button>
+      <Button mode="outlined" onPress={handleLogout} loading={loading} style={{ marginTop: 12 }}>
+        Sair
+      </Button> 
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   containerWelcome: {
 
-    paddingTop: 40,
-    paddingHorizontal: 20,
+    flex: 1,
+    paddingTop: 24,
+    paddingHorizontal: 16,
   },
   textInput: {
     marginTop: 20,
@@ -142,5 +177,17 @@ const styles = StyleSheet.create({
   subcategoryParent: {
     fontSize: 12,
     color: '#666',
+  }
+  ,
+  listWrapper: {
+    marginTop: 24,
+    flex: 1,
+    minHeight: 0, // Required on Android with flex children to prevent overflow
+  },
+  flatList: {
+    flex: 1,
+  },
+  flatListContent: {
+    paddingBottom: 24,
   }
 });
