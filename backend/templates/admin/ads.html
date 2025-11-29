@@ -284,12 +284,16 @@ async function loadFiles(adType) {
 
         container.innerHTML = files.map(file => `
             <div class="file-item">
-                <div>
-                    <span class="file-name">${file.name}</span>
-                    ${file.link ? `<small class="text-muted d-block">Link: <a href="${file.link}" target="_blank">${file.link}</a></small>` : ''}
-                    <span class="badge badge-file ${file.name.endsWith('.html') ? 'bg-primary' : file.name.endsWith('.css') ? 'bg-info' : file.name.endsWith('.js') ? 'bg-warning' : 'bg-secondary'} ms-2">
-                        ${file.name.split('.').pop().toUpperCase()}
-                    </span>
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    ${ file.name.endsWith('.png') || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.webp') || file.name.endsWith('.gif') || file.name.endsWith('.svg') ?
+                    `<img src="/ads-admin/assets/${location}/${encodeURIComponent(file.name)}" style="width:110px; max-height:70px; object-fit:cover; border-radius:6px;" alt="${file.name}" />` : '' }
+                    <div>
+                        <div><span class="file-name">${file.name}</span></div>
+                        ${file.link ? `<small class="text-muted d-block">Link: <a href="${file.link}" target="_blank">${file.link}</a></small>` : ''}
+                        <span class="badge badge-file ${file.name.endsWith('.html') ? 'bg-primary' : file.name.endsWith('.css') ? 'bg-info' : file.name.endsWith('.js') ? 'bg-warning' : 'bg-secondary'} ms-2">
+                            ${file.name.split('.').pop().toUpperCase()}
+                        </span>
+                    </div>
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-sm btn-danger" onclick="deleteFile('${adType}', '${file.name}')">
@@ -297,6 +301,9 @@ async function loadFiles(adType) {
                     </button>
                     ${ file.name.endsWith('.png') || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.webp') || file.name.endsWith('.gif') || file.name.endsWith('.svg') ?
                     `
+                    <button class="btn btn-sm btn-outline-secondary" onclick="openPreview('/ads-admin/assets/${location}/${encodeURIComponent(file.name)}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
                     <button class="btn btn-sm btn-outline-secondary" onclick="editImageLink('${adType}', '${file.name}')">
                         <i class="fas fa-link"></i>
                     </button>
