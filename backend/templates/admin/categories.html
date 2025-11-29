@@ -276,13 +276,17 @@
                     <tr>
                         <td><strong>{{ category.name }}</strong></td>
                         <td>
-                            <div class="d-flex flex-wrap gap-1">
-                                {% for tag in category.tags %}
-                                <span class="badge bg-primary">{{ tag }}</span>
-                                {% endfor %}
-                                {% if not category.tags %}
-                                <span class="text-muted small">Sem tags</span>
-                                {% endif %}
+                            <div class="d-flex align-items-center">
+                                <span class="me-2">{{ category.tags|length }} tags</span>
+                                <button class="btn btn-sm btn-outline-secondary js-manage-tags" 
+                                        data-id='{{ category._id|tojson }}' 
+                                        data-name='{{ category.name|tojson }}' 
+                                        data-tags='{{ category.tags|tojson }}' 
+                                    data-subcategories='{{ category.subcategories|tojson }}'
+                                    data-default-remote='{{ category.default_remote_execution|tojson }}'
+                                        title="Gerenciar tags">
+                                    <i class="fas fa-tags"></i>
+                                </button>
                             </div>
                         </td>
                         <td>
@@ -290,8 +294,8 @@
                                 {% for sub in category.subcategories %}
                                 {% set sub_name = sub.name if sub is mapping else sub %}
                                 {% set sub_tags = sub.tags if sub is mapping and sub.tags else [] %}
-                                <span class="badge bg-secondary" title="Tags: {{ sub_tags|join(', ') if sub_tags else 'Sem tags' }}">
-                                    {{ sub_name }}
+                                <span class="badge bg-secondary" title="{{ sub_tags|length }} tags">
+                                    {{ sub_name }} <small class="text-muted">({{ sub_tags|length }})</small>
                                 </span>
                                 {% endfor %}
                                 {% if not category.subcategories %}
@@ -495,6 +499,43 @@
 
 {% endblock %}
 
+<!-- Modal: Manage Tags -->
+<div class="modal fade" id="tagsManagerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gerenciar Tags</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="tagsManagerForm">
+                <div class="modal-body">
+                    <input type="hidden" name="name" id="tagsManagerCategoryName">
+                    <div class="mb-3">
+                        <label class="form-label">Tags da Categoria</label>
+                        <div id="tagsManagerCategoryTags" class="mb-2"></div>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="tagsManagerCategoryTagInput" placeholder="Adicionar tag e pressione Enter">
+                            <button class="btn btn-secondary" type="button" id="tagsManagerCategoryAddBtn">Adicionar</button>
+                        </div>
+                    </div>
+                    <hr>
+                    <div>
+                        <label class="form-label">Subcategorias</label>
+                        <div id="tagsManagerSubcategories"></div>
+                    </div>
+                    <input type="hidden" id="tagsManagerCategoryTagsHidden" name="tags">
+                    <input type="hidden" id="tagsManagerSubcategoriesDataHidden" name="subcategories_data">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+</div>
+
 {% block scripts %}
 <script>
 // Add subcategory field (CREATE)
@@ -663,6 +704,154 @@ document.addEventListener('click', (event) => {
     const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
 
     editCategory(id, name, tags, subcategories, defaultRemote);
+});
+
+// Manage tags modal
+document.addEventListener('click', (event) => {
+    const btn = event.target.closest('.js-manage-tags');
+    if (!btn) return;
+
+    const id = JSON.parse(btn.dataset.id);
+    const name = JSON.parse(btn.dataset.name);
+    const tags = JSON.parse(btn.dataset.tags || '[]');
+    const subcategories = JSON.parse(btn.dataset.subcategories || '[]');
+    const defaultRemote = JSON.parse(btn.dataset.defaultRemote || 'false');
+
+    // Populate modal fields
+    document.getElementById('tagsManagerForm').action = '/system-admin/categories/' + id + '/edit';
+    document.getElementById('tagsManagerCategoryName').value = name;
+    document.getElementById('tagsManagerCategoryTagsHidden').value = (tags || []).join(', ');
+    document.getElementById('tagsManagerCategoryTagInput').value = '';
+
+    // Render category tags
+    const categoryTagsContainer = document.getElementById('tagsManagerCategoryTags');
+    categoryTagsContainer.innerHTML = '';
+    const categoryTags = tags || [];
+    function addCategoryTagBadge(tag) {
+        const span = document.createElement('span');
+        span.className = 'badge bg-primary me-1';
+        span.textContent = tag + ' ';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn btn-sm btn-link text-light p-0 ms-1';
+        remove.innerHTML = '<i class="fas fa-times"></i>';
+        remove.addEventListener('click', () => {
+            const idx = categoryTags.indexOf(tag);
+            if (idx >= 0) categoryTags.splice(idx, 1);
+            categoryTagsContainer.removeChild(span);
+        });
+        span.appendChild(remove);
+        categoryTagsContainer.appendChild(span);
+    }
+    categoryTags.forEach(t => addCategoryTagBadge(t));
+
+    // Render subcategories and their tags
+    const subsContainer = document.getElementById('tagsManagerSubcategories');
+    subsContainer.innerHTML = '';
+    const localSubs = (subcategories || []).map(s => {
+        if (typeof s === 'string') return { name: s, tags: [] };
+        return { name: s.name || '', tags: s.tags || [] };
+    });
+    function createSubEntry(subObj, index) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mb-3 border rounded p-2';
+        const title = document.createElement('div');
+        title.innerHTML = `<strong>${subObj.name}</strong> <small class="text-muted">(${subObj.tags.length} tags)</small>`;
+        wrapper.appendChild(title);
+
+        const tagsDiv = document.createElement('div');
+        tagsDiv.className = 'my-2';
+        function addSubTagBadge(tag) {
+            const span = document.createElement('span');
+            span.className = 'badge bg-secondary me-1';
+            span.textContent = tag + ' ';
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'btn btn-sm btn-link text-light p-0 ms-1';
+            remove.innerHTML = '<i class="fas fa-times"></i>';
+            remove.addEventListener('click', () => {
+                const idx = subObj.tags.indexOf(tag);
+                if (idx >= 0) subObj.tags.splice(idx, 1);
+                tagsDiv.removeChild(span);
+            });
+            span.appendChild(remove);
+            tagsDiv.appendChild(span);
+        }
+        subObj.tags.forEach(t => addSubTagBadge(t));
+        wrapper.appendChild(tagsDiv);
+
+        const inputGroup = document.createElement('div');
+        inputGroup.className = 'input-group mb-1';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'form-control';
+        input.placeholder = 'Adicionar tag e pressione Enter';
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'btn btn-secondary';
+        addBtn.textContent = 'Adicionar';
+        addBtn.addEventListener('click', () => {
+            const value = input.value.trim();
+            if (!value) return;
+            const parts = value.split(',').map(p => p.trim()).filter(p => p);
+            parts.forEach(p => {
+                subObj.tags.push(p);
+                addSubTagBadge(p);
+            });
+            input.value = '';
+            title.innerHTML = `<strong>${subObj.name}</strong> <small class="text-muted">(${subObj.tags.length} tags)</small>`;
+        });
+        inputGroup.appendChild(input);
+        inputGroup.appendChild(addBtn);
+        wrapper.appendChild(inputGroup);
+
+        subsContainer.appendChild(wrapper);
+    }
+    localSubs.forEach((s, idx) => createSubEntry(s, idx));
+
+    // Category add tag handler
+    document.getElementById('tagsManagerCategoryAddBtn').onclick = function() {
+        const input = document.getElementById('tagsManagerCategoryTagInput');
+        const value = input.value.trim();
+        if (!value) return;
+        const parts = value.split(',').map(p => p.trim()).filter(p => p);
+        parts.forEach(p => {
+            if (!categoryTags.includes(p)) {
+                categoryTags.push(p);
+                addCategoryTagBadge(p);
+            }
+        });
+        input.value = '';
+    };
+
+    // On submit, prepare hidden fields and submit
+    const tagsForm = document.getElementById('tagsManagerForm');
+    tagsForm.onsubmit = function(e) {
+        e.preventDefault();
+        document.getElementById('tagsManagerCategoryTagsHidden').value = categoryTags.join(', ');
+        // Build subcategories payload
+        const subsPayload = localSubs.map(s => ({ name: s.name, tags: s.tags }));
+        document.getElementById('tagsManagerSubcategoriesDataHidden').value = JSON.stringify(subsPayload);
+        // default_remote_execution remains unchanged: submit with the existing value
+        // Create a dynamic hidden input with default_remote_execution if provided
+        if (typeof defaultRemote !== 'undefined') {
+            let el = document.querySelector('#tagsManagerForm input[name="default_remote_execution"]');
+            if (!el) {
+                el = document.createElement('input');
+                el.type = 'hidden';
+                el.name = 'default_remote_execution';
+                document.getElementById('tagsManagerForm').appendChild(el);
+            }
+            el.value = defaultRemote ? 'true' : 'false';
+        }
+        // Set the name field
+        document.getElementById('tagsManagerCategoryName').value = name;
+        // Submit the form
+        tagsForm.submit();
+    };
+
+    var modal = new bootstrap.Modal(document.getElementById('tagsManagerModal'));
+    modal.show();
 });
 </script>
 {% endblock %}
