@@ -34,6 +34,14 @@ ADS_BASE_DIR = Path(__file__).resolve().parents[3] / "ads"
 def get_ad_files(location: str) -> dict:
     """Read HTML, CSS, JS, and images from ad directory"""
     ad_dir = ADS_BASE_DIR / location
+    # Read optional metadata for images (meta.json)
+    images_meta = {}
+    meta_file = ad_dir / 'meta.json'
+    if meta_file.exists():
+        try:
+            images_meta = json.loads(meta_file.read_text(encoding='utf-8') or '{}').get('images', {})
+        except Exception:
+            images_meta = {}
 
     if not ad_dir.exists():
         return None
@@ -736,8 +744,7 @@ async def mobile_get_ad(ad_type: str):
             images_list.append({
                 "filename": key,
                 "content": asset.get("content"),
-                # optional link not present by default
-                "link": None,
+                "link": images_meta.get(key, {}).get('link') if isinstance(images_meta, dict) else None,
             })
 
     return JSONResponse({
