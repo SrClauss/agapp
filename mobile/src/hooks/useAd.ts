@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import client from '../api/axiosClient';
+import { AxiosError } from 'axios';
 
-const API_BASE_URL = 'https://agilizapro.net/system-admin/api/public/ads';
 const AD_CACHE_KEY = 'ad_cache_';
 const AD_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas
 
@@ -44,7 +45,7 @@ interface UseAdReturn {
  * ```
  */
 export function useAd(
-  adType: 'publi_client' | 'publi_professional' | 'banner_client' | 'banner_professional',
+  adType: 'publi_client' | 'publi_professional' | 'banner_client' | 'banner_professional' | 'banner_cliente_home',
   enabled: boolean = true,
   useCache: boolean = true
 ): UseAdReturn {
@@ -151,15 +152,11 @@ export function useAd(
       }
 
       // Verificar se o anúncio existe
-      const checkResponse = await fetch(`${API_BASE_URL}/${adType}/check`, {
+      const checkResponse = await client.get(`/system-admin/api/public/ads/${adType}/check`, {
         timeout: 5000,
-      } as any);
+      });
 
-      if (!checkResponse.ok) {
-        throw new Error(`HTTP error! status: ${checkResponse.status}`);
-      }
-
-      const checkData = await checkResponse.json();
+      const checkData = checkResponse.data;
 
       if (!checkData.exists) {
         setExists(false);
@@ -168,15 +165,11 @@ export function useAd(
       }
 
       // Carregar anúncio completo
-      const adResponse = await fetch(`${API_BASE_URL}/${adType}`, {
+      const adResponse = await client.get(`/system-admin/api/public/ads/${adType}`, {
         timeout: 10000,
-      } as any);
+      });
 
-      if (!adResponse.ok) {
-        throw new Error(`HTTP error! status: ${adResponse.status}`);
-      }
-
-      const adData: AdData = await adResponse.json();
+      const adData: AdData = adResponse.data;
 
       // Processar HTML com assets
       const html = buildHtmlWithAssets(adData);

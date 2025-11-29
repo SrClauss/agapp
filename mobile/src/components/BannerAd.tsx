@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
 
+type AdType = 'publi_client' | 'publi_professional' | 'banner_client' | 'banner_professional' | 'banner_cliente_home';
+
 interface BannerAdProps {
-  adType: string;
+  adType: AdType;
   height?: number;
   onPress?: () => void;
 }
@@ -20,7 +22,6 @@ interface BannerAdProps {
  * ```
  */
 export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
-
   const { adHtml, loading, exists } = useAd(adType);
 
   const handleMessage = (event: any) => {
