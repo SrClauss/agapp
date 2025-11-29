@@ -115,7 +115,10 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       // Fazer login nativo com Google
-      const idToken = await signIn();
+      const signInResult: any = await signIn();
+      const idToken = signInResult?.idToken;
+      const accessToken = signInResult?.accessToken;
+      const profile = signInResult?.userInfo;
 
       if (!idToken) {
         throw new Error('Não foi possível obter o token do Google');
@@ -125,7 +128,32 @@ export default function LoginScreen() {
       const data = await loginWithGoogle(idToken);
 
       await setToken(data.token);
-      const user = data.user || (await fetchCurrentUser(data.token));
+      let user = data.user || (await fetchCurrentUser(data.token));
+      // If backend didn't return photo, try to get from Google profile or accessToken
+      if (user && (!user.photo || user.photo === '')) {
+        // Try to use profile returned from native GoogleSignIn
+        const pictureFromProfile = profile?.user?.photo || profile?.user?.photoUrl || profile?.user?.photoURL || profile?.photo || profile?.picture;
+        if (pictureFromProfile) {
+          user = { ...user, photo: pictureFromProfile };
+        } else if (accessToken) {
+          // Fallback: fetch from Google Userinfo endpoint using accessToken
+          try {
+            const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            });
+            if (res.ok) {
+              const googleProfile = await res.json();
+              if (googleProfile?.picture) {
+                user = { ...user, photo: googleProfile.picture };
+              }
+            }
+          } catch (err) {
+            console.warn('Erro ao buscar foto do Google via API userinfo', err);
+          }
+        }
+      }
       setUser(user);
       // Register push token on successful Google login
       try {

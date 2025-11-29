@@ -73,10 +73,12 @@ export function useGoogleAuth() {
         // Pegar o ID Token
         const tokens = await GoogleSigninModule.getTokens();
         const idToken = tokens.idToken;
+        const accessToken = tokens.accessToken;
 
         console.log('ID Token obtido:', idToken ? 'Token encontrado ✓' : 'Token não encontrado ✗');
 
-        return idToken;
+        // return idToken + parsed userInfo and accessToken for fallback
+        return { idToken, accessToken, userInfo };
       } catch (error: any) {
         console.error('Erro no Google Sign-In:', error);
         throw error;
