@@ -130,10 +130,26 @@ export function useAd(
 
     try {
       const cacheKey = `${AD_CACHE_KEY}${adType}`;
+      // Avoid storing large image contents in AsyncStorage (can crash on Android / SQLite CursorWindow)
+      const safeData: any = { ...data };
+      if (safeData.assets) {
+        // Remove asset image contents (images may be large base64 strings)
+        Object.keys(safeData.assets).forEach((k) => {
+          if (safeData.assets[k]?.type === 'image') {
+            // Keep filename but drop content
+            safeData.assets[k] = { type: 'image', content: null };
+          }
+        });
+      }
+      if (safeData.images) {
+        // Keep only metadata for images (filename, link), drop base64 content
+        safeData.images = safeData.images.map((img: any) => ({ filename: img.filename, content: null, link: img.link }));
+      }
+
       await AsyncStorage.setItem(
         cacheKey,
         JSON.stringify({
-          data,
+          data: safeData,
           timestamp: Date.now(),
         })
       );
@@ -155,15 +171,19 @@ export function useAd(
       // Tentar carregar do cache primeiro
       const cachedAd = await loadAdFromCache();
       if (cachedAd) {
-        // If cached includes images, prefer them
+        // If cached includes images metadata, we might not have image content cached (we dropped it)
         if (cachedAd.images && cachedAd.images.length > 0) {
           const imgs = cachedAd.images.map(i => ({ uri: i.content, link: i.link }));
-          setImages(imgs);
-          setExists(true);
-          setLoading(false);
-          return;
+          // Note: cached image content may be null (we don't persist base64). UI should try to render only if uri is set.
+          const availableImgs = imgs.filter(i => i.uri);
+          if (availableImgs.length > 0) {
+            setImages(availableImgs);
+            setExists(true);
+            setLoading(false);
+            return;
+          }
+          // if no cached image URIs, fallthrough to load from server
         }
-
         const html = buildHtmlWithAssets(cachedAd);
         setAdHtml(html);
         setExists(true);
