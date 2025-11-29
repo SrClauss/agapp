@@ -534,6 +534,68 @@ async def admin_preview_html(
     return HTMLResponse(content=content)
 
 
+@admin_router.get("/preview-images/{location}")
+async def admin_preview_images(
+        location: Literal[
+                "publi_screen_client",
+                "publi_screen_professional",
+                "banner_client_home",
+                "banner_professional_home",
+        ],
+        current_user: User = Depends(get_current_user_from_request)
+):
+        """Return a small HTML page that displays images in a carousel for preview."""
+        if "admin" not in current_user.roles:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can preview ads")
+
+        ad_dir = ADS_BASE_DIR / location
+        if not ad_dir.exists():
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ad location not found")
+
+        images = []
+        for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
+                for img_file in ad_dir.glob(f"*.{ext}"):
+                        images.append(img_file.name)
+
+        if len(images) == 0:
+                return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+
+        # Build a basic HTML with a Bootstrap carousel (linked from CDN)
+        slides = []
+        for i, name in enumerate(images):
+                active = ' active' if i == 0 else ''
+                slides.append(f"<div class='carousel-item{active}'><img src='/ads-admin/assets/{location}/{name}' class='d-block w-100' alt='{name}'></div>")
+
+        html = f"""
+        <!DOCTYPE html>
+        <html lang='pt-br'>
+        <head>
+            <meta charset='utf-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1'>
+            <link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'>
+            <style>body {{ padding:10px; background: #f8f9fa; }}</style>
+        </head>
+        <body>
+            <div id='carouselPreview' class='carousel slide' data-bs-ride='carousel'>
+                <div class='carousel-inner'>
+                    {''.join(slides)}
+                </div>
+                <button class='carousel-control-prev' type='button' data-bs-target='#carouselPreview' data-bs-slide='prev'>
+                    <span class='carousel-control-prev-icon' aria-hidden='true'></span>
+                    <span class='visually-hidden'>Previous</span>
+                </button>
+                <button class='carousel-control-next' type='button' data-bs-target='#carouselPreview' data-bs-slide='next'>
+                    <span class='carousel-control-next-icon' aria-hidden='true'></span>
+                    <span class='visually-hidden'>Next</span>
+                </button>
+            </div>
+            <script src='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'></script>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html)
+
+
 @admin_router.get("/assets/{location}/{filename}")
 async def admin_serve_asset(
     location: Literal[

@@ -526,13 +526,40 @@ function closePreview() {
 
 function openPreviewLocation(adType) {
     const location = mapAdTypeToLocation(adType);
-    openPreview(`/ads-admin/preview-html/${location}`);
+    // Try HTML preview first, otherwise fallback to image preview
+    (async function() {
+        const token = localStorage.getItem('access_token');
+        try {
+            const resp = await fetch(`/ads-admin/preview-html/${location}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
+            if (resp.ok) {
+                openPreview(`/ads-admin/preview-html/${location}`);
+            } else {
+                // fallback to images preview (if available)
+                openPreview(`/ads-admin/preview-images/${location}`);
+            }
+        } catch (e) {
+            // network or CORS, fallback
+            openPreview(`/ads-admin/preview-images/${location}`);
+        }
+    })();
 }
 
 function openDesktopPreviewLocation(adType) {
     const location = mapAdTypeToLocation(adType);
-    // Open the admin preview HTML route in a new tab/window for desktop preview
-    openDesktopPreview(`/ads-admin/preview-html/${location}`);
+    (async function() {
+        const resp = await fetch(`/ads-admin/preview-html/${location}`, { method: 'GET', credentials: 'include' });
+        if (resp.ok) {
+            openDesktopPreview(`/ads-admin/preview-html/${location}`);
+        } else {
+            openDesktopPreview(`/ads-admin/preview-images/${location}`);
+        }
+    })();
 }
 
 // Load files on page load
