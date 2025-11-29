@@ -221,7 +221,7 @@ export function useClearAdCache() {
       } else {
         // Limpar cache de todos os anúncios
         const keys = await AsyncStorage.getAllKeys();
-        const adKeys = keys.filter(key => key.startsWith(AD_CACHE_KEY));
+        const adKeys = keys.filter((key: string) => key.startsWith(AD_CACHE_KEY));
         await AsyncStorage.multiRemove(adKeys);
       }
     } catch (err) {
