@@ -31,10 +31,11 @@ export default function AdScreen() {
     try {
       console.log('🔍 Buscando anúncio para:', location);
       console.log('🔑 Token presente:', !!token);
-      console.log('🌐 URL:', `${process.env.EXPO_PUBLIC_API_URL}/ads/${location}/index.html`);
+      // Use the JSON render endpoint (returns html, css, js, images)
+      console.log('🌐 URL:', `${process.env.EXPO_PUBLIC_API_URL}/ads/public/render/${location}`);
 
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/ads/${location}/index.html`
+        `${process.env.EXPO_PUBLIC_API_URL}/ads/public/render/${location}`
       );
 
       console.log('📡 Status HTTP:', response.status);
@@ -50,7 +51,7 @@ export default function AdScreen() {
         const data = await response.json();
         console.log('📦 Dados recebidos:', data);
 
-        // Backend agora retorna direto: { id, alias, type, html, css, js, images }
+        // Backend returns: { id, alias, type, html, css, js, images }
         if (data && data.html) {
           const adaptedAd: AdContent = {
             id: data.id,
