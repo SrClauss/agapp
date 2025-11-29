@@ -55,8 +55,10 @@
                         <td>
                             <div class="d-flex flex-wrap gap-1">
                                 {% for sub in category.subcategories %}
-                                <span class="badge bg-secondary" title="Tags: {{ sub.tags|join(', ') if sub.tags else 'Sem tags' }}">
-                                    {{ sub.name if sub.name is string else sub }}
+                                {% set sub_name = sub.name if sub is mapping else sub %}
+                                {% set sub_tags = sub.tags if sub is mapping and sub.tags else [] %}
+                                <span class="badge bg-secondary" title="Tags: {{ sub_tags|join(', ') if sub_tags else 'Sem tags' }}">
+                                    {{ sub_name }}
                                 </span>
                                 {% endfor %}
                                 {% if not category.subcategories %}
@@ -81,7 +83,7 @@
                         <td>{{ category.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                         <td>
                             <button class="btn btn-sm btn-info js-category-edit"
-                                    data-id='{{ category.id|tojson }}'
+                                    data-id='{{ category._id|tojson }}'
                                     data-name='{{ category.name|tojson }}'
                                     data-tags='{{ category.tags|tojson }}'
                                     data-subcategories='{{ category.subcategories|tojson }}'
@@ -89,7 +91,7 @@
                                 <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-secondary ms-1 js-category-info"
-                                    data-id='{{ category.id|tojson }}'
+                                    data-id='{{ category._id|tojson }}'
                                     data-name='{{ category.name|tojson }}'
                                     data-tags='{{ category.tags|tojson }}'
                                     data-subcategories='{{ category.subcategories|tojson }}'
@@ -98,7 +100,7 @@
                                     data-created-at='{{ category.created_at.strftime('%d/%m/%Y %H:%M')|tojson }}'>
                                 <i class="fas fa-info-circle"></i>
                             </button>
-                            <form method="POST" action="/system-admin/categories/{{ category.id }}/delete" style="display: inline;">
+                            <form method="POST" action="/system-admin/categories/{{ category._id }}/delete" style="display: inline;">
                                 <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir esta categoria?')">
                                     <i class="fas fa-trash"></i>
                                 </button>

@@ -543,10 +543,17 @@ async def admin_categories(
     categories = await get_categories(db, skip=skip, limit=limit, active_only=False)
     total_categories = await db.categories.count_documents({})
 
+    # Converter subcategorias para dict para serialização JSON no template
+    categories_dict = []
+    for cat in categories:
+        cat_dict = cat.dict()
+        cat_dict['_id'] = cat.id
+        categories_dict.append(cat_dict)
+
     return templates.TemplateResponse("admin/categories.html", {
         "request": request,
         "current_user": current_user,
-        "categories": categories,
+        "categories": categories_dict,
         "total": total_categories,
         "skip": skip,
         "limit": limit
