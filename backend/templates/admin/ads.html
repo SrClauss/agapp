@@ -286,13 +286,22 @@ async function loadFiles(adType) {
             <div class="file-item">
                 <div>
                     <span class="file-name">${file.name}</span>
+                    ${file.link ? `<small class="text-muted d-block">Link: <a href="${file.link}" target="_blank">${file.link}</a></small>` : ''}
                     <span class="badge badge-file ${file.name.endsWith('.html') ? 'bg-primary' : file.name.endsWith('.css') ? 'bg-info' : file.name.endsWith('.js') ? 'bg-warning' : 'bg-secondary'} ms-2">
                         ${file.name.split('.').pop().toUpperCase()}
                     </span>
                 </div>
-                <button class="btn btn-sm btn-danger" onclick="deleteFile('${adType}', '${file.name}')">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-danger" onclick="deleteFile('${adType}', '${file.name}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    ${ file.name.endsWith('.png') || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.webp') || file.name.endsWith('.gif') || file.name.endsWith('.svg') ?
+                    `
+                    <button class="btn btn-sm btn-outline-secondary" onclick="editImageLink('${adType}', '${file.name}')">
+                        <i class="fas fa-link"></i>
+                    </button>
+                    ` : '' }
+                </div>
             </div>
         `).join('');
     } catch (error) {
@@ -322,6 +331,31 @@ async function deleteFile(adType, filename) {
         loadFiles(adType);
     } catch (error) {
         showAlert('Erro ao deletar arquivo', 'danger');
+    }
+}
+
+// Edit image link metadata
+async function editImageLink(adType, filename) {
+    const location = mapAdTypeToLocation(adType);
+    const currentLink = prompt('Insira o link para o clique (deixe vazio para remover):');
+    try {
+        const token = localStorage.getItem('access_token');
+        const formData = new FormData();
+        formData.append('link', currentLink || '');
+        const response = await fetch(`/ads-admin/image/meta/${location}/${encodeURIComponent(filename)}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: formData
+        });
+        if (!response.ok) throw new Error('Failed to set image link');
+        showAlert('Link atualizado com sucesso', 'success');
+        loadFiles(adType);
+    } catch (error) {
+        console.error('Error setting image link', error);
+        showAlert('Erro ao atualizar link da imagem', 'danger');
     }
 }
 

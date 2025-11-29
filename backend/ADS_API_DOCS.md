@@ -41,6 +41,19 @@ GET https://agilizapro.net/system-admin/api/public/ads/publi_client
 }
 ```
 
+You may also receive an `images` array for image-only ads:
+
+```json
+{
+  "ad_type": "banner_client",
+  "type": "image",
+  "images": [
+    { "filename": "banner1.png", "content": "data:image/png;base64,iVBOR...", "link": "https://example.com" },
+    { "filename": "banner2.png", "content": "data:image/png;base64,QUJD...", "link": null }
+  ]
+}
+```
+
 **Status Codes:**
 - `200 OK` - Anúncio encontrado
 - `404 Not Found` - Anúncio não existe ou não está configurado

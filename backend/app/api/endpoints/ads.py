@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from typing import Literal
 from pathlib import Path
 import base64
+import json
 import shutil
 import os
 import tempfile
@@ -156,12 +157,21 @@ async def admin_list_ad_locations(
 
         # List all files in the directory
         files = []
+        # Load metadata if present
+        meta_file = ad_dir / 'meta.json'
+        images_meta = {}
+        if meta_file.exists():
+            try:
+                images_meta = json.loads(meta_file.read_text(encoding='utf-8') or '{}').get('images', {})
+            except Exception:
+                images_meta = {}
         if ad_dir.exists():
             for file in ad_dir.iterdir():
                 if file.is_file():
                     files.append({
                         "name": file.name,
-                        "size": file.stat().st_size
+                        "size": file.stat().st_size,
+                        "link": images_meta.get(file.name, {}).get('link') if isinstance(images_meta, dict) else None
                     })
 
         locations.append({
@@ -258,6 +268,55 @@ async def admin_upload_ad_file(
                 pass
 
     return {"message": f"File uploaded successfully to {location}", "filename": filename}
+
+
+@admin_router.post("/image/meta/{location}/{filename}")
+async def admin_set_image_meta(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    filename: str,
+    link: str = Form(None),
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """
+    Set metadata for an image (e.g., link) in the ad location. Stores metadata in meta.json under the ad folder.
+    """
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can set image metadata")
+
+    ad_dir = ADS_BASE_DIR / location
+    if not ad_dir.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ad location not found")
+
+    file_path = ad_dir / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found")
+
+    # Load existing meta.json if present
+    meta_file = ad_dir / 'meta.json'
+    meta = {}
+    if meta_file.exists():
+        try:
+            import json
+            meta = json.loads(meta_file.read_text(encoding='utf-8') or '{}')
+        except Exception:
+            meta = {}
+
+    images_meta = meta.get('images', {})
+    images_meta[filename] = { 'link': link }
+    meta['images'] = images_meta
+
+    # Write back
+    try:
+        meta_file.write_text(json.dumps(meta), encoding='utf-8')
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to write meta.json: {e}")
+
+    return { 'message': 'Image meta updated', 'filename': filename, 'link': link }
 
 
 # ============================================================================
