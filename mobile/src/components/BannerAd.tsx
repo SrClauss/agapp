@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet, Image, FlatList, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
 
@@ -67,6 +68,7 @@ export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
           }}
           renderItem={({ item }) => (
             <TouchableOpacity
+              style={[styles.itemContainer, { width, height }]}
               activeOpacity={0.8}
               onPress={() => {
                 if (item.link) {
@@ -75,10 +77,12 @@ export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
                 onPress?.();
               }}
             >
+              {/* Glassmorphic background */}
+              <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
               <Image
                 source={{ uri: item.uri }}
-                style={[styles.image, { width, height }]}
-                resizeMode="cover"
+                style={[styles.image, { width: width - 8, height: height - 8 }]}
+                resizeMode="contain"
               />
             </TouchableOpacity>
           )}
@@ -128,6 +132,11 @@ const styles = StyleSheet.create({
   },
   image: {
     height: '100%',
+  },
+  itemContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(240,240,240,0.6)',
   },
   dotsContainer: {
     position: 'absolute',

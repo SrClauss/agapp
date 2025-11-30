@@ -12,6 +12,7 @@ import {
   Linking,
   useWindowDimensions,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
 
@@ -102,19 +103,9 @@ export function PubliScreenAd({ userType, onClose, autoShow = true }: PubliScree
               setIndex(newIndex);
             }}
             renderItem={({ item }) => (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => {
-                  if (item.link) {
-                    Linking.openURL(item.link).catch(() => {});
-                  }
-                }}
-              >
-                <Image
-                  source={{ uri: item.uri }}
-                  style={[styles.image, { width, height: '100%' }]}
-                  resizeMode="contain"
-                />
+              <TouchableOpacity style={[styles.itemContainer, { width, height: '100%' }]} activeOpacity={0.8} onPress={() => item.link && Linking.openURL(item.link).catch(() => {})}>
+                <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
+                <Image source={{ uri: item.uri }} style={[styles.image, { width: width - 16, height: '100%' }]} resizeMode="contain" />
               </TouchableOpacity>
             )}
           />
@@ -173,5 +164,11 @@ const styles = StyleSheet.create({
   },
   image: {
     height: '100%'
+  }
+  ,
+  itemContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(240,240,240,0.6)'
   }
 });
