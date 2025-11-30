@@ -60,6 +60,7 @@ export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
           data={images}
           horizontal
           pagingEnabled
+          getItemLayout={(data, index) => ({ length: width, offset: width * index, index })}
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item, idx) => `${item.uri}-${idx}`}
           onMomentumScrollEnd={(ev) => {
