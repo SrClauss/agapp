@@ -48,7 +48,15 @@ def validate_image_dimensions(image_content: bytes) -> tuple[int, int, float]:
         if width <= 0 or height <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid image dimensions"
+                detail={
+                    "error": "invalid_dimensions",
+                    "message": "Dimensões da imagem inválidas",
+                    "details": {
+                        "width": width,
+                        "height": height,
+                        "explanation": "A imagem deve ter largura e altura maiores que zero"
+                    }
+                }
             )
 
         aspect_ratio = width / height
@@ -58,7 +66,14 @@ def validate_image_dimensions(image_content: bytes) -> tuple[int, int, float]:
             raise
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid image file: {str(e)}"
+            detail={
+                "error": "invalid_image_file",
+                "message": "Arquivo de imagem inválido ou corrompido",
+                "details": {
+                    "error_details": str(e),
+                    "suggestion": "Verifique se o arquivo é uma imagem válida (PNG, JPG, GIF, WebP ou SVG)"
+                }
+            }
         )
 
 
@@ -72,8 +87,23 @@ def validate_minimum_aspect_ratio(width: int, height: int, min_ratio: float = 3.
     if aspect_ratio < min_ratio:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Imagem rejeitada: proporção {width}x{height} ({aspect_ratio:.2f}:1) é menor que a mínima permitida de {min_ratio}:1. "
-                   f"Para banners, use imagens com largura pelo menos 3x a altura (ex: 1200x400, 1080x300, 900x300)."
+            detail={
+                "error": "invalid_aspect_ratio",
+                "message": "Imagem rejeitada: proporção incorreta para banners",
+                "details": {
+                    "uploaded_dimensions": f"{width}x{height}",
+                    "uploaded_ratio": f"{aspect_ratio:.2f}:1",
+                    "minimum_required": f"{min_ratio}:1",
+                    "explanation": f"Para banners, a largura deve ser pelo menos {min_ratio}x maior que a altura",
+                    "examples": [
+                        "1200x400 (3:1)",
+                        "1080x300 (3.6:1)",
+                        "900x300 (3:1)",
+                        "1500x400 (3.75:1)"
+                    ],
+                    "suggestion": f"Redimensione sua imagem para ter uma proporção mínima de {min_ratio}:1 (largura ÷ altura)"
+                }
+            }
         )
 
 
@@ -95,7 +125,7 @@ def validate_aspect_ratio_consistency(location: str, new_aspect_ratio: float, to
                 with open(img_file, "rb") as f:
                     img = Image.open(f)
                     w, h = img.size
-                    existing_ratios.append((w / h, img_file.name))
+                    existing_ratios.append((w / h, img_file.name, f"{w}x{h}"))
             except Exception:
                 continue  # Skip invalid images
 
@@ -103,16 +133,29 @@ def validate_aspect_ratio_consistency(location: str, new_aspect_ratio: float, to
         return  # No valid existing images
 
     # Compare new ratio with existing ones
-    for existing_ratio, filename in existing_ratios:
+    for existing_ratio, filename, dimensions in existing_ratios:
         ratio_diff = abs(new_aspect_ratio - existing_ratio)
 
         if ratio_diff > tolerance:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Imagem rejeitada: proporção {new_aspect_ratio:.2f}:1 é inconsistente com as imagens existentes no carrossel. "
-                       f"A imagem '{filename}' tem proporção {existing_ratio:.2f}:1. "
-                       f"Todas as imagens do carrossel devem ter a mesma proporção (tolerância: {tolerance*100:.0f}%). "
-                       f"Remova as imagens existentes ou use uma imagem com proporção similar."
+                detail={
+                    "error": "inconsistent_aspect_ratio",
+                    "message": "Imagem rejeitada: proporção inconsistente com o carrossel existente",
+                    "details": {
+                        "uploaded_ratio": f"{new_aspect_ratio:.2f}:1",
+                        "existing_image": filename,
+                        "existing_ratio": f"{existing_ratio:.2f}:1",
+                        "existing_dimensions": dimensions,
+                        "tolerance": f"{tolerance*100:.0f}%",
+                        "difference": f"{ratio_diff:.2f}",
+                        "explanation": "Todas as imagens no carrossel devem ter a mesma proporção para evitar deslocamento visual",
+                        "solutions": [
+                            f"Opção 1: Redimensione sua imagem para ter proporção {existing_ratio:.2f}:1 (similar a '{filename}')",
+                            "Opção 2: Delete todas as imagens existentes e faça upload de novas imagens com a mesma proporção"
+                        ]
+                    }
+                }
             )
 
 
@@ -321,17 +364,38 @@ async def admin_upload_ad_file(
     if file_ext not in allowed_extensions.get(file_type, []):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file extension for {file_type} file. Allowed: {allowed_extensions[file_type]}"
+            detail={
+                "error": "invalid_file_type",
+                "message": f"Extensão de arquivo inválida para tipo '{file_type}'",
+                "details": {
+                    "uploaded_file": file.filename,
+                    "uploaded_extension": file_ext,
+                    "allowed_extensions": allowed_extensions[file_type],
+                    "suggestion": f"Por favor, faça upload de um arquivo com uma das extensões permitidas: {', '.join(allowed_extensions[file_type])}"
+                }
+            }
         )
 
     # Read file content
     content = await file.read()
 
     # Max file size: 5MB
-    if len(content) > 5 * 1024 * 1024:
+    max_size_mb = 5
+    max_size_bytes = max_size_mb * 1024 * 1024
+    if len(content) > max_size_bytes:
+        actual_size_mb = len(content) / (1024 * 1024)
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="File size must be less than 5MB"
+            detail={
+                "error": "file_too_large",
+                "message": "Arquivo muito grande",
+                "details": {
+                    "uploaded_file": file.filename,
+                    "file_size": f"{actual_size_mb:.2f} MB",
+                    "max_allowed": f"{max_size_mb} MB",
+                    "suggestion": f"Reduza o tamanho do arquivo para no máximo {max_size_mb}MB antes de fazer upload"
+                }
+            }
         )
 
     # Validate image dimensions and aspect ratio (only for images)
