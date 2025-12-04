@@ -7,7 +7,7 @@
 <div class="mb-4">
     <h1 class="h3 mb-1 text-gray-800 fw-bold">Gerenciamento de Publicidade</h1>
     <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel</p>
-    <div class="mt-2"><span class="badge bg-secondary">ADS ADMIN UI: versão 67abdea (debug)</span></div>
+    <div class="mt-2"><span class="badge bg-secondary">ADS ADMIN UI: versão 4d5a888</span></div>
 </div>
 <!-- debug status removed -->
 
@@ -502,7 +502,46 @@ document.querySelectorAll('.upload-form').forEach(form => {
                             body: formData
                         });
 
-                if (!response.ok) throw new Error('Upload failed');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    const errorDetails = errorData.detail;
+
+                    // Format error message based on structured error response
+                    let errorMessage = 'Upload falhou';
+                    if (typeof errorDetails === 'object' && errorDetails.message) {
+                        errorMessage = `${file.name}: ${errorDetails.message}`;
+
+                        // Add detailed information if available
+                        if (errorDetails.details) {
+                            const details = errorDetails.details;
+                            const infoLines = [];
+
+                            if (details.uploaded_dimensions) infoLines.push(`Dimensões: ${details.uploaded_dimensions}`);
+                            if (details.uploaded_ratio) infoLines.push(`Proporção: ${details.uploaded_ratio}`);
+                            if (details.minimum_required) infoLines.push(`Mínimo requerido: ${details.minimum_required}`);
+                            if (details.existing_ratio) infoLines.push(`Proporção existente: ${details.existing_ratio}`);
+                            if (details.file_size) infoLines.push(`Tamanho: ${details.file_size}`);
+                            if (details.max_allowed) infoLines.push(`Máximo: ${details.max_allowed}`);
+
+                            if (infoLines.length > 0) {
+                                errorMessage += '\n' + infoLines.join(' | ');
+                            }
+
+                            if (details.suggestion) {
+                                errorMessage += `\n💡 ${details.suggestion}`;
+                            }
+
+                            if (details.examples && details.examples.length > 0) {
+                                errorMessage += `\n📋 Exemplos válidos: ${details.examples.join(', ')}`;
+                            }
+                        }
+                    } else if (typeof errorDetails === 'string') {
+                        errorMessage = `${file.name}: ${errorDetails}`;
+                    }
+
+                    showAlert(errorMessage, 'danger');
+                    throw new Error(errorMessage);
+                }
 
                 successCount++;
             } catch (error) {
