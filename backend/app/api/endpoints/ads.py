@@ -8,6 +8,8 @@ import shutil
 import os
 import tempfile
 import jinja2
+from PIL import Image
+import io
 
 from app.core.security import get_current_user, get_current_user_from_request
 from app.models.user import User
@@ -25,6 +27,93 @@ FIXED_AD_LOCATIONS = [
 ]
 
 ADS_BASE_DIR = Path(__file__).resolve().parents[3] / "ads"
+
+# Tolerance for aspect ratio comparison (5%)
+ASPECT_RATIO_TOLERANCE = 0.05
+
+
+# ============================================================================
+# IMAGE VALIDATION FUNCTIONS
+# ============================================================================
+
+def validate_image_dimensions(image_content: bytes) -> tuple[int, int, float]:
+    """
+    Validate image dimensions and return (width, height, aspect_ratio).
+    Raises HTTPException if image is invalid.
+    """
+    try:
+        img = Image.open(io.BytesIO(image_content))
+        width, height = img.size
+
+        if width <= 0 or height <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid image dimensions"
+            )
+
+        aspect_ratio = width / height
+        return width, height, aspect_ratio
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid image file: {str(e)}"
+        )
+
+
+def validate_minimum_aspect_ratio(width: int, height: int, min_ratio: float = 3.0) -> None:
+    """
+    Validate that image has minimum aspect ratio (width/height >= min_ratio).
+    Raises HTTPException if validation fails.
+    """
+    aspect_ratio = width / height
+
+    if aspect_ratio < min_ratio:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Imagem rejeitada: proporção {width}x{height} ({aspect_ratio:.2f}:1) é menor que a mínima permitida de {min_ratio}:1. "
+                   f"Para banners, use imagens com largura pelo menos 3x a altura (ex: 1200x400, 1080x300, 900x300)."
+        )
+
+
+def validate_aspect_ratio_consistency(location: str, new_aspect_ratio: float, tolerance: float = ASPECT_RATIO_TOLERANCE) -> None:
+    """
+    Validate that new image has same aspect ratio as existing images in the location.
+    Raises HTTPException if aspect ratios are inconsistent.
+    """
+    ad_dir = ADS_BASE_DIR / location
+
+    if not ad_dir.exists():
+        return  # No existing images, nothing to compare
+
+    # Check all existing images
+    existing_ratios = []
+    for ext in ["png", "jpg", "jpeg", "gif", "webp"]:
+        for img_file in ad_dir.glob(f"*.{ext}"):
+            try:
+                with open(img_file, "rb") as f:
+                    img = Image.open(f)
+                    w, h = img.size
+                    existing_ratios.append((w / h, img_file.name))
+            except Exception:
+                continue  # Skip invalid images
+
+    if not existing_ratios:
+        return  # No valid existing images
+
+    # Compare new ratio with existing ones
+    for existing_ratio, filename in existing_ratios:
+        ratio_diff = abs(new_aspect_ratio - existing_ratio)
+
+        if ratio_diff > tolerance:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Imagem rejeitada: proporção {new_aspect_ratio:.2f}:1 é inconsistente com as imagens existentes no carrossel. "
+                       f"A imagem '{filename}' tem proporção {existing_ratio:.2f}:1. "
+                       f"Todas as imagens do carrossel devem ter a mesma proporção (tolerância: {tolerance*100:.0f}%). "
+                       f"Remova as imagens existentes ou use uma imagem com proporção similar."
+            )
 
 
 # ============================================================================
@@ -244,6 +333,16 @@ async def admin_upload_ad_file(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="File size must be less than 5MB"
         )
+
+    # Validate image dimensions and aspect ratio (only for images)
+    if file_type == "image":
+        width, height, aspect_ratio = validate_image_dimensions(content)
+
+        # Validate minimum aspect ratio (3:1)
+        validate_minimum_aspect_ratio(width, height, min_ratio=3.0)
+
+        # Validate consistency with existing images in the same location
+        validate_aspect_ratio_consistency(location, aspect_ratio)
 
     # Create ad directory if it doesn't exist
     ad_dir = ADS_BASE_DIR / location
