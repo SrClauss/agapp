@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet, Image, FlatList, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
 
@@ -8,7 +7,8 @@ type AdType = 'publi_client' | 'publi_professional' | 'banner_client' | 'banner_
 
 interface BannerAdProps {
   adType: AdType;
-  height?: number;
+  minHeight?: number;
+  maxHeight?: number;
   onPress?: () => void;
 }
 
@@ -19,14 +19,25 @@ interface BannerAdProps {
  * @example
  * ```tsx
  * // Na tela home
- * <BannerAd adType="banner_client" height={120} />
+ * <BannerAd adType="banner_client" minHeight={100} maxHeight={200} />
  * ```
  */
-export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
+export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: BannerAdProps) {
   const { adHtml, images, loading, exists } = useAd(adType);
-  const { width } = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
   const flatListRef = useRef<FlatList<any> | null>(null);
   const [index, setIndex] = useState(0);
+  const [imageHeights, setImageHeights] = useState<number[]>([]);
+
+  // Container width: 90% of screen width
+  const containerWidth = screenWidth * 0.9;
+
+  // Calculate height based on image dimensions, clamped to min/max
+  const calculateHeight = (imgWidth: number, imgHeight: number): number => {
+    const ratio = imgHeight / imgWidth;
+    const calculatedHeight = containerWidth * ratio;
+    return Math.max(minHeight, Math.min(maxHeight, calculatedHeight));
+  };
 
   const handleMessage = (event: any) => {
     const message = event.nativeEvent.data;
@@ -44,32 +55,40 @@ export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
     return null;
   }
 
+  // Skeleton loader
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { height }]}>
-        <ActivityIndicator size="small" color="#007AFF" />
+      <View style={[styles.skeletonContainer, { width: containerWidth, height: minHeight }]}>
+        <View style={styles.skeletonShimmer} />
       </View>
     );
   }
 
+  // Get current height (use first image height if available, otherwise minHeight)
+  const currentHeight = imageHeights.length > 0 ? imageHeights[index] || minHeight : minHeight;
+
   return (
-    <View style={[styles.container, { height }]}>
+    <View style={[styles.container, { width: containerWidth, height: currentHeight }]}>
       {images && images.length > 0 ? (
         <FlatList
           ref={flatListRef}
           data={images}
           horizontal
           pagingEnabled
-          getItemLayout={(data, index) => ({ length: width, offset: width * index, index })}
+          getItemLayout={(data, idx) => ({
+            length: containerWidth,
+            offset: containerWidth * idx,
+            index: idx
+          })}
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item, idx) => `${item.uri}-${idx}`}
           onMomentumScrollEnd={(ev) => {
-            const newIndex = Math.round(ev.nativeEvent.contentOffset.x / width);
+            const newIndex = Math.round(ev.nativeEvent.contentOffset.x / containerWidth);
             setIndex(newIndex);
           }}
-          renderItem={({ item }) => (
+          renderItem={({ item, index: itemIndex }) => (
             <TouchableOpacity
-              style={[styles.itemContainer, { width, height }]}
+              style={[styles.itemContainer, { width: containerWidth }]}
               activeOpacity={0.8}
               onPress={() => {
                 if (item.link) {
@@ -78,12 +97,25 @@ export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
                 onPress?.();
               }}
             >
-              {/* Glassmorphic background */}
-              <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
               <Image
                 source={{ uri: item.uri }}
-                style={[styles.image, { width: width - 8, height: height - 8 }]}
-                resizeMode="contain"
+                style={[
+                  styles.image,
+                  {
+                    width: containerWidth,
+                    height: imageHeights[itemIndex] || minHeight
+                  }
+                ]}
+                resizeMode="cover"
+                onLoad={(e) => {
+                  const { width: imgW, height: imgH } = e.nativeEvent.source;
+                  const newHeight = calculateHeight(imgW, imgH);
+                  setImageHeights(prev => {
+                    const updated = [...prev];
+                    updated[itemIndex] = newHeight;
+                    return updated;
+                  });
+                }}
               />
             </TouchableOpacity>
           )}
@@ -115,29 +147,33 @@ export function BannerAd({ adType, height = 120, onPress }: BannerAdProps) {
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
     overflow: 'hidden',
     borderRadius: 8,
     marginVertical: 8,
+    alignSelf: 'center',
   },
-  loadingContainer: {
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+  skeletonContainer: {
+    alignSelf: 'center',
     borderRadius: 8,
+    marginVertical: 8,
+    backgroundColor: '#E1E9EE',
+    overflow: 'hidden',
+  },
+  skeletonShimmer: {
+    flex: 1,
+    backgroundColor: '#F2F8FC',
+    opacity: 0.5,
   },
   webview: {
     flex: 1,
     backgroundColor: 'transparent',
   },
   image: {
-    height: '100%',
+    borderRadius: 8,
   },
   itemContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(240,240,240,0.6)',
   },
   dotsContainer: {
     position: 'absolute',
@@ -152,10 +188,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     marginHorizontal: 4,
   },
   dotActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });
