@@ -76,6 +76,18 @@ export async function getProjects(params?: {
 }
 
 /**
+ * Get current user's projects (as client)
+ */
+export async function getMyProjects(status?: string): Promise<Project[]> {
+  const params: { status?: string } = {};
+  if (status) {
+    params.status = status;
+  }
+  const response = await client.get('/projects/my/projects', { params });
+  return response.data;
+}
+
+/**
  * Get a specific project by ID
  */
 export async function getProject(projectId: string): Promise<Project> {

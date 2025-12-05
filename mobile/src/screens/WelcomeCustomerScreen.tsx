@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { StyleSheet, View, FlatList, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, FlatList, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator } from 'react-native-paper';
 import type { ListRenderItemInfo } from 'react-native';
@@ -10,6 +10,7 @@ import useAuthStore, { AuthState } from '../stores/authStore';
 import LocationAvatar from '../components/LocationAvatar';
 import { BannerAd } from '../components/BannerAd';
 import CategoryGrid from '../components/CategoryGrid';
+import MyProjectsCarousel from '../components/MyProjectsCarousel';
 import { colors } from '../theme/colors';
 
 // Interface for Category endpoint: GET /categories
@@ -275,7 +276,10 @@ export default function WelcomeCustomerScreen() {
           </>
         )}
 
-        <Button mode="outlined" onPress={handleLogout} loading={loading} style={{ marginTop: 12 }}>
+        {/* User's Projects Carousel */}
+        <MyProjectsCarousel />
+
+        <Button mode="outlined" onPress={handleLogout} loading={loading} style={{ marginTop: 12, marginBottom: 24 }}>
           Sair
         </Button>
       </View>
