@@ -15,6 +15,8 @@ class Category(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = True
     default_remote_execution: bool = False  # Categorias que por padrão permitem execução remota
+    icon_name: Optional[str] = None  # Nome do ícone (ex: "hammer-wrench", "code-braces")
+    icon_library: Optional[str] = None  # Biblioteca do ícone (ex: "MaterialCommunityIcons", "FontAwesome")
 
     class Config:
         populate_by_name = True
@@ -24,6 +26,8 @@ class CategoryCreate(BaseModel):
     name: str
     tags: List[str] = []
     subcategories: List[Subcategory] = []
+    icon_name: Optional[str] = None
+    icon_library: Optional[str] = None
 
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
@@ -31,3 +35,5 @@ class CategoryUpdate(BaseModel):
     subcategories: Optional[List[Subcategory]] = None
     is_active: Optional[bool] = None
     default_remote_execution: Optional[bool] = None
+    icon_name: Optional[str] = None
+    icon_library: Optional[str] = None

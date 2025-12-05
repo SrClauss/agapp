@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Text } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { getCategories, CategoryAPI } from '../api/categories';
 import { useNavigation } from '@react-navigation/native';
+import DynamicIcon from './DynamicIcon';
 
-const ICON_MAP: { [key: string]: string } = {
-  'eletricista': 'hammer-wrench',
-  'encanador': 'pipe',
-  'pintura': 'format-paint',
-  'jardinagem': 'flower-outline',
-  'limpeza': 'broom',
-  'programacao': 'code-braces',
-  'instalacao tv': 'television-classic',
-  'conserto tv': 'television-classic-off',
+// Legacy ICON_MAP for backward compatibility when categories don't have icon_name/icon_library
+const LEGACY_ICON_MAP: { [key: string]: { name: string; library: string } } = {
+  'eletricista': { name: 'hammer-wrench', library: 'MaterialCommunityIcons' },
+  'encanador': { name: 'pipe', library: 'MaterialCommunityIcons' },
+  'pintura': { name: 'format-paint', library: 'MaterialCommunityIcons' },
+  'jardinagem': { name: 'flower-outline', library: 'MaterialCommunityIcons' },
+  'limpeza': { name: 'broom', library: 'MaterialCommunityIcons' },
+  'programacao': { name: 'code-braces', library: 'MaterialCommunityIcons' },
+  'instalacao tv': { name: 'television-classic', library: 'MaterialCommunityIcons' },
+  'conserto tv': { name: 'television-classic-off', library: 'MaterialCommunityIcons' },
 };
 
 function normalizeName(name: string) {
@@ -38,7 +39,20 @@ export default function CategoryGrid() {
     return () => { mounted = false; };
   }, []);
 
-  // Cleanup: use inline renderItem in FlatList and ensure stable unique keys
+  const getIconProps = (item: CategoryAPI) => {
+    // First, check if the category has icon data from the API
+    if (item.icon_name && item.icon_library) {
+      return { name: item.icon_name, library: item.icon_library };
+    }
+    // Fallback to legacy ICON_MAP for backward compatibility
+    const normalizedName = normalizeName(item.name);
+    const legacyIcon = LEGACY_ICON_MAP[normalizedName];
+    if (legacyIcon) {
+      return legacyIcon;
+    }
+    // No icon found
+    return { name: null, library: null };
+  };
 
   return (
     <View style={styles.container}>
@@ -47,21 +61,26 @@ export default function CategoryGrid() {
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item, index) => (item.id ? item.id : `${item.name}-${index}`)}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => navigation.navigate('SearchResults' as never, { category: item.name } as never)}
-          >
-            <View style={styles.iconContainer}>
-              {ICON_MAP[normalizeName(item.name)] ? (
-                <MaterialCommunityIcons name={ICON_MAP[normalizeName(item.name)]} size={28} color="#333" />
-              ) : (
-                <Text style={styles.iconText}>{item.name.charAt(0)}</Text>
-              )}
-            </View>
-            <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const iconProps = getIconProps(item);
+          return (
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => navigation.navigate('SearchResults' as never, { category: item.name } as never)}
+            >
+              <View style={styles.iconContainer}>
+                <DynamicIcon
+                  library={iconProps.library}
+                  name={iconProps.name}
+                  size={28}
+                  color="#333"
+                  fallbackText={item.name}
+                />
+              </View>
+              <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+            </TouchableOpacity>
+          );
+        }}
         contentContainerStyle={styles.listContent}
       />
     </View>
@@ -81,6 +100,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
-  iconText: { fontWeight: '700', color: '#333' },
   name: { fontSize: 12, textAlign: 'center' },
 });
