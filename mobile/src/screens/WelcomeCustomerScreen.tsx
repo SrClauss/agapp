@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import LocationAvatar from '../components/LocationAvatar';
 import { BannerAd } from '../components/BannerAd';
+import CategoryGrid from '../components/CategoryGrid';
 import { colors } from '../theme/colors';
 
 // Interface for Category endpoint: GET /categories
@@ -176,7 +177,7 @@ export default function WelcomeCustomerScreen() {
     </TouchableOpacity>
   ), [handleItemPress]);
 
-  const keyExtractor = useCallback((item: SubcategoryWithParent) => `${item.parent.id}-${item.name}`, []);
+  const keyExtractor = useCallback((item: SubcategoryWithParent, index: number) => `${item.parent.id || item.parent.name}-${item.name}-${index}`, []);
 
 
   return (
@@ -198,6 +199,9 @@ export default function WelcomeCustomerScreen() {
           left={<TextInput.Icon icon="magnify" />}
           right={loadingSuggestions ? <TextInput.Icon icon="loading" /> : undefined}
         />
+
+        {/* Grid de categorias */}
+        <CategoryGrid />
 
         {/* Lista suspensa de sugestões */}
         {showSuggestions && suggestions.length > 0 && (

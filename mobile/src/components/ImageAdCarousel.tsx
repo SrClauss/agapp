@@ -68,7 +68,7 @@ export default function ImageAdCarousel({ images, onClose }: ImageAdCarouselProp
       >
         {images.map((image, index) => (
           <TouchableOpacity
-            key={index}
+            key={`${image.uri ?? index}`}
             activeOpacity={image.link ? 0.8 : 1}
             onPress={handleImagePress}
             style={styles.imageContainer}
