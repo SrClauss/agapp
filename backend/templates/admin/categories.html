@@ -400,7 +400,7 @@
                         <label for="iconName" class="form-label">Ícone (Material Icons)</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="iconName" name="icon_name" placeholder="Ex: build">
-                            <button type="button" class="btn btn-outline-secondary" onclick="openIconSelector('add')">
+                            <button type="button" class="btn btn-outline-secondary" onclick="openIconSelector('add')" aria-label="Pesquisar ícones">
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>
@@ -477,7 +477,7 @@
                         <label for="editIconName" class="form-label">Ícone (Material Icons)</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="editIconName" name="icon_name" placeholder="Ex: build">
-                            <button type="button" class="btn btn-outline-secondary" onclick="openIconSelector('edit')">
+                            <button type="button" class="btn btn-outline-secondary" onclick="openIconSelector('edit')" aria-label="Pesquisar ícones">
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>
@@ -583,12 +583,12 @@
 </div>
 
 <!-- Modal: Icon Selector -->
-<div class="modal fade" id="iconSelectorModal" tabindex="-1" data-bs-backdrop="static">
+<div class="modal fade" id="iconSelectorModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="iconSelectorModalLabel">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Selecionar Ícone (Material Icons)</h5>
-                <button type="button" class="btn-close" onclick="closeIconSelector()"></button>
+                <h5 class="modal-title" id="iconSelectorModalLabel">Selecionar Ícone (Material Icons)</h5>
+                <button type="button" class="btn-close" onclick="closeIconSelector()" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
                 <div class="row mb-3">

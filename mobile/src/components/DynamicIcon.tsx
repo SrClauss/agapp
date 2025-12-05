@@ -30,9 +30,12 @@ export default function DynamicIcon({
   fallbackText = '?',
 }: DynamicIconProps) {
   // If we have a name, try to render the MaterialIcons icon
+  // Using ComponentProps to get the proper name type from MaterialIcons
   if (name) {
     try {
-      return <MaterialIcons name={name as any} size={size} color={color} />;
+      // MaterialIcons accepts string names that correspond to the icon set
+      // Type assertion is safe here as we handle invalid icons with fallback
+      return <MaterialIcons name={name as React.ComponentProps<typeof MaterialIcons>['name']} size={size} color={color} />;
     } catch (error) {
       // If icon rendering fails, fall through to fallback
       console.warn(`Failed to render icon: ${name}`, error);
