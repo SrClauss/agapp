@@ -14,21 +14,30 @@ import Octicons from '@expo/vector-icons/Octicons';
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
 import Zocial from '@expo/vector-icons/Zocial';
 
+// Define a common interface for icon component props
+interface IconComponentProps {
+  name: string;
+  size: number;
+  color: string;
+}
+
 // Map library names to icon components
-const ICON_LIBRARIES: { [key: string]: React.ComponentType<any> } = {
-  MaterialCommunityIcons,
-  FontAwesome,
-  FontAwesome5,
-  Ionicons,
-  MaterialIcons,
-  Feather,
-  AntDesign,
-  Entypo,
-  EvilIcons,
-  Foundation,
-  Octicons,
-  SimpleLineIcons,
-  Zocial,
+// Note: Using a generic type here because each icon library has its own specific
+// name types, but we need to support dynamic icon names from the API
+const ICON_LIBRARIES: Record<string, React.ComponentType<IconComponentProps>> = {
+  MaterialCommunityIcons: MaterialCommunityIcons as React.ComponentType<IconComponentProps>,
+  FontAwesome: FontAwesome as React.ComponentType<IconComponentProps>,
+  FontAwesome5: FontAwesome5 as React.ComponentType<IconComponentProps>,
+  Ionicons: Ionicons as React.ComponentType<IconComponentProps>,
+  MaterialIcons: MaterialIcons as React.ComponentType<IconComponentProps>,
+  Feather: Feather as React.ComponentType<IconComponentProps>,
+  AntDesign: AntDesign as React.ComponentType<IconComponentProps>,
+  Entypo: Entypo as React.ComponentType<IconComponentProps>,
+  EvilIcons: EvilIcons as React.ComponentType<IconComponentProps>,
+  Foundation: Foundation as React.ComponentType<IconComponentProps>,
+  Octicons: Octicons as React.ComponentType<IconComponentProps>,
+  SimpleLineIcons: SimpleLineIcons as React.ComponentType<IconComponentProps>,
+  Zocial: Zocial as React.ComponentType<IconComponentProps>,
 };
 
 interface DynamicIconProps {
@@ -55,7 +64,7 @@ export default function DynamicIcon({
     const IconComponent = ICON_LIBRARIES[library];
     if (IconComponent) {
       try {
-        return <IconComponent name={name as any} size={size} color={color} />;
+        return <IconComponent name={name} size={size} color={color} />;
       } catch (error) {
         // If icon rendering fails, fall through to fallback
         console.warn(`Failed to render icon: ${library}/${name}`, error);
