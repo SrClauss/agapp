@@ -30,6 +30,8 @@ ADS_BASE_DIR = Path(__file__).resolve().parents[3] / "ads"
 
 # Tolerance for aspect ratio comparison (5%)
 ASPECT_RATIO_TOLERANCE = 0.05
+IDEAL_BANNER_RATIO = 3.0
+MIN_BANNER_RATIO = 2.5
 
 
 # ============================================================================
@@ -77,14 +79,16 @@ def validate_image_dimensions(image_content: bytes) -> tuple[int, int, float]:
         )
 
 
-def validate_minimum_aspect_ratio(width: int, height: int, min_ratio: float = 3.0) -> None:
+def validate_minimum_aspect_ratio(width: int, height: int, min_ratio: float = MIN_BANNER_RATIO, tolerance: float = ASPECT_RATIO_TOLERANCE, ideal_ratio: float = IDEAL_BANNER_RATIO) -> None:
     """
     Validate that image has minimum aspect ratio (width/height >= min_ratio).
     Raises HTTPException if validation fails.
     """
     aspect_ratio = width / height
 
-    if aspect_ratio < min_ratio:
+    # Allow tolerance on minimum ratio (e.g., min_ratio * (1 - tolerance))
+    min_allowed = min_ratio * (1 - tolerance)
+    if aspect_ratio < min_allowed:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -92,16 +96,18 @@ def validate_minimum_aspect_ratio(width: int, height: int, min_ratio: float = 3.
                 "message": "Imagem rejeitada: proporção incorreta para banners",
                 "details": {
                     "uploaded_dimensions": f"{width}x{height}",
-                    "uploaded_ratio": f"{aspect_ratio:.2f}:1",
-                    "minimum_required": f"{min_ratio}:1",
-                    "explanation": f"Para banners, a largura deve ser pelo menos {min_ratio}x maior que a altura",
-                    "examples": [
-                        "1200x400 (3:1)",
-                        "1080x300 (3.6:1)",
-                        "900x300 (3:1)",
-                        "1500x400 (3.75:1)"
+                        "uploaded_ratio": f"{aspect_ratio:.2f}:1",
+                        "minimum_required": f"{min_ratio}:1",
+                        "minimum_allowed_with_tolerance": f"{min_allowed:.2f}:1",
+                        "ideal_ratio": f"{ideal_ratio:.2f}:1",
+                        "explanation": f"Para banners, a largura deve ser pelo menos {min_ratio}x maior que a altura",
+                        "examples": [
+                        "1200x480 (2.50:1)",
+                        "1080x420 (2.57:1)",
+                        "900x360 (2.50:1)",
+                        "1500x600 (2.50:1)"
                     ],
-                    "suggestion": f"Redimensione sua imagem para ter uma proporção mínima de {min_ratio}:1 (largura ÷ altura)"
+                    "suggestion": f"Recomendado: 3:1 (ideal). Aceita-se a partir de {min_ratio}:1; valores próximos a {min_ratio}:1 (+- {tolerance*100:.0f}%) também serão aceitos"
                 }
             }
         )
@@ -134,9 +140,11 @@ def validate_aspect_ratio_consistency(location: str, new_aspect_ratio: float, to
 
     # Compare new ratio with existing ones
     for existing_ratio, filename, dimensions in existing_ratios:
+        # Compare using relative percentage tolerance so that larger ratios get an appropriate interval
         ratio_diff = abs(new_aspect_ratio - existing_ratio)
+        ratio_relative = ratio_diff / existing_ratio if existing_ratio > 0 else ratio_diff
 
-        if ratio_diff > tolerance:
+        if ratio_relative > tolerance:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
@@ -147,8 +155,8 @@ def validate_aspect_ratio_consistency(location: str, new_aspect_ratio: float, to
                         "existing_image": filename,
                         "existing_ratio": f"{existing_ratio:.2f}:1",
                         "existing_dimensions": dimensions,
-                        "tolerance": f"{tolerance*100:.0f}%",
-                        "difference": f"{ratio_diff:.2f}",
+                        "tolerance": f"{tolerance*100:.0f}% (relative)",
+                        "difference": f"{ratio_relative*100:.2f}%",
                         "explanation": "Todas as imagens no carrossel devem ter a mesma proporção para evitar deslocamento visual",
                         "solutions": [
                             f"Opção 1: Redimensione sua imagem para ter proporção {existing_ratio:.2f}:1 (similar a '{filename}')",
@@ -402,11 +410,13 @@ async def admin_upload_ad_file(
     if file_type == "image":
         width, height, aspect_ratio = validate_image_dimensions(content)
 
-        # Validate minimum aspect ratio (3:1)
-        validate_minimum_aspect_ratio(width, height, min_ratio=3.0)
+        # Only apply the banner proportion restriction and consistency checks for BANNER locations
+        if "banner" in location:
+            # Validate minimum aspect ratio (2.5:1) with tolerance
+            validate_minimum_aspect_ratio(width, height, min_ratio=MIN_BANNER_RATIO)
 
-        # Validate consistency with existing images in the same location
-        validate_aspect_ratio_consistency(location, aspect_ratio)
+            # Validate consistency with existing images in the same location (for banners only)
+            validate_aspect_ratio_consistency(location, aspect_ratio)
 
     # Create ad directory if it doesn't exist
     ad_dir = ADS_BASE_DIR / location
