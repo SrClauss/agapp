@@ -262,6 +262,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <th>Ícone</th>
                         <th>Categoria Principal</th>
                         <th>Tags</th>
                         <th>Subcategorias</th>
@@ -274,6 +275,18 @@
                 <tbody>
                     {% for category in categories %}
                     <tr>
+                        <td>
+                            {% if category.icon_name and category.icon_library %}
+                            <span class="category-icon-preview" 
+                                  data-icon="{{ category.icon_name }}" 
+                                  data-library="{{ category.icon_library }}"
+                                  title="{{ category.icon_library }}: {{ category.icon_name }}">
+                                <i class="fas fa-icons" style="font-size: 1.5rem; color: #667eea;"></i>
+                            </span>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
                         <td><strong>{{ category.name }}</strong></td>
                         <td>
                             <div class="d-flex align-items-center">
@@ -326,6 +339,8 @@
                                         data-tags='{{ category.tags|tojson }}'
                                         data-subcategories='{{ category.subcategories|tojson }}'
                                         data-default-remote='{{ category.default_remote_execution|tojson }}'
+                                        data-icon-name='{{ (category.icon_name or "")|tojson }}'
+                                        data-icon-library='{{ (category.icon_library or "")|tojson }}'
                                         title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -335,6 +350,8 @@
                                         data-tags='{{ category.tags|tojson }}'
                                         data-subcategories='{{ category.subcategories|tojson }}'
                                         data-default-remote='{{ category.default_remote_execution|tojson }}'
+                                        data-icon-name='{{ (category.icon_name or "")|tojson }}'
+                                        data-icon-library='{{ (category.icon_library or "")|tojson }}'
                                         data-is-active='{{ category.is_active|tojson }}'
                                         data-created-at='{{ category.created_at.strftime('%d/%m/%Y %H:%M')|tojson }}'
                                         title="Informações">
@@ -354,7 +371,7 @@
                     {% endfor %}
                     {% if not categories %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                             Nenhuma categoria encontrada.
                         </td>
                     </tr>
@@ -383,6 +400,44 @@
                         <label for="categoryTags" class="form-label">Tags da Categoria (separadas por vírgula)</label>
                         <input type="text" class="form-control" id="categoryTags" name="tags" placeholder="Ex: reparo, conserto, eletrônica, manutenção">
                         <small class="text-muted">Essas tags ajudam na busca. Separe por vírgulas.</small>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="iconLibrary" class="form-label">Biblioteca de Ícones</label>
+                            <select class="form-select" id="iconLibrary" name="icon_library">
+                                <option value="">Selecione uma biblioteca</option>
+                                <option value="MaterialCommunityIcons">MaterialCommunityIcons</option>
+                                <option value="FontAwesome">FontAwesome</option>
+                                <option value="FontAwesome5">FontAwesome5</option>
+                                <option value="Ionicons">Ionicons</option>
+                                <option value="MaterialIcons">MaterialIcons</option>
+                                <option value="Feather">Feather</option>
+                                <option value="AntDesign">AntDesign</option>
+                                <option value="Entypo">Entypo</option>
+                                <option value="EvilIcons">EvilIcons</option>
+                                <option value="Foundation">Foundation</option>
+                                <option value="Octicons">Octicons</option>
+                                <option value="SimpleLineIcons">SimpleLineIcons</option>
+                                <option value="Zocial">Zocial</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="iconName" class="form-label">Nome do Ícone</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="iconName" name="icon_name" placeholder="Ex: hammer-wrench">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#iconSelectorModal" onclick="openIconSelector('add')">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Pesquise ou digite o nome do ícone</small>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="iconPreviewContainer" style="display: none;">
+                        <label class="form-label">Pré-visualização do Ícone</label>
+                        <div class="p-3 bg-light rounded d-flex align-items-center">
+                            <span id="iconPreview" class="me-2" style="font-size: 2rem;"></span>
+                            <span id="iconPreviewText" class="text-muted"></span>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Subcategorias com Tags</label>
@@ -443,6 +498,44 @@
                         <input type="text" class="form-control" id="editCategoryTags" name="tags">
                         <small class="text-muted">Essas tags ajudam na busca. Separe por vírgulas.</small>
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="editIconLibrary" class="form-label">Biblioteca de Ícones</label>
+                            <select class="form-select" id="editIconLibrary" name="icon_library">
+                                <option value="">Selecione uma biblioteca</option>
+                                <option value="MaterialCommunityIcons">MaterialCommunityIcons</option>
+                                <option value="FontAwesome">FontAwesome</option>
+                                <option value="FontAwesome5">FontAwesome5</option>
+                                <option value="Ionicons">Ionicons</option>
+                                <option value="MaterialIcons">MaterialIcons</option>
+                                <option value="Feather">Feather</option>
+                                <option value="AntDesign">AntDesign</option>
+                                <option value="Entypo">Entypo</option>
+                                <option value="EvilIcons">EvilIcons</option>
+                                <option value="Foundation">Foundation</option>
+                                <option value="Octicons">Octicons</option>
+                                <option value="SimpleLineIcons">SimpleLineIcons</option>
+                                <option value="Zocial">Zocial</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editIconName" class="form-label">Nome do Ícone</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="editIconName" name="icon_name" placeholder="Ex: hammer-wrench">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#iconSelectorModal" onclick="openIconSelector('edit')">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Pesquise ou digite o nome do ícone</small>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="editIconPreviewContainer" style="display: none;">
+                        <label class="form-label">Pré-visualização do Ícone</label>
+                        <div class="p-3 bg-light rounded d-flex align-items-center">
+                            <span id="editIconPreview" class="me-2" style="font-size: 2rem;"></span>
+                            <span id="editIconPreviewText" class="text-muted"></span>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Subcategorias com Tags</label>
                         <div id="editSubcategoriesContainer">
@@ -478,6 +571,7 @@
             </div>
             <div class="modal-body">
                 <p><strong>Nome:</strong> <span id="infoCategoryName"></span></p>
+                <p><strong>Ícone:</strong> <span id="infoCategoryIcon"></span></p>
                 <p><strong>Tags:</strong> <span id="infoCategoryTags"></span></p>
                 <p><strong>Subcategorias:</strong></p>
                 <div id="infoCategorySubcategories" class="ms-3"></div>
@@ -529,6 +623,53 @@
                     <button type="submit" class="btn btn-primary">Salvar</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Icon Selector -->
+<div class="modal fade" id="iconSelectorModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Selecionar Ícone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="iconSelectorLibrary" class="form-label">Biblioteca</label>
+                        <select class="form-select" id="iconSelectorLibrary">
+                            <option value="MaterialCommunityIcons">MaterialCommunityIcons</option>
+                            <option value="FontAwesome">FontAwesome</option>
+                            <option value="FontAwesome5">FontAwesome5</option>
+                            <option value="Ionicons">Ionicons</option>
+                            <option value="MaterialIcons">MaterialIcons</option>
+                            <option value="Feather">Feather</option>
+                            <option value="AntDesign">AntDesign</option>
+                            <option value="Entypo">Entypo</option>
+                            <option value="EvilIcons">EvilIcons</option>
+                            <option value="Foundation">Foundation</option>
+                            <option value="Octicons">Octicons</option>
+                            <option value="SimpleLineIcons">SimpleLineIcons</option>
+                            <option value="Zocial">Zocial</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label for="iconSelectorSearch" class="form-label">Pesquisar ícones</label>
+                        <input type="text" class="form-control" id="iconSelectorSearch" placeholder="Digite para pesquisar...">
+                    </div>
+                </div>
+                <div class="icon-grid-container" style="max-height: 400px; overflow-y: auto;">
+                    <div id="iconGrid" class="row g-2">
+                        <!-- Icons will be loaded here -->
+                    </div>
+                </div>
+                <p class="text-muted mt-2 small">
+                    <i class="fas fa-info-circle"></i> 
+                    Clique em um ícone para selecioná-lo. Você pode pesquisar pelo nome do ícone.
+                </p>
+            </div>
         </div>
     </div>
 </div>
@@ -623,10 +764,16 @@ if (editCategoryFormEl) {
 }
 
 // Edit category
-function editCategory(id, name, tags, subcategories, defaultRemoteExecution) {
+function editCategory(id, name, tags, subcategories, defaultRemoteExecution, iconName, iconLibrary) {
     document.getElementById('editCategoryName').value = name;
     document.getElementById('editCategoryTags').value = tags.join(', ');
     document.getElementById('editDefaultRemoteExecution').checked = defaultRemoteExecution || false;
+    document.getElementById('editIconName').value = iconName || '';
+    document.getElementById('editIconLibrary').value = iconLibrary || '';
+    
+    // Update icon preview
+    updateIconPreview('edit', iconName, iconLibrary);
+    
     const formEl = document.getElementById('editCategoryForm');
     if (formEl) formEl.action = '/system-admin/categories/' + id + '/edit';
 
@@ -672,10 +819,20 @@ document.addEventListener('click', (event) => {
     const tags = JSON.parse(btn.dataset.tags);
     const subcategories = JSON.parse(btn.dataset.subcategories);
     const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
+    const iconName = JSON.parse(btn.dataset.iconName || '""');
+    const iconLibrary = JSON.parse(btn.dataset.iconLibrary || '""');
     const isActive = JSON.parse(btn.dataset.isActive);
     const createdAt = JSON.parse(btn.dataset.createdAt);
 
     document.getElementById('infoCategoryName').textContent = name;
+    
+    // Display icon info
+    if (iconName && iconLibrary) {
+        document.getElementById('infoCategoryIcon').innerHTML = `<span class="badge bg-info">${iconLibrary}: ${iconName}</span>`;
+    } else {
+        document.getElementById('infoCategoryIcon').innerHTML = '<span class="text-muted">Nenhum ícone definido</span>';
+    }
+    
     document.getElementById('infoCategoryTags').innerHTML = tags.map(t => `<span class="badge bg-primary me-1">${t}</span>`).join('') || '<span class="text-muted">Sem tags</span>';
 
     // Display subcategories with their tags
@@ -708,8 +865,10 @@ document.addEventListener('click', (event) => {
     const tags = JSON.parse(btn.dataset.tags);
     const subcategories = JSON.parse(btn.dataset.subcategories);
     const defaultRemote = JSON.parse(btn.dataset.defaultRemote);
+    const iconName = JSON.parse(btn.dataset.iconName || '""');
+    const iconLibrary = JSON.parse(btn.dataset.iconLibrary || '""');
 
-    editCategory(id, name, tags, subcategories, defaultRemote);
+    editCategory(id, name, tags, subcategories, defaultRemote, iconName, iconLibrary);
 });
 
 // Manage tags modal
@@ -887,5 +1046,322 @@ document.addEventListener('click', (event) => {
     var modal = new bootstrap.Modal(document.getElementById('tagsManagerModal'));
     modal.show();
 });
+
+// ============================================
+// Icon Selector Functionality
+// ============================================
+
+// Common icons for each library
+const ICON_LIBRARIES = {
+    'MaterialCommunityIcons': [
+        'hammer-wrench', 'pipe', 'format-paint', 'flower-outline', 'broom', 'code-braces',
+        'television-classic', 'television-classic-off', 'car', 'car-wrench', 'washing-machine',
+        'fridge', 'air-conditioner', 'tools', 'wrench', 'screwdriver', 'saw-blade',
+        'hammer', 'pliers', 'lightning-bolt', 'water', 'fire', 'leaf', 'tree',
+        'home', 'home-variant', 'office-building', 'store', 'hospital', 'school',
+        'account', 'account-group', 'briefcase', 'laptop', 'cellphone', 'tablet',
+        'camera', 'video', 'microphone', 'music', 'palette', 'brush', 'pencil',
+        'book', 'book-open', 'bookshelf', 'newspaper', 'file-document', 'folder',
+        'calculator', 'clock', 'calendar', 'chart-line', 'chart-bar', 'chart-pie',
+        'cart', 'shopping', 'truck', 'airplane', 'train', 'bus', 'bicycle', 'walk',
+        'silverware-fork-knife', 'food', 'pizza', 'coffee', 'glass-cocktail', 'cup',
+        'dog', 'cat', 'paw', 'heart', 'star', 'bell', 'gift', 'party-popper',
+        'medical-bag', 'pill', 'needle', 'stethoscope', 'tooth', 'eye', 'ear-hearing',
+        'dumbbell', 'yoga', 'run', 'swim', 'bike', 'basketball', 'soccer', 'football',
+        'shield-check', 'lock', 'key', 'security', 'cctv', 'alarm-light',
+        'wifi', 'bluetooth', 'signal', 'antenna', 'satellite-uplink', 'router-wireless',
+        'printer', 'scanner', 'projector', 'monitor', 'keyboard', 'mouse',
+        'solar-panel', 'solar-power', 'wind-turbine', 'hydro-power', 'recycle',
+        'trash-can', 'delete', 'content-cut', 'content-copy', 'content-paste',
+        'arrow-left', 'arrow-right', 'arrow-up', 'arrow-down', 'check', 'close',
+        'plus', 'minus', 'information', 'help-circle', 'alert', 'alert-circle',
+        'magnify', 'filter', 'sort', 'menu', 'dots-vertical', 'dots-horizontal',
+        'cog', 'tune', 'power', 'refresh', 'sync', 'upload', 'download', 'cloud',
+        'email', 'phone', 'message', 'chat', 'comment', 'forum', 'share', 'link'
+    ],
+    'FontAwesome': [
+        'home', 'user', 'users', 'cog', 'wrench', 'hammer', 'screwdriver', 'tools',
+        'car', 'truck', 'bicycle', 'bus', 'plane', 'train', 'ship', 'rocket',
+        'building', 'hospital', 'hotel', 'store', 'school', 'university',
+        'laptop', 'desktop', 'mobile', 'tablet', 'tv', 'camera', 'video-camera',
+        'book', 'file', 'folder', 'newspaper', 'envelope', 'phone', 'fax',
+        'calendar', 'clock', 'bell', 'flag', 'map', 'map-marker', 'globe',
+        'heart', 'star', 'thumbs-up', 'thumbs-down', 'comment', 'comments',
+        'search', 'filter', 'sort', 'chart-bar', 'chart-line', 'chart-pie',
+        'shopping-cart', 'credit-card', 'money', 'dollar', 'euro', 'gift',
+        'music', 'microphone', 'headphones', 'gamepad', 'puzzle-piece',
+        'paint-brush', 'pencil', 'cut', 'copy', 'paste', 'eraser', 'magic',
+        'medkit', 'stethoscope', 'heartbeat', 'pills', 'syringe', 'thermometer',
+        'leaf', 'tree', 'flower', 'bug', 'paw', 'dog', 'cat', 'fish',
+        'bolt', 'fire', 'water', 'sun', 'moon', 'cloud', 'umbrella', 'snowflake',
+        'lock', 'unlock', 'key', 'shield', 'eye', 'eye-slash', 'ban', 'check',
+        'times', 'plus', 'minus', 'exclamation', 'question', 'info', 'warning'
+    ],
+    'FontAwesome5': [
+        'home', 'user', 'users', 'cog', 'wrench', 'hammer', 'screwdriver', 'tools',
+        'car', 'truck', 'bicycle', 'bus', 'plane', 'train', 'ship', 'rocket',
+        'building', 'hospital', 'hotel', 'store', 'school', 'university',
+        'laptop', 'desktop', 'mobile-alt', 'tablet-alt', 'tv', 'camera', 'video',
+        'book', 'file-alt', 'folder', 'newspaper', 'envelope', 'phone', 'fax',
+        'calendar', 'clock', 'bell', 'flag', 'map', 'map-marker-alt', 'globe',
+        'heart', 'star', 'thumbs-up', 'thumbs-down', 'comment', 'comments',
+        'search', 'filter', 'sort', 'chart-bar', 'chart-line', 'chart-pie',
+        'shopping-cart', 'credit-card', 'money-bill', 'dollar-sign', 'euro-sign', 'gift',
+        'music', 'microphone', 'headphones', 'gamepad', 'puzzle-piece',
+        'paint-brush', 'pencil-alt', 'cut', 'copy', 'paste', 'eraser', 'magic',
+        'medkit', 'stethoscope', 'heartbeat', 'pills', 'syringe', 'thermometer',
+        'leaf', 'tree', 'seedling', 'bug', 'paw', 'dog', 'cat', 'fish',
+        'bolt', 'fire', 'tint', 'sun', 'moon', 'cloud', 'umbrella', 'snowflake',
+        'lock', 'unlock', 'key', 'shield-alt', 'eye', 'eye-slash', 'ban', 'check',
+        'times', 'plus', 'minus', 'exclamation', 'question', 'info-circle', 'exclamation-triangle'
+    ],
+    'Ionicons': [
+        'home', 'home-outline', 'person', 'person-outline', 'people', 'people-outline',
+        'settings', 'settings-outline', 'construct', 'construct-outline', 'hammer', 'hammer-outline',
+        'car', 'car-outline', 'bus', 'bus-outline', 'airplane', 'airplane-outline', 'boat', 'boat-outline',
+        'business', 'business-outline', 'storefront', 'storefront-outline', 'school', 'school-outline',
+        'laptop', 'laptop-outline', 'desktop', 'desktop-outline', 'phone-portrait', 'tablet-portrait',
+        'book', 'book-outline', 'document', 'document-outline', 'folder', 'folder-outline',
+        'calendar', 'calendar-outline', 'time', 'time-outline', 'alarm', 'alarm-outline',
+        'heart', 'heart-outline', 'star', 'star-outline', 'chatbubble', 'chatbubble-outline',
+        'search', 'search-outline', 'filter', 'filter-outline', 'stats-chart', 'stats-chart-outline',
+        'cart', 'cart-outline', 'card', 'card-outline', 'cash', 'cash-outline', 'gift', 'gift-outline',
+        'musical-notes', 'musical-notes-outline', 'mic', 'mic-outline', 'headset', 'headset-outline',
+        'brush', 'brush-outline', 'pencil', 'pencil-outline', 'color-palette', 'color-palette-outline',
+        'medkit', 'medkit-outline', 'pulse', 'pulse-outline', 'fitness', 'fitness-outline',
+        'leaf', 'leaf-outline', 'paw', 'paw-outline', 'fish', 'fish-outline',
+        'flash', 'flash-outline', 'flame', 'flame-outline', 'water', 'water-outline',
+        'lock-closed', 'lock-closed-outline', 'key', 'key-outline', 'shield-checkmark', 'shield-checkmark-outline',
+        'checkmark', 'checkmark-outline', 'close', 'close-outline', 'add', 'add-outline', 'remove', 'remove-outline'
+    ],
+    'MaterialIcons': [
+        'home', 'person', 'group', 'settings', 'build', 'handyman', 'hardware',
+        'directions-car', 'local-shipping', 'directions-bike', 'directions-bus', 'flight', 'directions-train',
+        'business', 'store', 'local-hospital', 'school', 'apartment', 'house',
+        'laptop', 'computer', 'smartphone', 'tablet', 'tv', 'camera-alt', 'videocam',
+        'menu-book', 'description', 'folder', 'newspaper', 'email', 'phone', 'fax',
+        'calendar-today', 'access-time', 'notifications', 'flag', 'map', 'place', 'public',
+        'favorite', 'star', 'thumb-up', 'thumb-down', 'chat', 'forum',
+        'search', 'filter-list', 'sort', 'bar-chart', 'show-chart', 'pie-chart',
+        'shopping-cart', 'credit-card', 'attach-money', 'euro', 'card-giftcard',
+        'music-note', 'mic', 'headset', 'sports-esports', 'extension',
+        'brush', 'edit', 'content-cut', 'content-copy', 'content-paste',
+        'local-hospital', 'healing', 'favorite-border', 'medical-services',
+        'eco', 'park', 'pets', 'bug-report',
+        'flash-on', 'whatshot', 'water-drop', 'wb-sunny', 'nights-stay', 'cloud', 'umbrella', 'ac-unit',
+        'lock', 'lock-open', 'vpn-key', 'security', 'visibility', 'visibility-off', 'block', 'check',
+        'close', 'add', 'remove', 'info', 'help', 'warning', 'error'
+    ],
+    'Feather': [
+        'home', 'user', 'users', 'settings', 'tool', 'truck', 'briefcase',
+        'monitor', 'smartphone', 'tablet', 'tv', 'camera', 'video',
+        'book', 'file', 'folder', 'mail', 'phone', 'message-square',
+        'calendar', 'clock', 'bell', 'flag', 'map', 'map-pin', 'globe',
+        'heart', 'star', 'thumbs-up', 'thumbs-down', 'message-circle',
+        'search', 'filter', 'bar-chart', 'trending-up', 'pie-chart',
+        'shopping-cart', 'credit-card', 'dollar-sign', 'gift', 'package',
+        'music', 'mic', 'headphones', 'speaker', 'radio',
+        'edit', 'pen-tool', 'scissors', 'copy', 'clipboard',
+        'activity', 'heart', 'thermometer', 'droplet',
+        'sun', 'moon', 'cloud', 'cloud-rain', 'wind', 'umbrella',
+        'lock', 'unlock', 'key', 'shield', 'eye', 'eye-off', 'slash', 'check',
+        'x', 'plus', 'minus', 'info', 'help-circle', 'alert-triangle', 'alert-circle'
+    ],
+    'AntDesign': [
+        'home', 'user', 'team', 'setting', 'tool', 'car', 'rocket',
+        'laptop', 'desktop', 'mobile', 'tablet', 'camera', 'videocamera',
+        'book', 'file', 'folder', 'mail', 'phone', 'message',
+        'calendar', 'clockcircle', 'bell', 'flag', 'enviromento', 'global',
+        'heart', 'star', 'like', 'dislike', 'wechat',
+        'search', 'filter', 'barchart', 'linechart', 'piechart',
+        'shoppingcart', 'creditcard', 'dollar', 'gift', 'skin',
+        'sound', 'customerservice', 'playcircle', 'pausecircle',
+        'edit', 'highlight', 'scissor', 'copy', 'snippets',
+        'medicinebox', 'experiment', 'fire',
+        'bulb', 'thunderbolt', 'cloud', 'clouddownload', 'cloudupload',
+        'lock', 'unlock', 'key', 'safety', 'eye', 'eyeinvisible', 'stop', 'check',
+        'close', 'plus', 'minus', 'infocirlce', 'questioncircle', 'warning', 'exclamationcircle'
+    ],
+    'Entypo': [
+        'home', 'user', 'users', 'cog', 'tools', 'briefcase', 'suitcase',
+        'laptop', 'desktop', 'mobile', 'tablet', 'camera', 'video-camera',
+        'book', 'documents', 'folder', 'mail', 'phone', 'chat',
+        'calendar', 'clock', 'bell', 'flag', 'map', 'location', 'globe',
+        'heart', 'star', 'thumbs-up', 'thumbs-down', 'message',
+        'magnifying-glass', 'bar-graph', 'line-graph', 'pie-chart',
+        'shopping-cart', 'credit-card', 'wallet', 'ticket',
+        'note', 'beamed-note', 'mic', 'headphones',
+        'brush', 'pencil', 'scissors', 'clipboard',
+        'leaf', 'tree', 'bug', 'flower',
+        'light-bulb', 'flash', 'cloud', 'thunder-cloud',
+        'lock', 'lock-open', 'key', 'shield', 'eye', 'check', 'cross',
+        'plus', 'minus', 'info', 'help', 'warning', 'circle-with-cross'
+    ],
+    'EvilIcons': [
+        'archive', 'arrow-down', 'arrow-left', 'arrow-right', 'arrow-up',
+        'bell', 'calendar', 'camera', 'cart', 'chart', 'check', 'chevron-down',
+        'chevron-left', 'chevron-right', 'chevron-up', 'clock', 'close', 'close-o',
+        'comment', 'credit-card', 'envelope', 'exclamation', 'external-link',
+        'eye', 'gear', 'heart', 'image', 'like', 'link', 'location', 'lock',
+        'minus', 'navicon', 'paperclip', 'pencil', 'play', 'plus', 'pointer',
+        'question', 'redo', 'refresh', 'retweet', 'search', 'share-apple',
+        'share-google', 'spinner', 'star', 'tag', 'trash', 'trophy', 'undo',
+        'unlock', 'user'
+    ],
+    'Foundation': [
+        'home', 'torso', 'torsos-all', 'widget', 'wrench', 'laptop', 'monitor',
+        'mobile', 'tablet-portrait', 'camera', 'video', 'book', 'folder',
+        'page', 'mail', 'telephone', 'comments', 'calendar', 'clock',
+        'flag', 'map', 'marker', 'web', 'heart', 'star', 'like',
+        'dislike', 'magnifying-glass', 'graph-bar', 'graph-horizontal',
+        'graph-pie', 'shopping-cart', 'credit-card', 'dollar', 'euro', 'ticket',
+        'music', 'microphone', 'volume', 'headphones', 'paint-bucket', 'pencil',
+        'first-aid', 'trees', 'paw', 'lightbulb', 'cloud', 'die-one',
+        'lock', 'key', 'shield', 'eye', 'check', 'x', 'plus', 'minus', 'info', 'alert'
+    ],
+    'Octicons': [
+        'home', 'person', 'people', 'gear', 'tools', 'briefcase', 'package',
+        'device-desktop', 'device-mobile', 'device-camera-video', 'book',
+        'file', 'file-directory', 'mail', 'calendar', 'clock', 'bell',
+        'location', 'globe', 'heart', 'star', 'thumbsup', 'thumbsdown', 'comment',
+        'search', 'filter', 'graph', 'credit-card', 'gift',
+        'note', 'unmute', 'mute', 'paintbrush', 'pencil', 'scissors', 'paste',
+        'mortar-board', 'bug', 'flame', 'light-bulb', 'cloud',
+        'lock', 'unlock', 'key', 'shield-check', 'eye', 'eye-closed',
+        'check', 'x', 'plus', 'dash', 'info', 'question', 'alert', 'stop'
+    ],
+    'SimpleLineIcons': [
+        'home', 'user', 'people', 'settings', 'wrench', 'briefcase', 'plane',
+        'screen-desktop', 'screen-smartphone', 'screen-tablet', 'camera', 'camrecorder',
+        'book-open', 'doc', 'folder', 'envelope', 'call-in', 'call-out', 'bubble',
+        'calendar', 'clock', 'bell', 'flag', 'map', 'location-pin', 'globe',
+        'heart', 'star', 'like', 'dislike', 'speech',
+        'magnifier', 'graph', 'chart', 'credit-card', 'wallet', 'present',
+        'music-tone', 'microphone', 'earphones', 'control-play',
+        'pencil', 'note', 'paper-clip', 'scissors',
+        'graduation', 'ghost', 'fire', 'bulb', 'cloud-download', 'cloud-upload',
+        'lock', 'lock-open', 'key', 'shield', 'eye', 'check', 'close',
+        'plus', 'minus', 'info', 'question', 'exclamation'
+    ],
+    'Zocial': [
+        'acrobat', 'amazon', 'android', 'angellist', 'apple', 'appstore',
+        'bitbucket', 'bitcoin', 'blogger', 'buffer', 'call', 'cart', 'chrome',
+        'cloudapp', 'creativecommons', 'delicious', 'disqus', 'dribbble',
+        'dropbox', 'drupal', 'dwolla', 'email', 'eventasaurus', 'eventbrite',
+        'eventful', 'evernote', 'facebook', 'fivehundredpx', 'flattr', 'flickr',
+        'forrst', 'foursquare', 'github', 'gmail', 'google', 'googleplay',
+        'googleplus', 'gowalla', 'grooveshark', 'guest', 'html5', 'ie',
+        'instagram', 'instapaper', 'intensedebate', 'itunes', 'klout',
+        'lanyrd', 'lastfm', 'lego', 'linkedin', 'lkdto', 'logmein', 'macstore',
+        'meetup', 'myspace', 'ninetyninedesigns', 'openid', 'opentable',
+        'paypal', 'persona', 'pinboard', 'pinterest', 'plancast', 'plurk',
+        'pocket', 'podcast', 'posterous', 'print', 'quora', 'reddit',
+        'rss', 'scribd', 'skype', 'smashing', 'songkick', 'soundcloud',
+        'spotify', 'stackoverflow', 'statusnet', 'steam', 'stripe', 'stumbleupon',
+        'tumblr', 'twitter', 'viadeo', 'vimeo', 'vk', 'weibo', 'wikipedia',
+        'windows', 'wordpress', 'xing', 'yahoo', 'yelp', 'youtube'
+    ]
+};
+
+let currentIconContext = 'add'; // 'add' or 'edit'
+
+function openIconSelector(context) {
+    currentIconContext = context;
+    loadIcons('MaterialCommunityIcons');
+}
+
+function loadIcons(library) {
+    const grid = document.getElementById('iconGrid');
+    const icons = ICON_LIBRARIES[library] || [];
+    const searchTerm = document.getElementById('iconSelectorSearch').value.toLowerCase();
+    
+    const filteredIcons = searchTerm 
+        ? icons.filter(icon => icon.toLowerCase().includes(searchTerm))
+        : icons;
+    
+    grid.innerHTML = filteredIcons.map(icon => `
+        <div class="col-2 col-md-1 text-center p-2">
+            <button type="button" class="btn btn-light w-100 h-100 icon-selector-item" 
+                    data-icon="${icon}" data-library="${library}"
+                    title="${icon}" style="min-height: 60px;">
+                <i class="fas fa-question" style="font-size: 1.5rem; color: #667eea;"></i>
+                <div class="small text-truncate" style="font-size: 0.6rem;">${icon}</div>
+            </button>
+        </div>
+    `).join('');
+}
+
+function updateIconPreview(context, iconName, iconLibrary) {
+    const prefix = context === 'edit' ? 'edit' : '';
+    const container = document.getElementById(prefix + 'IconPreviewContainer');
+    const previewText = document.getElementById(prefix + 'IconPreviewText');
+    
+    if (iconName && iconLibrary) {
+        if (container) container.style.display = 'block';
+        if (previewText) previewText.textContent = `${iconLibrary}: ${iconName}`;
+    } else {
+        if (container) container.style.display = 'none';
+    }
+}
+
+// Event listeners for icon selector
+document.getElementById('iconSelectorLibrary').addEventListener('change', function() {
+    loadIcons(this.value);
+});
+
+document.getElementById('iconSelectorSearch').addEventListener('input', function() {
+    const library = document.getElementById('iconSelectorLibrary').value;
+    loadIcons(library);
+});
+
+// Handle icon selection
+document.getElementById('iconGrid').addEventListener('click', function(e) {
+    const item = e.target.closest('.icon-selector-item');
+    if (!item) return;
+    
+    const iconName = item.dataset.icon;
+    const iconLibrary = item.dataset.library;
+    
+    if (currentIconContext === 'edit') {
+        document.getElementById('editIconName').value = iconName;
+        document.getElementById('editIconLibrary').value = iconLibrary;
+        updateIconPreview('edit', iconName, iconLibrary);
+    } else {
+        document.getElementById('iconName').value = iconName;
+        document.getElementById('iconLibrary').value = iconLibrary;
+        updateIconPreview('', iconName, iconLibrary);
+    }
+    
+    // Close the icon selector modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('iconSelectorModal'));
+    if (modal) modal.hide();
+});
+
+// Update preview when icon name or library changes (CREATE)
+document.getElementById('iconName').addEventListener('input', function() {
+    const iconName = this.value;
+    const iconLibrary = document.getElementById('iconLibrary').value;
+    updateIconPreview('', iconName, iconLibrary);
+});
+
+document.getElementById('iconLibrary').addEventListener('change', function() {
+    const iconName = document.getElementById('iconName').value;
+    const iconLibrary = this.value;
+    updateIconPreview('', iconName, iconLibrary);
+});
+
+// Update preview when icon name or library changes (EDIT)
+document.getElementById('editIconName').addEventListener('input', function() {
+    const iconName = this.value;
+    const iconLibrary = document.getElementById('editIconLibrary').value;
+    updateIconPreview('edit', iconName, iconLibrary);
+});
+
+document.getElementById('editIconLibrary').addEventListener('change', function() {
+    const iconName = document.getElementById('editIconName').value;
+    const iconLibrary = this.value;
+    updateIconPreview('edit', iconName, iconLibrary);
+});
+
 </script>
 {% endblock %}

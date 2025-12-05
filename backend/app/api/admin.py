@@ -566,6 +566,8 @@ async def admin_create_category(
     tags: str = Form(""),
     subcategories_data: str = Form(""),
     default_remote_execution: bool = Form(False),
+    icon_name: str = Form(""),
+    icon_library: str = Form(""),
     current_user: User = Depends(get_current_user_from_request),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
@@ -592,7 +594,9 @@ async def admin_create_category(
     category_data = CategoryCreate(
         name=name,
         tags=tags_list,
-        subcategories=subcategories_list
+        subcategories=subcategories_list,
+        icon_name=icon_name.strip() if icon_name.strip() else None,
+        icon_library=icon_library.strip() if icon_library.strip() else None
     )
 
     # Create category
@@ -612,6 +616,8 @@ async def admin_edit_category(
     tags: str = Form(""),
     subcategories_data: str = Form(""),
     default_remote_execution: bool = Form(False),
+    icon_name: str = Form(""),
+    icon_library: str = Form(""),
     current_user: User = Depends(get_current_user_from_request),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
@@ -639,7 +645,9 @@ async def admin_edit_category(
         name=name,
         tags=tags_list,
         subcategories=subcategories_list,
-        default_remote_execution=default_remote_execution
+        default_remote_execution=default_remote_execution,
+        icon_name=icon_name.strip() if icon_name.strip() else None,
+        icon_library=icon_library.strip() if icon_library.strip() else None
     )
 
     await update_category(db, category_id, category_data)

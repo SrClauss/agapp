@@ -15,6 +15,8 @@ export interface CategoryAPI {
   name: string;
   tags?: string[];
   subcategories?: Array<{ name: string; tags?: string[] }>; // server uses subcategories as array of objects
+  icon_name?: string | null;  // Icon name from react-native-vector-icons
+  icon_library?: string | null;  // Icon library name (e.g., "MaterialCommunityIcons", "FontAwesome")
 }
 
 export interface SearchSuggestion {
