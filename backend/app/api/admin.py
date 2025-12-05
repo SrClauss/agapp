@@ -596,7 +596,7 @@ async def admin_create_category(
         tags=tags_list,
         subcategories=subcategories_list,
         icon_name=icon_name.strip() if icon_name.strip() else None,
-        icon_library=icon_library.strip() if icon_library.strip() else None
+        icon_library="MaterialIcons" if icon_name.strip() else None
     )
 
     # Create category
@@ -647,7 +647,7 @@ async def admin_edit_category(
         subcategories=subcategories_list,
         default_remote_execution=default_remote_execution,
         icon_name=icon_name.strip() if icon_name.strip() else None,
-        icon_library=icon_library.strip() if icon_library.strip() else None
+        icon_library="MaterialIcons" if icon_name.strip() else None
     )
 
     await update_category(db, category_id, category_data)

@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import List, Any
+from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List, Any, Optional, Literal
 from datetime import datetime, timezone
 from app.core.database import get_database
 from app.core.security import get_current_user, get_current_admin_user
@@ -127,6 +127,28 @@ async def read_nearby_non_remote_projects(
     async for project in db.projects.find(query).limit(100):
         projects.append(Project(**project))
 
+    return projects
+
+@router.get("/my/projects", response_model=List[Project])
+async def read_my_projects(
+    status: Optional[Literal["open", "closed", "in_progress"]] = None,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Get all projects for the current user (as client).
+    Optionally filter by status (open, closed, in_progress)
+    """
+    query = {"client_id": str(current_user.id)}
+    if status:
+        query["status"] = status
+    
+    projects = []
+    async for project in db.projects.find(query).sort("created_at", -1).skip(skip).limit(limit):
+        projects.append(Project(**project))
+    
     return projects
 
 @router.get("/{project_id}", response_model=Project)
