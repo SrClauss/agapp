@@ -17,6 +17,16 @@ export interface CategoryAPI {
   subcategories?: Array<{ name: string; tags?: string[] }>; // server uses subcategories as array of objects
 }
 
+export interface SearchSuggestion {
+  type: 'category' | 'subcategory';
+  id: string;
+  name: string;
+  tags: string[];
+  match_count: number;
+  parent_category: string | null;
+  match_type: 'exact_name' | 'partial_name' | 'tag';
+}
+
 export async function getCategories(): Promise<CategoryAPI[]> {
   const res = await fetch(`${BACKEND_URL}/categories`);
   if (!res.ok) throw new Error('Falha ao listar categorias');
@@ -44,4 +54,23 @@ export async function getSubcategoriesWithParent(): Promise<SubcategoryWithParen
   });
 
   return results;
+}
+
+export async function getSearchSuggestions(query: string, limit: number = 10): Promise<SearchSuggestion[]> {
+  if (!query || query.trim() === '') {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    q: query.trim(),
+    limit: limit.toString(),
+  });
+
+  const res = await fetch(`${BACKEND_URL}/search/suggestions?${params}`);
+  if (!res.ok) {
+    console.warn('Falha ao buscar sugestões', res.status);
+    return [];
+  }
+
+  return res.json();
 }

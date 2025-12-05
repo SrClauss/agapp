@@ -8,7 +8,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
-from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads
+from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search
 from app.api.admin import router as admin_router
 from app.api.professional import router as professional_router
 from app.api.websockets.routes import router as websocket_router
@@ -30,6 +30,10 @@ tags_metadata = [
     {
         "name": "categories",
         "description": "Gerenciamento de categorias e subcategorias de projetos.",
+    },
+    {
+        "name": "search",
+        "description": "Busca inteligente de categorias e subcategorias com sugestões em tempo real.",
     },
     {
         "name": "contacts",
@@ -167,6 +171,7 @@ app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(projects.router, prefix="/projects", tags=["projects"])
 app.include_router(categories.router, prefix="/categories", tags=["categories"])
+app.include_router(search.router, prefix="/search", tags=["search"])
 app.include_router(contacts.router, prefix="/contacts", tags=["contacts"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(contract_templates.router, prefix="/contract-templates", tags=["contract-templates"])
