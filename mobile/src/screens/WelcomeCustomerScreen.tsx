@@ -166,15 +166,26 @@ export default function WelcomeCustomerScreen() {
 
   // Memoized renderItem — avoids recreating function on every render
   const handleItemPress = useCallback((item: SubcategoryWithParent) => {
-    // TODO: navegação – passar para a tela de resultados filtrando por subcategoria
-    // navigation.navigate('SearchResults' as never, { subcategory: item.name } as never);
+    // Navigate to project creation with category and subcategory info
+    navigation.navigate('CreateProject' as never, {
+      categoryName: item.parent.name,
+      subcategoryName: item.name,
+    } as never);
   }, [navigation]);
 
   const renderItem = useCallback(({ item }: ListRenderItemInfo<SubcategoryWithParent>) => (
-    <TouchableOpacity style={styles.subcategoryItem} onPress={() => handleItemPress(item)}>
-      <Text style={styles.subcategoryName}>{item.name}</Text>
-      <Text style={styles.subcategoryParent}>{item.parent.name}</Text>
-    </TouchableOpacity>
+    <View style={styles.subcategoryItem}>
+      <View style={styles.subcategoryInfo}>
+        <Text style={styles.subcategoryName}>{item.name}</Text>
+        <Text style={styles.subcategoryParent}>{item.parent.name}</Text>
+      </View>
+      <TouchableOpacity 
+        style={styles.createProjectButton}
+        onPress={() => handleItemPress(item)}
+      >
+        <Text style={styles.createProjectButtonText}>Criar Projeto</Text>
+      </TouchableOpacity>
+    </View>
   ), [handleItemPress]);
 
   const keyExtractor = useCallback((item: SubcategoryWithParent, index: number) => `${item.parent.id || item.parent.name}-${item.name}-${index}`, []);
@@ -333,16 +344,36 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   subcategoryItem: {
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: '#eee',
   },
+  subcategoryInfo: {
+    flex: 1,
+  },
   subcategoryName: {
     fontSize: 16,
+    fontWeight: '500',
   },
   subcategoryParent: {
     fontSize: 12,
     color: '#666',
+    marginTop: 2,
+  },
+  createProjectButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginLeft: 12,
+  },
+  createProjectButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   listWrapper: {
     marginTop: 24,
