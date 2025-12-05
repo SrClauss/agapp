@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useProfilePhoto } from '../hooks/useProfilePhoto';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import * as Location from 'expo-location';
 import useAuthStore from "../stores/authStore";
@@ -12,6 +13,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
     const [locationText, setLocationText] = useState<string>('Obtendo localização...');
     const initials = user?.full_name ? user.full_name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'U';
     const [neigbhorhood, setNeigbhorhood] = useState<string>('');
+    const { localUri } = useProfilePhoto(user?.id || null, user?.photo || null);
     // Debug: log user photo
     // Debug logs removed to avoid verbose output in production
 
@@ -20,6 +22,8 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
             getCurrentLocation();
         }
     }, [showLocation]);
+
+    // localUri provided by useProfilePhoto hook contains a cached local path if available.
 
     const getCurrentLocation = async () => {
         try {
@@ -72,8 +76,8 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                     </View>
                 </View>
             )}
-            {user?.photo ? (
-                <Image source={{ uri: user.photo }} style={styles.avatar} />
+            {(localUri || user?.photo_local || user?.photo) ? (
+                    <Image source={{ uri: localUri || user?.photo_local || user?.photo! }} style={styles.avatar} />
             ) : (
                 <View style={styles.fallback}>
                     <Text style={styles.fallbackText}>{initials}</Text>

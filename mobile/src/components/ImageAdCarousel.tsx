@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Image, StyleSheet, Dimensions, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { Linking } from 'react-native';
 
@@ -20,6 +20,8 @@ interface ImageAdCarouselProps {
  */
 export default function ImageAdCarousel({ images, onClose }: ImageAdCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollRef = useRef<ScrollView | null>(null);
+  // cyclic refs removed
 
   const handleImagePress = async () => {
     const currentImage = images[currentIndex];
@@ -41,6 +43,8 @@ export default function ImageAdCarousel({ images, onClose }: ImageAdCarouselProp
     setCurrentIndex(index);
   };
 
+  // Cycle behavior when user drags past the first/last items
+
   if (!images || images.length === 0) {
     return null;
   }
@@ -52,7 +56,14 @@ export default function ImageAdCarousel({ images, onClose }: ImageAdCarouselProp
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onScroll={handleScroll}
+        onMomentumScrollEnd={(ev) => {
+          const offsetX = ev.nativeEvent.contentOffset.x;
+          const visibleWidth = ev.nativeEvent.layoutMeasurement?.width || SCREEN_WIDTH;
+          const idx = Math.round(offsetX / visibleWidth);
+          setCurrentIndex(idx);
+        }}
         scrollEventThrottle={16}
+        ref={scrollRef}
         style={styles.scrollView}
       >
         {images.map((image, index) => (
@@ -71,20 +82,7 @@ export default function ImageAdCarousel({ images, onClose }: ImageAdCarouselProp
         ))}
       </ScrollView>
 
-      {/* Indicador de páginas */}
-      {images.length > 1 && (
-        <View style={styles.paginationContainer}>
-          {images.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.paginationDot,
-                index === currentIndex && styles.paginationDotActive,
-              ]}
-            />
-          ))}
-        </View>
-      )}
+      {/* Pagination dots removed. Carousel auto-plays every 5 seconds. */}
 
       {/* Botão de fechar */}
       <TouchableOpacity

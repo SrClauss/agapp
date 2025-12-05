@@ -15,6 +15,7 @@ export type User = {
   created_at: string;
   updated_at: string;
   photo?: string;  // Novo campo para photo do Google
+  photo_local?: string; // Caminho local cacheado do avatar / Local cached file URI for profile photo
   address?: {
     street?: string;
     city?: string;

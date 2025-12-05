@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Image, FlatList, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
@@ -27,10 +27,15 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
   const { width: screenWidth } = useWindowDimensions();
   const flatListRef = useRef<FlatList<any> | null>(null);
   const [index, setIndex] = useState(0);
-  const [imageHeights, setImageHeights] = useState<number[]>([]);
+  const [bannerHeight, setBannerHeight] = useState<number>(minHeight);
+  const [firstImageLoaded, setFirstImageLoaded] = useState(false);
 
   // Container width: 90% of screen width
   const containerWidth = screenWidth * 0.9;
+
+  // Cycle behavior on user swipe: if user tries to swipe past last/first, wrap around.
+  // removed cyclic refs (startXRef, prevIndexRef)
+
 
   // Calculate height based on image dimensions, clamped to min/max
   const calculateHeight = (imgWidth: number, imgHeight: number): number => {
@@ -52,11 +57,13 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
 
   // Não mostrar se não existir
   if (!exists) {
+    console.log('[BannerAd] Not rendering - ad does not exist');
     return null;
   }
 
   // Skeleton loader
   if (loading) {
+    console.log('[BannerAd] Showing skeleton loader');
     return (
       <View style={[styles.skeletonContainer, { width: containerWidth, height: minHeight }]}>
         <View style={styles.skeletonShimmer} />
@@ -64,11 +71,10 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
     );
   }
 
-  // Get current height (use first image height if available, otherwise minHeight)
-  const currentHeight = imageHeights.length > 0 ? imageHeights[index] || minHeight : minHeight;
+  console.log('[BannerAd] Rendering banner - images:', images?.length, 'adHtml:', !!adHtml, 'bannerHeight:', bannerHeight);
 
   return (
-    <View style={[styles.container, { width: containerWidth, height: currentHeight }]}>
+    <View style={[styles.container, { width: containerWidth, height: bannerHeight }]}>
       {images && images.length > 0 ? (
         <FlatList
           ref={flatListRef}
@@ -83,42 +89,52 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item, idx) => `${item.uri}-${idx}`}
           onMomentumScrollEnd={(ev) => {
-            const newIndex = Math.round(ev.nativeEvent.contentOffset.x / containerWidth);
+            const offsetX = ev.nativeEvent.contentOffset.x;
+            const visibleWidth = ev.nativeEvent.layoutMeasurement?.width || containerWidth;
+            const newIndex = Math.round(offsetX / visibleWidth);
             setIndex(newIndex);
           }}
-          renderItem={({ item, index: itemIndex }) => (
-            <TouchableOpacity
-              style={[styles.itemContainer, { width: containerWidth }]}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (item.link) {
-                  Linking.openURL(item.link).catch(() => {});
-                }
-                onPress?.();
-              }}
-            >
-              <Image
-                source={{ uri: item.uri }}
-                style={[
-                  styles.image,
-                  {
-                    width: containerWidth,
-                    height: imageHeights[itemIndex] || minHeight
+          renderItem={({ item, index: itemIndex }) => {
+            console.log('[BannerAd] Rendering image', itemIndex, 'uri:', item.uri?.substring(0, 100));
+            return (
+              <TouchableOpacity
+                style={[styles.itemContainer, { width: containerWidth }]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (item.link) {
+                    Linking.openURL(item.link).catch(() => {});
                   }
-                ]}
-                resizeMode="cover"
-                onLoad={(e) => {
-                  const { width: imgW, height: imgH } = e.nativeEvent.source;
-                  const newHeight = calculateHeight(imgW, imgH);
-                  setImageHeights(prev => {
-                    const updated = [...prev];
-                    updated[itemIndex] = newHeight;
-                    return updated;
-                  });
+                  onPress?.();
                 }}
-              />
-            </TouchableOpacity>
-          )}
+              >
+                <Image
+                  source={{ uri: item.uri }}
+                  style={[
+                    styles.image,
+                    {
+                      width: containerWidth,
+                      height: bannerHeight
+                    }
+                  ]}
+                  resizeMode="cover"
+                  onLoad={(e) => {
+                    console.log('[BannerAd] Image loaded:', itemIndex);
+                    // Apenas a primeira imagem define a altura do banner
+                    if (itemIndex === 0 && !firstImageLoaded) {
+                      const { width: imgW, height: imgH } = e.nativeEvent.source;
+                      const newHeight = calculateHeight(imgW, imgH);
+                      console.log('[BannerAd] Setting banner height from first image:', newHeight);
+                      setBannerHeight(newHeight);
+                      setFirstImageLoaded(true);
+                    }
+                  }}
+                  onError={(e) => {
+                    console.error('[BannerAd] Image load error:', itemIndex, e.nativeEvent.error);
+                  }}
+                />
+              </TouchableOpacity>
+            );
+          }}
         />
       ) : (
         <WebView
@@ -134,13 +150,7 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
           overScrollMode="never"
         />
       )}
-      {images && images.length > 1 && (
-        <View style={styles.dotsContainer} pointerEvents="none">
-          {images.map((_, i) => (
-            <View key={i} style={[styles.dot, i === index ? styles.dotActive : null]} />
-          ))}
-        </View>
-      )}
+      {/* Dots/indicators intentionally removed - carousel is autoplaying */}
     </View>
   );
 }

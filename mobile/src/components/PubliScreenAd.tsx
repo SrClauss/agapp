@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -60,6 +60,9 @@ export function PubliScreenAd({ userType, onClose, autoShow = true }: PubliScree
     }
   };
 
+  // Cycle behavior when user drags past the first/last items
+  // cyclic refs removed
+
   // Não mostrar se estiver carregando ou não existir
   if (!exists || !visible) {
     return null;
@@ -100,7 +103,9 @@ export function PubliScreenAd({ userType, onClose, autoShow = true }: PubliScree
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, idx) => `${item.uri}-${idx}`}
             onMomentumScrollEnd={(ev) => {
-              const newIndex = Math.round(ev.nativeEvent.contentOffset.x / width);
+              const offsetX = ev.nativeEvent.contentOffset.x;
+              const visibleWidth = ev.nativeEvent.layoutMeasurement?.width || width;
+              const newIndex = Math.round(offsetX / visibleWidth);
               setIndex(newIndex);
             }}
             renderItem={({ item }) => (

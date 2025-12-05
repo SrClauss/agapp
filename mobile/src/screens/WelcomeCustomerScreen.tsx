@@ -71,6 +71,7 @@ export default function WelcomeCustomerScreen() {
     setFilteredSubcategories(null);
   };
 
+
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -112,7 +113,9 @@ export default function WelcomeCustomerScreen() {
       <View style={styles.containerWelcome}>
         <LocationAvatar />
 
-        <BannerAd adType="banner_client" height={90} />
+        <BannerAd adType="banner_client" minHeight={90} maxHeight={200} />
+
+        {/* Botão de limpar cache removido (debug retirado). */}
 
         <TextInput
           style={styles.textInput}
