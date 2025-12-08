@@ -591,13 +591,19 @@ async def admin_create_category(
         except:
             pass
 
-    category_data = CategoryCreate(
+    try:
+        category_data = CategoryCreate(
         name=name,
         tags=tags_list,
         subcategories=subcategories_list,
         icon_name=icon_name.strip() if icon_name.strip() else None,
         icon_library="MaterialIcons" if icon_name.strip() else None
-    )
+        )
+    except Exception as e:
+        # If category validation failed, redirect back with an error message
+        from urllib.parse import quote
+        msg = quote(str(e))
+        return RedirectResponse(url=f"/system-admin/categories?error={msg}", status_code=303)
 
     # Create category
     category = await create_category(db, category_data)
@@ -641,14 +647,19 @@ async def admin_edit_category(
         except:
             pass
 
-    category_data = CategoryUpdate(
+    try:
+        category_data = CategoryUpdate(
         name=name,
         tags=tags_list,
         subcategories=subcategories_list,
         default_remote_execution=default_remote_execution,
         icon_name=icon_name.strip() if icon_name.strip() else None,
         icon_library="MaterialIcons" if icon_name.strip() else None
-    )
+        )
+    except Exception as e:
+        from urllib.parse import quote
+        msg = quote(str(e))
+        return RedirectResponse(url=f"/system-admin/categories?error={msg}", status_code=303)
 
     await update_category(db, category_id, category_data)
 

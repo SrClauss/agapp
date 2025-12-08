@@ -1,6 +1,9 @@
 import React from 'react';
 import { Text, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 // Define a common interface for icon component props
 interface IconComponentProps {
@@ -31,14 +34,31 @@ export default function DynamicIcon({
 }: DynamicIconProps) {
   // If we have a name, try to render the MaterialIcons icon
   // Using ComponentProps to get the proper name type from MaterialIcons
+  // If we have a name, try to render using specified library
   if (name) {
     try {
-      // MaterialIcons accepts string names that correspond to the icon set
-      // Type assertion is safe here as we handle invalid icons with fallback
-      return <MaterialIcons name={name as React.ComponentProps<typeof MaterialIcons>['name']} size={size} color={color} />;
+      const lib = (library || 'MaterialIcons').toLowerCase();
+      switch (lib) {
+        case 'materialicons':
+        case 'material-icons':
+          return <MaterialIcons name={name as React.ComponentProps<typeof MaterialIcons>['name']} size={size} color={color} />;
+        case 'materialcommunityicons':
+        case 'material-community-icons':
+        case 'materialcommunity':
+          return <MaterialCommunityIcons name={name as React.ComponentProps<typeof MaterialCommunityIcons>['name']} size={size} color={color} />;
+        case 'ionicons':
+          return <Ionicons name={name as React.ComponentProps<typeof Ionicons>['name']} size={size} color={color} />;
+        case 'fontawesome':
+        case 'fontawesome5':
+        case 'fa':
+          return <FontAwesome name={name as React.ComponentProps<typeof FontAwesome>['name']} size={size} color={color} />;
+        default:
+          // Default to MaterialIcons
+          return <MaterialIcons name={name as React.ComponentProps<typeof MaterialIcons>['name']} size={size} color={color} />;
+      }
     } catch (error) {
       // If icon rendering fails, fall through to fallback
-      console.warn(`Failed to render icon: ${name}`, error);
+      console.warn(`Failed to render icon '${name}' from library '${library}':`, error);
     }
   }
 

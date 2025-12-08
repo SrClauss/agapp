@@ -243,6 +243,14 @@
     </button>
 </div>
 
+{% if request.query_params.get('error') %}
+<div class="alert alert-danger" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i>
+    {{ request.query_params.get('error') }}
+    <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
 <!-- Estatísticas -->
 <div class="row mb-4">
     <div class="col-md-4">
@@ -990,11 +998,11 @@ document.addEventListener('click', (event) => {
 // Icon Selector Functionality
 // ============================================
 
-// Load Material Icons list from backend static JSON file (generated from react-native-vector-icons glyphmap)
+// Load Material Icons list from backend static JSON file (Google Fonts Material Icons web list)
 let MATERIAL_ICONS = [];
 async function loadMaterialIconsList() {
     try {
-        const res = await fetch('/static/material-icons.json');
+        const res = await fetch('/static/material-icons-web.json');
         if (res.ok) {
             MATERIAL_ICONS = await res.json();
             // after loading we re-render the icons grid if it's open
@@ -1058,8 +1066,19 @@ function updateIconPreview(context, iconName) {
     
     if (iconName) {
         if (container) container.style.display = 'block';
-        if (preview) preview.textContent = iconName;
-        if (previewText) previewText.textContent = iconName;
+        const known = MATERIAL_ICONS && MATERIAL_ICONS.indexOf(iconName) !== -1;
+        if (known) {
+            if (preview) preview.textContent = iconName;
+            if (previewText) previewText.textContent = iconName;
+            if (previewText) previewText.classList.remove('text-danger');
+        } else {
+            // show warning and fallback
+            if (preview) preview.textContent = '';
+            if (previewText) {
+                previewText.textContent = iconName + ' (não disponível no Material Icons web)';
+                previewText.classList.add('text-danger');
+            }
+        }
     } else {
         if (container) container.style.display = 'none';
     }

@@ -3,7 +3,7 @@ import json
 from typing import Set, List
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'static'))
-ICON_JSON_PATH = os.path.join(BASE_DIR, 'material-icons.json')
+ICON_JSON_PATH = os.path.join(BASE_DIR, 'material-icons-web.json')
 
 def _load_icons_from_json() -> List[str]:
     try:
