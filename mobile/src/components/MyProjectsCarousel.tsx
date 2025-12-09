@@ -21,10 +21,13 @@ export default function MyProjectsCarousel() {
 
   const loadProjects = async () => {
     try {
+      console.log('Loading projects...');
       const [open, closed] = await Promise.all([
         getMyProjects('open'),
         getMyProjects('closed'),
       ]);
+      console.log('Open projects:', open);
+      console.log('Closed projects:', closed);
       setOpenProjects(open);
       setClosedProjects(closed);
     } catch (error) {
@@ -247,6 +250,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginBottom: 8,
+  },
+  projectClient: {
+    fontSize: 12,
+    color: colors.primary,
+    marginTop: 2,
+    fontWeight: '500',
   },
   cardFooter: {
     flexDirection: 'row',

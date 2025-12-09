@@ -8,7 +8,11 @@ from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectFilter
 
 async def get_project(db: AsyncIOMotorDatabase, project_id: str) -> Optional[Project]:
     project = await db.projects.find_one({"_id": project_id})
-    return Project(**project) if project else None
+    if project:
+        project_dict = dict(project)
+        project_dict['id'] = str(project_dict.pop('_id'))
+        return Project(**project_dict)
+    return None
 
 async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100, filters: ProjectFilter = None, query_filter: dict = None) -> List[Project]:
     query = {}
@@ -44,7 +48,9 @@ async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100
 
     projects = []
     async for project in db.projects.find(query).skip(skip).limit(limit):
-        projects.append(Project(**project))
+        project_dict = dict(project)
+        project_dict['id'] = str(project_dict.pop('_id'))
+        projects.append(Project(**project_dict))
     return projects
 
 async def create_project(db: AsyncIOMotorDatabase, project: ProjectCreate, client_id: str) -> Project:
@@ -78,7 +84,9 @@ async def create_project(db: AsyncIOMotorDatabase, project: ProjectCreate, clien
     project_dict["updated_at"] = datetime.now(timezone.utc)
     project_dict["liberado_por"] = []
     project_dict["chat"] = []
-    await db.projects.insert_one(project_dict)
+    inserted = await db.projects.insert_one(project_dict)
+    project_dict['_id'] = inserted.inserted_id
+    project_dict['id'] = str(inserted.inserted_id)
     return Project(**project_dict)
 
 async def update_project(db: AsyncIOMotorDatabase, project_id: str, project_update: ProjectUpdate) -> Optional[Project]:

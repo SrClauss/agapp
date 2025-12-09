@@ -125,7 +125,9 @@ async def read_nearby_non_remote_projects(
 
     projects = []
     async for project in db.projects.find(query).limit(100):
-        projects.append(Project(**project))
+        project_dict = dict(project)
+        project_dict['id'] = str(project_dict.pop('_id'))
+        projects.append(Project(**project_dict))
 
     return projects
 
@@ -147,7 +149,9 @@ async def read_my_projects(
     
     projects = []
     async for project in db.projects.find(query).sort("created_at", -1).skip(skip).limit(limit):
-        projects.append(Project(**project))
+        project_dict = dict(project)
+        project_dict['id'] = str(project_dict.pop('_id'))
+        projects.append(Project(**project_dict))
     
     # Populate client_name for each project
     client_ids = list(set(p.client_id for p in projects if p.client_id))
