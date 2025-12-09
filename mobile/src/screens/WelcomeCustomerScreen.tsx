@@ -3,7 +3,7 @@ import { StyleSheet, View, FlatList, Text, TouchableOpacity, ScrollView } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator } from 'react-native-paper';
 import type { ListRenderItemInfo } from 'react-native';
-import { Button, TextInput } from 'react-native-paper';
+import { Button, TextInput, Divider } from 'react-native-paper';
 import { getSubcategoriesWithParent, SubcategoryWithParent, getSearchSuggestions, SearchSuggestion } from '../api/categories';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
@@ -194,8 +194,10 @@ export default function WelcomeCustomerScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.containerWelcome}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.containerWelcome}>
         <LocationAvatar />
+
+        <Divider style={styles.divider} />
 
         <BannerAd adType="banner_client" minHeight={90} maxHeight={200} />
 
@@ -248,7 +250,8 @@ export default function WelcomeCustomerScreen() {
         <Button onPress={handleSearch} mode="contained" style={{ marginTop: 20 }}>
           Buscar
         </Button>
-    {Array.isArray(filteredSubcategories) && filteredSubcategories.length > 0 && (
+
+        {Array.isArray(filteredSubcategories) && filteredSubcategories.length > 0 && (
           <>
             <View style={styles.listWrapper}>
               <Text style={{ fontWeight: 'bold', marginBottom: 12 }}>Subcategorias</Text>
@@ -261,6 +264,7 @@ export default function WelcomeCustomerScreen() {
                 windowSize={21}
                 style={styles.flatList}
                 contentContainerStyle={styles.flatListContent}
+                scrollEnabled={false}
               />
             </View>
 
@@ -282,7 +286,7 @@ export default function WelcomeCustomerScreen() {
         <Button mode="outlined" onPress={handleLogout} loading={loading} style={{ marginTop: 12, marginBottom: 24 }}>
           Sair
         </Button>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -295,10 +299,14 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  containerWelcome: {
+  scrollContainer: {
     flex: 1,
-    paddingTop: 24,
+  },
+  containerWelcome: {
+    flexGrow: 1,
+    paddingTop: 16,
     paddingHorizontal: 16,
+    paddingBottom: 24,
   },
   textInput: {
     marginTop: 20,
@@ -389,5 +397,8 @@ const styles = StyleSheet.create({
   },
   flatListContent: {
     paddingBottom: 24,
+  },
+  divider: {
+    marginVertical: 16,
   }
 });

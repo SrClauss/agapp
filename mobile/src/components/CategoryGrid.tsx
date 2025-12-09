@@ -1,57 +1,34 @@
+
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Text } from 'react-native';
 import { getCategories, CategoryAPI } from '../api/categories';
 import { useNavigation } from '@react-navigation/native';
 import DynamicIcon from './DynamicIcon';
 
-// Legacy ICON_MAP for backward compatibility when categories don't have icon_name/icon_library
-const LEGACY_ICON_MAP: { [key: string]: { name: string; library: string } } = {
-  'eletricista': { name: 'hammer-wrench', library: 'MaterialCommunityIcons' },
-  'encanador': { name: 'pipe', library: 'MaterialCommunityIcons' },
-  'pintura': { name: 'format-paint', library: 'MaterialCommunityIcons' },
-  'jardinagem': { name: 'flower-outline', library: 'MaterialCommunityIcons' },
-  'limpeza': { name: 'broom', library: 'MaterialCommunityIcons' },
-  'programacao': { name: 'code-braces', library: 'MaterialCommunityIcons' },
-  'instalacao tv': { name: 'television-classic', library: 'MaterialCommunityIcons' },
-  'conserto tv': { name: 'television-classic-off', library: 'MaterialCommunityIcons' },
-};
-
-function normalizeName(name: string) {
-  if (!name) return '';
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^a-z0-9\s]/g, ' ') // remove punctuation
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 export default function CategoryGrid() {
   const [categories, setCategories] = useState<CategoryAPI[]>([]);
   const navigation = useNavigation();
-
+  function convertSnakeToPascal(str: string) {
+    return str
+      .toLowerCase()
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join('');
+  }
   useEffect(() => {
     let mounted = true;
     getCategories()
       .then((cats) => { if (mounted) setCategories(cats); })
       .catch(() => { if (mounted) setCategories([]); });
+
     return () => { mounted = false; };
   }, []);
 
   const getIconProps = (item: CategoryAPI) => {
-    // First, check if the category has icon data from the API
     if (item.icon_name && item.icon_library) {
       return { name: item.icon_name, library: item.icon_library };
     }
-    // Fallback to legacy ICON_MAP for backward compatibility
-    const normalizedName = normalizeName(item.name);
-    const legacyIcon = LEGACY_ICON_MAP[normalizedName];
-    if (legacyIcon) {
-      return legacyIcon;
-    }
-    // No icon found
-    return { name: null, library: null };
+    return { name: undefined, library: undefined };
   };
 
   return (
@@ -71,13 +48,13 @@ export default function CategoryGrid() {
               <View style={styles.iconContainer}>
                 <DynamicIcon
                   library={iconProps.library}
-                  name={iconProps.name}
+                  name={iconProps.name?.replaceAll('_', '-') || ''}
                   size={28}
                   color="#333"
                   fallbackText={item.name}
                 />
               </View>
-              <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+                <Text style={[styles.name, { maxWidth: 130 }]} numberOfLines={3} ellipsizeMode="tail">{item.name}</Text>
             </TouchableOpacity>
           );
         }}
@@ -100,5 +77,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
-  name: { fontSize: 12, textAlign: 'center' },
+    name: {
+      fontSize: 12, textAlign: 'center', flexWrap: 'wrap',
+    },
 });

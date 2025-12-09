@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useProfilePhoto } from '../hooks/useProfilePhoto';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import * as Location from 'expo-location';
+import * as FileSystem from 'expo-file-system';
 import useAuthStore from "../stores/authStore";
+
 
 interface LocationAvatarProps {
     showLocation?: boolean;
@@ -14,8 +16,36 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
     const initials = user?.full_name ? user.full_name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'U';
     const [neigbhorhood, setNeigbhorhood] = useState<string>('');
     const { localUri } = useProfilePhoto(user?.id || null, user?.photo || null);
-    // Debug: log user photo
-    // Debug logs removed to avoid verbose output in production
+    const [cachedPhotoUri, setCachedPhotoUri] = useState<string | null>(null);
+
+    // Busca genérica de foto no cache quando não há contexto completo
+    useEffect(() => {
+        async function findCachedPhoto() {
+            try {
+                const folder = `${FileSystem.cacheDirectory}profile/`;
+                const dirInfo = await FileSystem.getInfoAsync(folder);
+                if (!dirInfo.exists) {
+                    setCachedPhotoUri(null);
+                    return;
+                }
+                const files = await FileSystem.readDirectoryAsync(folder);
+                // Pega o primeiro arquivo de foto encontrado
+                const photoFile = files.find(f => f.startsWith('profile_') && (f.endsWith('.jpg') || f.endsWith('.png')));
+                if (photoFile) {
+                    setCachedPhotoUri(`${folder}${photoFile}`);
+                } else {
+                    setCachedPhotoUri(null);
+                }
+            } catch (err) {
+                console.error('Erro ao buscar foto em cache:', err);
+                setCachedPhotoUri(null);
+            }
+        }
+        // Só busca no cache se não tiver localUri ou photo_local
+        if (!localUri && !user?.photo_local) {
+            findCachedPhoto();
+        }
+    }, [localUri, user?.photo_local]);
 
     useEffect(() => {
         if (showLocation) {
@@ -76,8 +106,8 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                     </View>
                 </View>
             )}
-            {(localUri || user?.photo_local || user?.photo) ? (
-                    <Image source={{ uri: localUri || user?.photo_local || user?.photo! }} style={styles.avatar} />
+                {(localUri || cachedPhotoUri || user?.photo_local || user?.photo) ? (
+                    <Image source={{ uri: localUri || cachedPhotoUri || user?.photo_local || user?.photo }} style={styles.avatar} />
             ) : (
                 <View style={styles.fallback}>
                     <Text style={styles.fallbackText}>{initials}</Text>
