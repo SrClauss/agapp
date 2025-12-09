@@ -5,6 +5,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -14,6 +15,7 @@ import { colors } from '../theme/colors';
 
 export default function MyProjectsCarousel() {
   const navigation = useNavigation();
+  const { width: windowWidth } = useWindowDimensions();
   const [openProjects, setOpenProjects] = useState<Project[]>([]);
   const [closedProjects, setClosedProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,13 +23,10 @@ export default function MyProjectsCarousel() {
 
   const loadProjects = async () => {
     try {
-      console.log('Loading projects...');
       const [open, closed] = await Promise.all([
         getMyProjects('open'),
         getMyProjects('closed'),
       ]);
-      console.log('Open projects:', open);
-      console.log('Closed projects:', closed);
       setOpenProjects(open);
       setClosedProjects(closed);
     } catch (error) {
@@ -63,10 +62,12 @@ export default function MyProjectsCarousel() {
     return category.sub || category.main;
   };
 
+  const cardWidth = Math.max(windowWidth - 32, 260); // 16px side padding on parent ScrollView
+
   const renderProjectCard = (project: Project, isClosed: boolean = false) => (
     <TouchableOpacity
       key={project.id}
-      style={styles.projectCard}
+      style={[styles.projectCard, { width: cardWidth }]}
       onPress={() => handleProjectPress(project)}
       activeOpacity={0.7}
     >
@@ -75,11 +76,6 @@ export default function MyProjectsCarousel() {
         <Text style={styles.projectTitle} numberOfLines={2}>
           {project.title}
         </Text>
-        {project.client_name && (
-          <Text style={styles.projectClient} numberOfLines={1}>
-            Cliente: {project.client_name}
-          </Text>
-        )}
         <Text style={styles.projectCategory} numberOfLines={1}>
           {getCategoryDisplay(project.category)}
         </Text>
@@ -130,6 +126,9 @@ export default function MyProjectsCarousel() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            snapToInterval={cardWidth + 12}
+            snapToAlignment="start"
+            decelerationRate="fast"
           >
             {openProjects.map((project) => renderProjectCard(project, false))}
           </ScrollView>
@@ -166,6 +165,9 @@ export default function MyProjectsCarousel() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
+              snapToInterval={cardWidth + 12}
+              snapToAlignment="start"
+              decelerationRate="fast"
             >
               {closedProjects.map((project) => renderProjectCard(project, true))}
             </ScrollView>
@@ -179,6 +181,7 @@ export default function MyProjectsCarousel() {
 const styles = StyleSheet.create({
   container: {
     marginTop: 16,
+    marginHorizontal: -16,
   },
   loadingContainer: {
     padding: 24,
@@ -214,7 +217,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   scrollContent: {
-    paddingRight: 16,
+    paddingHorizontal: 16,
   },
   projectCard: {
     flexDirection: 'row',
@@ -250,12 +253,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginBottom: 8,
-  },
-  projectClient: {
-    fontSize: 12,
-    color: colors.primary,
-    marginTop: 2,
-    fontWeight: '500',
   },
   cardFooter: {
     flexDirection: 'row',
