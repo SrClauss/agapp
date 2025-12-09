@@ -72,6 +72,11 @@ export default function MyProjectsCarousel() {
         <Text style={styles.projectTitle} numberOfLines={2}>
           {project.title}
         </Text>
+        {project.client_name && (
+          <Text style={styles.projectClient} numberOfLines={1}>
+            Cliente: {project.client_name}
+          </Text>
+        )}
         <Text style={styles.projectCategory} numberOfLines={1}>
           {getCategoryDisplay(project.category)}
         </Text>

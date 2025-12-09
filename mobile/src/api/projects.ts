@@ -55,7 +55,9 @@ export interface Project {
  * Create a new project
  */
 export async function createProject(data: ProjectCreateData): Promise<Project> {
+
   const response = await client.post('/projects/', data);
+  console.log('Resposta da criação do projeto:', response.data);
   return response.data;
 }
 
@@ -103,3 +105,4 @@ export async function getRecommendedCategories(): Promise<string[]> {
   const response = await client.get('/projects/recomended-categories');
   return response.data;
 }
+

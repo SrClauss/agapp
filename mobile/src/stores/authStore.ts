@@ -51,6 +51,7 @@ export type AuthState = {
   setActiveRole: (role: string) => void;
   setHydrated: () => void;
   logout: () => Promise<void>;
+  getToken: () => string | null;
 };
 
 const SECURE_KEY = 'auth_token_v1';
@@ -71,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user: User | null) => set({ user }),
       setActiveRole: (role: string) => set({ activeRole: role }),
       setHydrated: () => set({ isHydrated: true }),
+      getToken: () => get().token,
       logout: async () => {
         console.log(`[AuthStore] Fazendo logout`);
         set({ token: null, user: null, activeRole: null });

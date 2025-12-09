@@ -1,6 +1,12 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import axiosRetry from 'axios-retry';
 import * as SecureStore from 'expo-secure-store';
+import useAuthStore from '../stores/authStore';
+
+// Função para obter token diretamente do store
+const getAuthToken = (): string | null => {
+  return useAuthStore.getState().token;
+};
 
 // Get base URL from environment
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -31,8 +37,8 @@ axiosRetry(client, {
 client.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
-      // Get token from secure store
-      const token = await SecureStore.getItemAsync('auth_token');
+      // Get token from auth store
+      const token = getAuthToken();
 
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -64,7 +70,7 @@ client.interceptors.response.use(
       try {
         // TODO: Implement token refresh logic here if you have a refresh endpoint
         // For now, just clear the token and let the user re-authenticate
-        await SecureStore.deleteItemAsync('auth_token');
+        useAuthStore.getState().logout();
 
         // You could also trigger a navigation to login screen here
         // or emit an event that the app listens to

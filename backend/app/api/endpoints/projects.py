@@ -149,6 +149,18 @@ async def read_my_projects(
     async for project in db.projects.find(query).sort("created_at", -1).skip(skip).limit(limit):
         projects.append(Project(**project))
     
+    # Populate client_name for each project
+    client_ids = list(set(p.client_id for p in projects if p.client_id))
+    if client_ids:
+        users_cursor = db.users.find({"_id": {"$in": client_ids}})
+        users = {}
+        async for user in users_cursor:
+            users[str(user["_id"])] = user.get("full_name", "")
+        
+        for project in projects:
+            if project.client_id in users:
+                project.client_name = users[project.client_id]
+    
     return projects
 
 @router.get("/{project_id}", response_model=Project)
