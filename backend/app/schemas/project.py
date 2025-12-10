@@ -3,7 +3,8 @@ from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 
 class ProjectBase(BaseModel):
-    title: str
+    # Limit title length to 80 characters to keep layout consistent with mobile
+    title: str = Field(..., max_length=80)
     description: str
     category: Union[str, Dict[str, str]]  # Aceita string (legacy) ou dict {main, sub}
     skills_required: List[str] = []
@@ -18,7 +19,7 @@ class ProjectCreate(ProjectBase):
     pass
 
 class ProjectUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=80)
     description: Optional[str] = None
     category: Optional[Union[str, Dict[str, str]]] = None  # Aceita string ou dict
     skills_required: Optional[List[str]] = None

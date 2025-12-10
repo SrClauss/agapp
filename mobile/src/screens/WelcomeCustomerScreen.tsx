@@ -280,10 +280,7 @@ export default function WelcomeCustomerScreen() {
           </>
         )}
 
-        {/* Seção de Projetos */}
-        <Divider style={[styles.divider, { marginVertical: 20 }]} />
-        <Text style={styles.sectionTitle}>Meus Projetos Ativos</Text>
-
+     
         {/* User's Projects Carousel */}
         <MyProjectsCarousel />
 

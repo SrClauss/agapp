@@ -1,4 +1,5 @@
 import client from './axiosClient';
+import useAuthStore from '../stores/authStore';
 
 export interface ProjectLocation {
   address?: string;
@@ -60,9 +61,13 @@ export interface Project {
  * Create a new project
  */
 export async function createProject(data: ProjectCreateData): Promise<Project> {
+  // Ensure Authorization header present in case axios interceptor didn't run or token not set
+  const token = useAuthStore.getState().token;
+  const config = token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : undefined;
 
-  const response = await client.post('/projects/', data);
-  console.log('Resposta da criação do projeto:', response.data);
+  const response = await client.post('/projects/', data, config);
   return response.data;
 }
 

@@ -58,6 +58,7 @@ Observações rápidas
 - POST /projects/
   - Descrição: Criar novo projeto
   - Body: `ProjectCreate`
+  - Observação: O campo `title` possui tamanho máximo de 80 caracteres.
   - Auth: sim
 
 - GET /projects/

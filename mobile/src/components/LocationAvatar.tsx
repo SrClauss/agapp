@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useProfilePhoto } from '../hooks/useProfilePhoto';
 import { View, Text, Image, StyleSheet } from 'react-native';
+import { IconButton, Badge } from 'react-native-paper';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
 import useAuthStore from "../stores/authStore";
+import useNotificationStore from '../stores/notificationStore';
 
 
 interface LocationAvatarProps {
@@ -16,11 +20,15 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
     const initials = user?.full_name ? user.full_name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'U';
     const [neigbhorhood, setNeigbhorhood] = useState<string>('');
     const { localUri } = useProfilePhoto(user?.id || null, user?.avatar_url || null);
+    const navigation = useNavigation();
+    const notificationCount = useNotificationStore((s) => s.count);
     const [cachedPhotoUri, setCachedPhotoUri] = useState<string | null>(null);
 
     // Busca genérica de foto no cache quando não há contexto completo
     useEffect(() => {
         async function findCachedPhoto() {
+
+            useNotificationStore.setState({ count:5});
             try {
                 const folder = `${FileSystem.cacheDirectory}profile/`;
                 const dirInfo = await FileSystem.getInfoAsync(folder);
@@ -88,6 +96,19 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
         }
     };
 
+
+    const openNotifications = () => {
+        // Navigate to a Notifications screen if exists; otherwise fallback to Profile
+        try {
+            navigation.navigate('Notifications' as never);
+        } catch (err) {
+            // if screen not found just log
+            console.warn('Notifications screen not configured', err);
+        }
+    };
+
+    // API for external code: button/other code can call setNotificationCount or inc/dec via useNotificationStore
+
     return (
         <View style={styles.container}>
             {showLocation && (
@@ -106,13 +127,35 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                     </View>
                 </View>
             )}
-                {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
-                    <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
-            ) : (
-                <View style={styles.fallback}>
-                    <Text style={styles.fallbackText}>{initials}</Text>
+                {/* Notification icon with badge (moved to left of avatar) */}
+                <View style={styles.notificationsContainerLeft}>
+                    <IconButton
+                        onPress={openNotifications}
+                        icon={({ size, color }) => (
+                            <MaterialIcons 
+                            name={notificationCount > 0 ? 'notifications' : 'notifications-none'}
+                            size={size} color={color} />
+                        )}
+                        size={22}
+                        iconColor={notificationCount > 0 ? 'red' : '#333'}
+                        style={styles.notificationIcon}
+                    />
+                    {notificationCount > 0 && (
+                        <Badge style={styles.notificationBadgeLeft}>{notificationCount}</Badge>
+                    )}
                 </View>
-            )}
+
+                <View style={styles.avatarWrapper}>
+                    {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
+                        <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
+                    ) : (
+                        <View style={styles.fallback}>
+                            <Text style={styles.fallbackText}>{initials}</Text>
+                        </View>
+                    )}
+
+                </View>
+                
         </View>
     );
 }
@@ -193,5 +236,30 @@ const styles = StyleSheet.create({
         color: '#666',
         fontWeight: '700',
         fontSize: 16,
+    },
+    avatarWrapper: {
+        position: 'relative',
+        marginLeft: 10,
+        marginRight: 6,
+    },
+        // logout overlay removed per design
+    /* notificationsContainer removed in favor of notificationsContainerLeft */
+    notificationIcon: {
+        margin: 0,
+        padding: 0,
+    },
+    /* notificationBadge removed - using notificationBadgeLeft */
+    notificationsContainerLeft: {
+        marginRight: 8,
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    notificationBadgeLeft: {
+        position: 'absolute',
+        top: -2,
+        right: -6,
+        backgroundColor: '#E53935',
+        color: '#fff',
     },
 });

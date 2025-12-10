@@ -13,7 +13,8 @@ class Project(BaseModel):
     client_name: Optional[str] = None
     professional_id: Optional[str] = None
     professional_name: Optional[str] = None
-    title: str
+    # Limit title to 80 chars to match mobile card UI
+    title: str = Field(..., max_length=80)
     description: str
     category: Dict[str, str]  # {"main": "Programação", "sub": "Desenvolvimento Web"}
     skills_required: List[str] = []

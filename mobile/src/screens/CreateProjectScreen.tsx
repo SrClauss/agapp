@@ -14,8 +14,11 @@ import { TextInput, Button, Checkbox, ActivityIndicator } from 'react-native-pap
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import axios from 'axios';
 import { createProject, ProjectCreateData, ProjectLocation } from '../api/projects';
+import useAuthStore from '../stores/authStore';
 import { colors } from '../theme/colors';
+import { MAX_PROJECT_TITLE_LENGTH } from '../constants';
 
 interface RouteParams {
   categoryName: string;
@@ -113,6 +116,10 @@ export default function CreateProjectScreen() {
       Alert.alert('Erro', 'Por favor, informe um título para o projeto.');
       return false;
     }
+    if (title.trim().length > MAX_PROJECT_TITLE_LENGTH) {
+      Alert.alert('Erro', `O título do projeto deve ter no máximo ${MAX_PROJECT_TITLE_LENGTH} caracteres.`);
+      return false;
+    }
     if (!description.trim()) {
       Alert.alert('Erro', 'Por favor, descreva o que você precisa.');
       return false;
@@ -130,6 +137,14 @@ export default function CreateProjectScreen() {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
+
+    // Make sure user is authenticated
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      Alert.alert('Autenticação requerida', 'Você precisa entrar para publicar um projeto.');
+      navigation.navigate('Login' as never);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -185,10 +200,20 @@ export default function CreateProjectScreen() {
     } catch (error: unknown) {
       console.error('Erro ao criar projeto:', error);
       let message = 'Não foi possível criar o projeto. Tente novamente.';
-      if (error instanceof Error && 'response' in error) {
-        const axiosError = error as { response?: { data?: { detail?: string } } };
-        if (axiosError.response?.data?.detail) {
-          message = axiosError.response.data.detail;
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          // try to find title error
+          const titleError = detail.find((d: any) => d?.loc?.includes('title') || (d?.msg && d.msg.includes('title')));
+          if (titleError) {
+            message = `O título do projeto deve ter no máximo ${MAX_PROJECT_TITLE_LENGTH} caracteres.`;
+          } else if (detail.length > 0 && typeof detail[0] === 'string') {
+            message = detail[0];
+          } else if (detail.length > 0 && detail[0].msg) {
+            message = detail[0].msg;
+          }
+        } else if (typeof detail === 'string') {
+          message = detail;
         }
       }
       Alert.alert('Erro', message);
@@ -229,9 +254,11 @@ export default function CreateProjectScreen() {
               value={title}
               onChangeText={setTitle}
               mode="outlined"
+              maxLength={MAX_PROJECT_TITLE_LENGTH}
               style={styles.input}
               placeholder="Ex: Conserto de torneira vazando"
             />
+            <Text style={styles.charCounter}>{title.length}/{MAX_PROJECT_TITLE_LENGTH}</Text>
 
             {/* Description */}
             <TextInput
@@ -447,6 +474,13 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: 16,
     backgroundColor: '#fff',
+  },
+  charCounter: {
+    alignSelf: 'flex-end',
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: -12,
+    marginBottom: 8,
   },
   textArea: {
     minHeight: 100,
