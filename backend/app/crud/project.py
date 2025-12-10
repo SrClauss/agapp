@@ -10,7 +10,7 @@ async def get_project(db: AsyncIOMotorDatabase, project_id: str) -> Optional[Pro
     project = await db.projects.find_one({"_id": project_id})
     if project:
         project_dict = dict(project)
-        project_dict['id'] = str(project_dict.pop('_id'))
+        project_dict['_id'] = str(project_dict['_id'])
         return Project(**project_dict)
     return None
 
@@ -49,7 +49,7 @@ async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100
     projects = []
     async for project in db.projects.find(query).skip(skip).limit(limit):
         project_dict = dict(project)
-        project_dict['id'] = str(project_dict.pop('_id'))
+        project_dict['_id'] = str(project_dict['_id'])
         projects.append(Project(**project_dict))
     return projects
 
