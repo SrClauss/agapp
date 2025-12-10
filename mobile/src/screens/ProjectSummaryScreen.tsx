@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Project } from '../api/projects';
 import { Card, Title, Paragraph, Chip, Divider, Avatar as PaperAvatar, List, useTheme } from 'react-native-paper';
@@ -21,7 +21,12 @@ export default function ProjectSummaryScreen(props: Props) {
       : `${liberadoresNames.slice(0, 3).join(', ')} e mais ${liberadoresNames.length - 3}`;
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}> 
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}> 
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+      >
       <Card mode="elevated" style={styles.headerCard}>
         <Card.Content>
           <View style={styles.headerTop}>
@@ -97,12 +102,15 @@ export default function ProjectSummaryScreen(props: Props) {
           )}
         </Card.Content>
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
+  safeArea: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 36 },
   headerCard: { marginBottom: 16 },
   headerTop: { marginBottom: 12 },
   projectTitle: { fontSize: 24, fontWeight: '700', marginBottom: 8, lineHeight: 32 },
