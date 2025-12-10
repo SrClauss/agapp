@@ -10,6 +10,7 @@ import WelcomeCustomerScreen from './src/screens/WelcomeCustomerScreen';
 import SearchResultsScreen from './src/screens/SearchResultsScreen';
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
 import ProjectDetailScreen from './src/screens/ProjectDetailScreen';
+import AllProjectsScreen from './src/screens/AllProjectsScreen';
 import ProjectSummaryScreen from './src/screens/ProjectSummaryScreen';
 import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
 import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
@@ -101,6 +102,7 @@ export default function App() {
           <Stack.Screen name="CreateProject" component={CreateProjectScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ProjectSummary" component={ProjectSummaryScreen} options={{ title: 'Resumo do Projeto' }} />
+          <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />
           <Stack.Screen name="ProfessionalHome" component={ProfessionalHomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />

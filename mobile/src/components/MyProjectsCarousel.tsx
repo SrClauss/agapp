@@ -66,9 +66,13 @@ export default function MyProjectsCarousel() {
 
   const cardWidth = Math.max(windowWidth - 32, 260); // 16px side padding on parent ScrollView
 
-  const renderProjectCard = (project: Project, isClosed: boolean = false) => (
+  const getProjectKey = (project: Project, index: number) => {
+    return project.id ?? `${project.client_id ?? 'no-client'}-${index}-${project.created_at}`;
+  };
+
+  const renderProjectCard = (project: Project, index: number, isClosed: boolean = false) => (
     <TouchableOpacity
-      key={project.id}
+      key={getProjectKey(project, index)}
       style={[styles.projectCard, { width: cardWidth }]}
       onPress={() => handleProjectPress(project)}
       activeOpacity={0.7}
@@ -142,7 +146,15 @@ export default function MyProjectsCarousel() {
             snapToAlignment="start"
             decelerationRate="fast"
           >
-            {openProjects.map((project) => renderProjectCard(project, false))}
+            {openProjects.map((project, index) => renderProjectCard(project, index, false))}
+            {/* Ver todos button */}
+            <TouchableOpacity
+              style={[styles.projectCard, { width: cardWidth, justifyContent: 'center', alignItems: 'center' }]}
+              onPress={() => navigation.navigate('AllProjects' as never)}
+            >
+              <MaterialIcons name="format-list-bulleted" size={40} color={colors.primary} />
+              <Text style={[styles.projectTitle, { marginTop: 8, textAlign: 'center' }]}>Ver todos</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       )}
@@ -181,7 +193,7 @@ export default function MyProjectsCarousel() {
               snapToAlignment="start"
               decelerationRate="fast"
             >
-              {closedProjects.map((project) => renderProjectCard(project, true))}
+              {closedProjects.map((project, index) => renderProjectCard(project, index, true))}
             </ScrollView>
           )}
         </View>
