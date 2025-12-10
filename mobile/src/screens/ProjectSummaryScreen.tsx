@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Project } from '../api/projects';
 import { Card, Title, Paragraph, Chip, Divider, Avatar as PaperAvatar, List, useTheme } from 'react-native-paper';
@@ -10,6 +10,15 @@ export default function ProjectSummaryScreen(props: Props) {
   const route = useRoute();
   const { project }: { project: Project } = route.params as any;
   const theme = useTheme();
+
+  // Preparar texto de feedback dos liberadores
+  const liberadores = project?.liberado_por_profiles || [];
+  const liberadoresNames = liberadores.map(p => p.full_name || p.id || '—');
+  const liberadoresLabel = liberadoresNames.length === 0
+    ? ''
+    : liberadoresNames.length <= 3
+      ? liberadoresNames.join(', ')
+      : `${liberadoresNames.slice(0, 3).join(', ')} e mais ${liberadoresNames.length - 3}`;
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}> 
@@ -64,12 +73,12 @@ export default function ProjectSummaryScreen(props: Props) {
         )}
       </Card>
 
-      {project.liberado_por_profiles && project.liberado_por_profiles.length > 0 && (
+      {liberadores.length > 0 ? (
         <Card style={styles.card}>
           <Card.Title title="Liberado por" titleStyle={styles.cardTitle} />
           <Card.Content>
             <View style={styles.avatarStack}>
-              {project.liberado_por_profiles.map((profile, idx) => (
+              {liberadores.map((profile, idx) => (
                 <View key={profile.id || idx} style={styles.avatarItem}>
                   {profile.avatar_url ? (
                     <PaperAvatar.Image size={48} source={{ uri: profile.avatar_url }} />
@@ -80,6 +89,13 @@ export default function ProjectSummaryScreen(props: Props) {
                 </View>
               ))}
             </View>
+            <Paragraph style={styles.liberadoresFeedback}>Liberadores: {liberadoresLabel}</Paragraph>
+          </Card.Content>
+        </Card>
+      ) : (
+        <Card style={styles.card}>
+          <Card.Content>
+            <Paragraph style={styles.emptyText}>Até agora ninguém liberou este projeto.</Paragraph>
           </Card.Content>
         </Card>
       )}
@@ -100,4 +116,6 @@ const styles = StyleSheet.create({
   avatarStack: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   avatarItem: { alignItems: 'center', width: 80 },
   avatarName: { fontSize: 12, marginTop: 8, textAlign: 'center', color: '#333' },
+  liberadoresFeedback: { marginTop: 8, color: '#444', fontSize: 14 },
+  emptyText: { color: '#666', fontSize: 14, textAlign: 'center', paddingVertical: 12 },
 });
