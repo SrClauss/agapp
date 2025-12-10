@@ -130,10 +130,6 @@ export default function MyProjectsCarousel() {
             <Text style={styles.sectionTitle}>Meus Projetos Ativos</Text>
           </View>
           <Text style={styles.projectCount}>{openProjects.length}</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('AllProjects' as never)} style={styles.viewAllButton}>
-            <MaterialIcons name="format-list-bulleted" size={18} color={colors.primary} />
-            <Text style={styles.viewAllText}>Ver todos</Text>
-          </TouchableOpacity>
         </View>
         <ScrollView
           horizontal
@@ -225,6 +221,7 @@ const styles = StyleSheet.create({
   sectionTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 24,
   },
   sectionTitle: {
     fontSize: 16,
@@ -241,8 +238,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  viewAllButton: { flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
-  viewAllText: { fontSize: 12, color: colors.primary, marginLeft: 6, fontWeight: '600' },
+  // Removed header 'Ver todos' button to keep carousel clean (card keeps 'Ver todos')
   scrollContent: {
     paddingHorizontal: 16,
   },
