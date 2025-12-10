@@ -120,44 +120,46 @@ export default function MyProjectsCarousel() {
     );
   }
 
-  const hasProjects = openProjects.length > 0 || closedProjects.length > 0;
-
-  if (!hasProjects) {
-    return null; // Don't show anything if no projects
-  }
-
   return (
     <View style={styles.container}>
-      {/* Open Projects Section */}
-      {openProjects.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <MaterialIcons name="assignment" size={20} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Meus Projetos Ativos</Text>
-            </View>
-            <Text style={styles.projectCount}>{openProjects.length}</Text>
+      {/* Open Projects Section (always rendered so 'Ver todos' is visible) */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleContainer}>
+            <MaterialIcons name="assignment" size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Meus Projetos Ativos</Text>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-            snapToInterval={cardWidth + 12}
-            snapToAlignment="start"
-            decelerationRate="fast"
-          >
-            {openProjects.map((project, index) => renderProjectCard(project, index, false))}
-            {/* Ver todos button */}
-            <TouchableOpacity
-              style={[styles.projectCard, { width: cardWidth, justifyContent: 'center', alignItems: 'center' }]}
-              onPress={() => navigation.navigate('AllProjects' as never)}
-            >
-              <MaterialIcons name="format-list-bulleted" size={40} color={colors.primary} />
-              <Text style={[styles.projectTitle, { marginTop: 8, textAlign: 'center' }]}>Ver todos</Text>
-            </TouchableOpacity>
-          </ScrollView>
+          <Text style={styles.projectCount}>{openProjects.length}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('AllProjects' as never)} style={styles.viewAllButton}>
+            <MaterialIcons name="format-list-bulleted" size={18} color={colors.primary} />
+            <Text style={styles.viewAllText}>Ver todos</Text>
+          </TouchableOpacity>
         </View>
-      )}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          snapToInterval={cardWidth + 12}
+          snapToAlignment="start"
+          decelerationRate="fast"
+        >
+          {openProjects.length === 0 ? (
+            <View style={[styles.projectCard, { width: cardWidth, justifyContent: 'center', alignItems: 'center' }]}> 
+              <Text style={{ color: colors.textSecondary }}>Nenhum projeto ativo</Text>
+            </View>
+          ) : (
+            openProjects.map((project, index) => renderProjectCard(project, index, false))
+          )}
+          {/* Ver todos button */}
+          <TouchableOpacity
+            style={[styles.projectCard, { width: cardWidth, justifyContent: 'center', alignItems: 'center' }]}
+            onPress={() => navigation.navigate('AllProjects' as never)}
+          >
+            <MaterialIcons name="format-list-bulleted" size={40} color={colors.primary} />
+            <Text style={[styles.projectTitle, { marginTop: 8, textAlign: 'center' }]}>Ver todos</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
 
       {/* Closed Projects Toggle */}
       {closedProjects.length > 0 && (
@@ -201,7 +203,6 @@ export default function MyProjectsCarousel() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     marginTop: 16,
@@ -240,6 +241,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
+  viewAllButton: { flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
+  viewAllText: { fontSize: 12, color: colors.primary, marginLeft: 6, fontWeight: '600' },
   scrollContent: {
     paddingHorizontal: 16,
   },
