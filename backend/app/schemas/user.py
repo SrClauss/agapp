@@ -9,7 +9,7 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     roles: List[str] = Field(default=["client"])
     is_profile_complete: bool = False  # Novo campo
-    photo: Optional[str] = None  # Novo campo para photo do Google
+    avatar_url: Optional[str] = None  # URL pública do avatar (por ex, do Google)
 
 class UserCreate(UserBase):
     password: str
@@ -22,7 +22,7 @@ class UserUpdate(BaseModel):
     professional_info: Optional[Dict[str, Any]] = None
     roles: Optional[List[str]] = None
     is_profile_complete: Optional[bool] = None  # Novo campo opcional para updates
-    photo: Optional[str] = None  # Novo campo opcional
+    avatar_url: Optional[str] = None  # Novo campo opcional
 
 class UserInDBBase(UserBase):
     id: str = Field(alias="_id")

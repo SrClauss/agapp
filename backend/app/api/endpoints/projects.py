@@ -52,6 +52,19 @@ async def read_projects(
         radius_km=radius_km
     )
     projects = await get_projects(db, skip=skip, limit=limit, filters=filters)
+    # Populate liberado_por_profiles for projects
+    prof_ids = list({pid for p in projects for pid in (p.liberado_por or [])})
+    if prof_ids:
+        prof_cursor = db.users.find({"_id": {"$in": prof_ids}}, {"full_name": 1, "avatar_url": 1})
+        profs = {}
+        async for prof in prof_cursor:
+            profs[str(prof["_id"])] = {
+                "id": str(prof["_id"]),
+                "name": prof.get("full_name", ""),
+                "avatar_url": prof.get("avatar_url")
+            }
+        for project in projects:
+            project.liberado_por_profiles = [profs[pid] for pid in (project.liberado_por or []) if pid in profs]
     return projects
 
 @router.get("/nearby", response_model=List[Project])
@@ -164,6 +177,20 @@ async def read_my_projects(
         for project in projects:
             if project.client_id in users:
                 project.client_name = users[project.client_id]
+    
+    # Populate liberado_por_profiles (profiles of professionals who liberated the project)
+    prof_ids = list({pid for p in projects for pid in (p.liberado_por or [])})
+    if prof_ids:
+        prof_cursor = db.users.find({"_id": {"$in": prof_ids}}, {"full_name": 1, "avatar_url": 1})
+        profs = {}
+        async for prof in prof_cursor:
+            profs[str(prof["_id"])] = {
+                "id": str(prof["_id"]),
+                "name": prof.get("full_name", ""),
+                "avatar_url": prof.get("avatar_url")
+            }
+        for project in projects:
+            project.liberado_por_profiles = [profs[pid] for pid in (project.liberado_por or []) if pid in profs]
     
     return projects
 

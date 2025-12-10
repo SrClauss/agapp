@@ -16,7 +16,7 @@ class User(BaseModel):
     credits: int = 0  # Créditos para contatar profissionais
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    photo: Optional[str] = None  # Novo campo para photo do Google
+    avatar_url: Optional[str] = None  # URL pública do avatar (por ex, do Google)
 
     # Perfil de endereço
     address: Optional[Dict[str, Any]] = None  # {street, city, state, zip_code, country}
@@ -28,9 +28,10 @@ class User(BaseModel):
     # Assinatura
     subscription: Optional[Dict[str, Any]] = None  # {plan, credits, expires_at}
 
-    class Config:
-        validate_by_name = True
-        arbitrary_types_allowed = True
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+    }
 
 class UserInDB(User):
     pass

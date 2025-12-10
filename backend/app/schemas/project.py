@@ -34,7 +34,7 @@ class ProjectUpdate(BaseModel):
     remote_execution: Optional[bool] = None
 
 class ProjectInDBBase(ProjectBase):
-    id: str
+    id: str = Field(alias="_id")
     client_id: str
     client_name: Optional[str] = None  # Added client name
     status: str
@@ -46,12 +46,17 @@ class ProjectInDBBase(ProjectBase):
     final_budget: Optional[float] = None  # Final agreed budget
     closed_by: Optional[str] = None  # Professional ID who closed the project
     closed_by_name: Optional[str] = None  # Added professional name
+    liberado_por_profiles: List[Dict[str, Any]] = []  # Profiles for professionals who liberated the project
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 class Project(ProjectInDBBase):
     pass
+
+# Include liberated professionals profiles in responses
+ProjectInDBBase.liberado_por_profiles = []
 
 class ProjectFilter(BaseModel):
     category: Optional[str] = None

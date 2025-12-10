@@ -124,7 +124,7 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
                 phone=None,
                 roles=["client"],
                 is_profile_complete=False,  # Novo campo
-                photo=google_picture  # Novo campo
+                avatar_url=google_picture  # Novo campo
             )
             await create_user(db, new_user)
             # Recarregar usuário do banco para garantir todos os campos preenchidos (is_active, timestamps, etc.)

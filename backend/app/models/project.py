@@ -40,6 +40,7 @@ class Project(BaseModel):
     # Execução Remota
     remote_execution: bool = False  # Permite execução remota do projeto
 
-    class Config:
-        validate_by_name = True
-        arbitrary_types_allowed = True
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+    }
