@@ -73,32 +73,30 @@ export default function ProjectSummaryScreen(props: Props) {
         )}
       </Card>
 
-      {liberadores.length > 0 ? (
-        <Card style={styles.card}>
-          <Card.Title title="Liberado por" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            <View style={styles.avatarStack}>
-              {liberadores.map((profile, idx) => (
-                <View key={profile.id || idx} style={styles.avatarItem}>
-                  {profile.avatar_url ? (
-                    <PaperAvatar.Image size={48} source={{ uri: profile.avatar_url }} />
-                  ) : (
-                    <PaperAvatar.Text size={48} label={(profile.full_name || profile.id || '').slice(0,2).toUpperCase()} />
-                  )}
-                  <Text style={styles.avatarName} numberOfLines={2}>{profile.full_name || profile.id}</Text>
-                </View>
-              ))}
-            </View>
-            <Paragraph style={styles.liberadoresFeedback}>Liberadores: {liberadoresLabel}</Paragraph>
-          </Card.Content>
-        </Card>
-      ) : (
-        <Card style={styles.card}>
-          <Card.Content>
+      <Card style={styles.card}>
+        <Card.Title title="Liberado por" titleStyle={styles.cardTitle} />
+        <Card.Content>
+          {liberadores.length > 0 ? (
+            <>
+              <View style={styles.avatarStack}>
+                {liberadores.map((profile, idx) => (
+                  <View key={profile.id || idx} style={styles.avatarItem}>
+                    {profile.avatar_url ? (
+                      <PaperAvatar.Image size={48} source={{ uri: profile.avatar_url }} />
+                    ) : (
+                      <PaperAvatar.Text size={48} label={(profile.full_name || profile.id || '').slice(0,2).toUpperCase()} />
+                    )}
+                    <Text style={styles.avatarName} numberOfLines={2}>{profile.full_name || profile.id}</Text>
+                  </View>
+                ))}
+              </View>
+              <Paragraph style={styles.liberadoresFeedback}>Liberadores: {liberadoresLabel}</Paragraph>
+            </>
+          ) : (
             <Paragraph style={styles.emptyText}>Até agora ninguém liberou este projeto.</Paragraph>
-          </Card.Content>
-        </Card>
-      )}
+          )}
+        </Card.Content>
+      </Card>
     </ScrollView>
   );
 }
