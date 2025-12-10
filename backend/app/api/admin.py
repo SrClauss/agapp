@@ -194,11 +194,15 @@ async def admin_projects(
     # Get clients for filter dropdown
     clients = await get_users(db, query_filter={"roles": "client"})
 
+    # Dicionário de clientes para lookup rápido no template
+    clients_dict = {str(client.id): client for client in clients}
+
     return templates.TemplateResponse("admin/projects.html", {
         "request": request,
         "current_user": current_user,
         "projects": projects,
         "clients": clients,
+        "clients_dict": clients_dict,
         "skip": skip,
         "limit": limit,
         "total": total_projects,
