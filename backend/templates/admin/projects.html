@@ -80,7 +80,20 @@
                                 {% endif %}
                             </div>
                         </td>
-                        <td>{{ project.client_name or 'N/A' }}</td>
+                        <td>
+                            {% if project.client_name %}
+                                {{ project.client_name }}
+                            {% elif project.client_id %}
+                                <span class="badge bg-info text-dark" title="ID: {{ project.client_id }}">
+                                    {{ project.client_id[:4] }}...{{ project.client_id[-4:] }}
+                                </span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Ver cliente" onclick="window.open('/system-admin/clients/{{ project.client_id }}', '_blank')">
+                                    <i class="fas fa-user"></i>
+                                </button>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
                         <td>
                             <span class="badge bg-{{ 'warning' if project.status == 'pending' else 'success' if project.status == 'active' else 'secondary' if project.status == 'completed' else 'danger' }}">
                                 {{ project.status }}
