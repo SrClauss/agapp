@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Card, Searchbar, List, Divider, ActivityIndicator, Text } from 'react-native-paper';
+import { Searchbar, Divider, ActivityIndicator, Text } from 'react-native-paper';
+import ProjectCard from '../components/ProjectCard';
 import { getProjects, Project } from '../api/projects';
 
 export default function AllProjectsScreen() {
@@ -33,15 +34,7 @@ export default function AllProjectsScreen() {
   }, [projects, query]);
 
   const renderItem = ({ item }: { item: Project }) => (
-    <Card style={styles.card} onPress={() => navigation.navigate('ProjectSummary' as never, { project: item } as never)}>
-      <Card.Content>
-        <List.Item
-          title={item.title}
-          description={item.description ? item.description.slice(0, 150) : '—'}
-          left={props => <List.Icon {...props} icon="file-document-outline" />}
-        />
-      </Card.Content>
-    </Card>
+    <ProjectCard project={item} showStatus />
   );
 
   if (loading) return (

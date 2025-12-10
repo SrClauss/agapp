@@ -6,11 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
-  Image,
 } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import ProjectCard from './ProjectCard';
 import { getMyProjects, Project } from '../api/projects';
 import { colors } from '../theme/colors';
 
@@ -70,47 +70,7 @@ export default function MyProjectsCarousel() {
     return project.id ?? `${project.client_id ?? 'no-client'}-${index}-${project.created_at}`;
   };
 
-  const renderProjectCard = (project: Project, index: number, isClosed: boolean = false) => (
-    <TouchableOpacity
-      key={getProjectKey(project, index)}
-      style={[styles.projectCard, { width: cardWidth }]}
-      onPress={() => handleProjectPress(project)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.statusIndicator, { backgroundColor: isClosed ? colors.textSecondary : colors.success }]} />
-      <View style={styles.cardContent}>
-        <Text style={styles.projectTitle} numberOfLines={2}>
-          {project.title}
-        </Text>
-        <Text style={styles.projectCategory} numberOfLines={1}>
-          {getCategoryDisplay(project.category)}
-        </Text>
-        <View style={styles.cardFooter}>
-          <View style={styles.dateContainer}>
-            <MaterialIcons name="event" size={14} color={colors.textSecondary} />
-            <Text style={styles.dateText}>{formatDate(project.created_at)}</Text>
-          </View>
-          {project.liberado_por_profiles && project.liberado_por_profiles.length > 0 && (
-            <View style={styles.contactsContainer}>
-              <View style={styles.avatarStack}>
-                {project.liberado_por_profiles.slice(0, 3).map((p: any, idx: number) => (
-                  <View key={p.id || idx} style={[styles.avatarWrapper, { left: idx * -8 }]}> 
-                    <Image source={{ uri: p.avatar_url }} style={styles.smallAvatar} />
-                  </View>
-                ))}
-                {project.liberado_por_profiles.length > 3 && (
-                  <View style={[styles.avatarMore, { left: 3 * -8 }]}> 
-                    <Text style={styles.avatarMoreText}>+{project.liberado_por_profiles.length - 3}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-        </View>
-      </View>
-      <MaterialIcons name="chevron-right" size={24} color={colors.textSecondary} />
-    </TouchableOpacity>
-  );
+  // Replaced old renderProjectCard implementation with the reusable ProjectCard component
 
   if (loading) {
     return (
@@ -144,7 +104,9 @@ export default function MyProjectsCarousel() {
               <Text style={{ color: colors.textSecondary }}>Nenhum projeto ativo</Text>
             </View>
           ) : (
-            openProjects.map((project, index) => renderProjectCard(project, index, false))
+            openProjects.map((project, index) => (
+              <ProjectCard key={getProjectKey(project, index)} project={project} index={index} compact cardWidth={cardWidth} />
+            ))
           )}
           {/* Ver todos button */}
           <TouchableOpacity
@@ -191,7 +153,9 @@ export default function MyProjectsCarousel() {
               snapToAlignment="start"
               decelerationRate="fast"
             >
-              {closedProjects.map((project, index) => renderProjectCard(project, index, true))}
+              {closedProjects.map((project, index) => (
+                <ProjectCard key={getProjectKey(project, index)} project={project} index={index} compact showStatus cardWidth={cardWidth} />
+              ))}
             </ScrollView>
           )}
         </View>
