@@ -280,6 +280,10 @@ export default function WelcomeCustomerScreen() {
           </>
         )}
 
+        {/* Seção de Projetos */}
+        <Divider style={[styles.divider, { marginVertical: 20 }]} />
+        <Text style={styles.sectionTitle}>Meus Projetos Ativos</Text>
+
         {/* User's Projects Carousel */}
         <MyProjectsCarousel />
 
@@ -397,6 +401,13 @@ const styles = StyleSheet.create({
   },
   flatListContent: {
     paddingBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 12,
+    paddingLeft: 28,
   },
   divider: {
     marginVertical: 16,
