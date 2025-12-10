@@ -115,12 +115,12 @@ export default function LoginScreen() {
 
       await setToken(data.token);
       let user = data.user || (await fetchCurrentUser(data.token));
-      // If backend didn't return photo, try to get from Google profile or accessToken
-      if (user && (!user.photo || user.photo === '')) {
+      // If backend didn't return avatar_url, try to get from Google profile or accessToken
+      if (user && (!user.avatar_url || user.avatar_url === '')) {
         // Try to use profile returned from native GoogleSignIn
         const pictureFromProfile = profile?.user?.photo || profile?.user?.photoUrl || profile?.user?.photoURL || profile?.photo || profile?.picture;
         if (pictureFromProfile) {
-          user = { ...user, photo: pictureFromProfile };
+          user = { ...user, avatar_url: pictureFromProfile };
         } else if (accessToken) {
           // Fallback: fetch from Google Userinfo endpoint using accessToken
           try {
@@ -130,7 +130,7 @@ export default function LoginScreen() {
               },
             });
             if (googleProfile?.picture) {
-              user = { ...user, photo: googleProfile.picture };
+              user = { ...user, avatar_url: googleProfile.picture };
             }
           } catch (err) {
             console.warn('Erro ao buscar foto do Google via API userinfo', err);

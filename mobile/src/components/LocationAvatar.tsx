@@ -15,7 +15,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
     const [locationText, setLocationText] = useState<string>('Obtendo localização...');
     const initials = user?.full_name ? user.full_name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'U';
     const [neigbhorhood, setNeigbhorhood] = useState<string>('');
-    const { localUri } = useProfilePhoto(user?.id || null, user?.photo || null);
+    const { localUri } = useProfilePhoto(user?.id || null, user?.avatar_url || null);
     const [cachedPhotoUri, setCachedPhotoUri] = useState<string | null>(null);
 
     // Busca genérica de foto no cache quando não há contexto completo
@@ -41,11 +41,11 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                 setCachedPhotoUri(null);
             }
         }
-        // Só busca no cache se não tiver localUri ou photo_local
-        if (!localUri && !user?.photo_local) {
+        // Só busca no cache se não tiver localUri ou avatar_local
+        if (!localUri && !user?.avatar_local) {
             findCachedPhoto();
         }
-    }, [localUri, user?.photo_local]);
+    }, [localUri, user?.avatar_local]);
 
     useEffect(() => {
         if (showLocation) {
@@ -106,8 +106,8 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                     </View>
                 </View>
             )}
-                {(localUri || cachedPhotoUri || user?.photo_local || user?.photo) ? (
-                    <Image source={{ uri: localUri || cachedPhotoUri || user?.photo_local || user?.photo }} style={styles.avatar} />
+                {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
+                    <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
             ) : (
                 <View style={styles.fallback}>
                     <Text style={styles.fallbackText}>{initials}</Text>

@@ -44,6 +44,11 @@ export interface Project {
   created_at: string;
   updated_at: string;
   liberado_por: string[];
+  liberado_por_profiles?: Array<{
+    id: string;
+    full_name?: string;
+    avatar_url?: string;
+  }>;
   chat: any[];
   closed_at?: string;
   final_budget?: number;

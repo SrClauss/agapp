@@ -222,7 +222,41 @@ export default function ProjectDetailScreen() {
               Profissionais que entraram em contato
             </Text>
             
-            {project.liberado_por && project.liberado_por.length > 0 ? (
+            {project.liberado_por_profiles && project.liberado_por_profiles.length > 0 ? (
+              <View style={styles.professionalsContainer}>
+                {project.liberado_por_profiles.map((p) => (
+                  <View key={p.id} style={styles.professionalItem}>
+                    {p.avatar_url ? (
+                      <Avatar.Image
+                        size={48}
+                        source={{ uri: p.avatar_url }}
+                        style={styles.professionalAvatar}
+                      />
+                    ) : (
+                      <Avatar.Icon
+                        size={48}
+                        icon="account"
+                        style={styles.professionalAvatar}
+                      />
+                    )}
+                    <View style={styles.professionalInfo}>
+                      <Text style={styles.professionalName}>
+                        {p.full_name || 'Profissional'}
+                      </Text>
+                      <Text style={styles.professionalId}>
+                        ID: {p.id.substring(0, 8)}...
+                      </Text>
+                    </View>
+                    <View style={styles.contactButtonPlaceholder}>
+                      <MaterialIcons name="chat" size={20} color={colors.textDisabled} />
+                    </View>
+                  </View>
+                ))}
+                <Text style={styles.futureFeatureText}>
+                  Em breve: possibilidade de contatar profissionais diretamente
+                </Text>
+              </View>
+            ) : project.liberado_por && project.liberado_por.length > 0 ? (
               <View style={styles.professionalsContainer}>
                 {project.liberado_por.map((professionalId, index) => (
                   <View key={professionalId} style={styles.professionalItem}>

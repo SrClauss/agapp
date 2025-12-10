@@ -49,8 +49,8 @@ export default function CompleteProfileScreen() {
         roles,
       });
       console.log('Perfil completado:', updatedUser);
-      // Atualizar user com photo se disponível
-      const userWithPhoto = { ...updatedUser, photo: user.photo };
+      // Atualizar user com avatar_url se disponível
+      const userWithPhoto = { ...updatedUser, avatar_url: user?.avatar_url };
       setUser(userWithPhoto);
       // Navigate based on user roles
       const destination = updatedUser.roles.includes('client') ? 'WelcomeCustomer' : 'ProfessionalHome';

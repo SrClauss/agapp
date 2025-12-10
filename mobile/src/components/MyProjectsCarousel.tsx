@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
+  Image,
 } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -84,10 +85,20 @@ export default function MyProjectsCarousel() {
             <MaterialIcons name="event" size={14} color={colors.textSecondary} />
             <Text style={styles.dateText}>{formatDate(project.created_at)}</Text>
           </View>
-          {project.liberado_por && project.liberado_por.length > 0 && (
+          {project.liberado_por_profiles && project.liberado_por_profiles.length > 0 && (
             <View style={styles.contactsContainer}>
-              <MaterialIcons name="people" size={14} color={colors.primary} />
-              <Text style={styles.contactsText}>{project.liberado_por.length}</Text>
+              <View style={styles.avatarStack}>
+                {project.liberado_por_profiles.slice(0, 3).map((p: any, idx: number) => (
+                  <View key={p.id || idx} style={[styles.avatarWrapper, { left: idx * -8 }]}> 
+                    <Image source={{ uri: p.avatar_url }} style={styles.smallAvatar} />
+                  </View>
+                ))}
+                {project.liberado_por_profiles.length > 3 && (
+                  <View style={[styles.avatarMore, { left: 3 * -8 }]}> 
+                    <Text style={styles.avatarMoreText}>+{project.liberado_por_profiles.length - 3}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           )}
         </View>
@@ -280,6 +291,40 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.primary,
     marginLeft: 4,
+    fontWeight: '600',
+  },
+  avatarStack: {
+    width: 64,
+    height: 26,
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarWrapper: {
+    position: 'relative',
+    zIndex: 2,
+  },
+  smallAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  avatarMore: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: `${colors.primary}30`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+    zIndex: 1,
+  },
+  avatarMoreText: {
+    fontSize: 11,
+    color: colors.primary,
     fontWeight: '600',
   },
   closedHeader: {

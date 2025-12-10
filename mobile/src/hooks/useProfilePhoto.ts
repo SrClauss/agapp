@@ -3,10 +3,10 @@ import * as FileSystem from 'expo-file-system';
 import useAuthStore from '../stores/authStore';
 
 /**
- * Ensures a user's profile photo is cached locally and returns a local uri.
- * If user has photo_local, returns it immediately (and validates existence).
+ * Ensures a user's profile avatar is cached locally and returns a local uri.
+ * If user has avatar_local, returns it immediately (and validates existence).
  */
-export function useProfilePhoto(userId?: string | null, remotePhotoUrl?: string | null) {
+export function useProfilePhoto(userId?: string | null, remoteAvatarUrl?: string | null) {
   const [localUri, setLocalUri] = useState<string | null>(null);
   const setUser = useAuthStore((s) => s.setUser);
   const user = useAuthStore((s) => s.user);
@@ -14,11 +14,11 @@ export function useProfilePhoto(userId?: string | null, remotePhotoUrl?: string 
   useEffect(() => {
     let mounted = true;
     async function ensure() {
-      if (!userId || !remotePhotoUrl) return;
+      if (!userId || !remoteAvatarUrl) return;
 
       try {
         // Determine extension from remote URL or default .jpg
-        const extMatch = remotePhotoUrl.split('?')[0].split('.').pop() || 'jpg';
+        const extMatch = remoteAvatarUrl.split('?')[0].split('.').pop() || 'jpg';
         const filename = `profile_${userId}.${extMatch}`;
         const folder = `${FileSystem.cacheDirectory}profile/`;
         await FileSystem.makeDirectoryAsync(folder, { intermediates: true }).catch(() => {});
@@ -29,27 +29,27 @@ export function useProfilePhoto(userId?: string | null, remotePhotoUrl?: string 
         if (info.exists) {
           if (mounted) setLocalUri(localPath);
           // Update store if not present
-          if (user && user.photo_local !== localPath) {
-            setUser({ ...user, photo_local: localPath });
+          if (user && user.avatar_local !== localPath) {
+            setUser({ ...user, avatar_local: localPath });
           }
           return;
         }
 
         // If remote is already a local file URI (file://), just set it
-        if (remotePhotoUrl.startsWith('file://')) {
+        if (remoteAvatarUrl.startsWith('file://')) {
           if (mounted) setLocalUri(remotePhotoUrl);
-          if (user && user.photo_local !== remotePhotoUrl) {
-            setUser({ ...user, photo_local: remotePhotoUrl });
+          if (user && user.avatar_local !== remoteAvatarUrl) {
+            setUser({ ...user, avatar_local: remoteAvatarUrl });
           }
           return;
         }
 
         // Otherwise, download remote image
-        const result = await FileSystem.downloadAsync(remotePhotoUrl, localPath);
+        const result = await FileSystem.downloadAsync(remoteAvatarUrl, localPath);
         if (result.status === 200 && mounted) {
           setLocalUri(result.uri);
-          if (user && user.photo_local !== result.uri) {
-            setUser({ ...user, photo_local: result.uri });
+          if (user && user.avatar_local !== result.uri) {
+            setUser({ ...user, avatar_local: result.uri });
           }
         }
       } catch (err) {
@@ -59,7 +59,7 @@ export function useProfilePhoto(userId?: string | null, remotePhotoUrl?: string 
 
     ensure();
     return () => { mounted = false; };
-  }, [userId, remotePhotoUrl]);
+  }, [userId, remoteAvatarUrl]);
 
   return { localUri };
 }
