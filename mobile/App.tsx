@@ -16,6 +16,9 @@ import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
 import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
 import AdScreen from './src/screens/AdScreen';
 import ProfessionalHomeScreen from './src/screens/ProfessionalHomeScreen';
+import SubcategorySelectionScreen from './src/screens/SubcategorySelectionScreen';
+import ProjectsBySubcategoryScreen from './src/screens/ProjectsBySubcategoryScreen';
+import FilteredProjectsListScreen from './src/screens/FilteredProjectsListScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
 import { getRouteForRoles } from './src/utils/roles';
@@ -105,6 +108,9 @@ export default function App() {
           <Stack.Screen name="ProjectSummary" component={ProjectSummaryScreen} options={{ title: 'Resumo do Projeto' }} />
           <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />
           <Stack.Screen name="ProfessionalHome" component={ProfessionalHomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="SubcategorySelection" component={SubcategorySelectionScreen} options={{ title: 'Minhas Subcategorias' }} />
+          <Stack.Screen name="ProjectsBySubcategory" component={ProjectsBySubcategoryScreen} options={{ title: 'Projetos Disponíveis' }} />
+          <Stack.Screen name="FilteredProjectsList" component={FilteredProjectsListScreen} options={{ title: 'Projetos para Você' }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />
         </Stack.Navigator>

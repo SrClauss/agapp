@@ -117,3 +117,23 @@ export async function getRecommendedCategories(): Promise<string[]> {
   return response.data;
 }
 
+/**
+ * Get projects matching professional's subcategories
+ */
+export async function getProfessionalSubcategoryProjects(params?: {
+  skip?: number;
+  limit?: number;
+  include_remote?: boolean;
+}): Promise<Project[]> {
+  const token = useAuthStore.getState().token;
+  const config = token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : undefined;
+
+  const response = await client.get('/projects/professional/my-subcategory-projects', {
+    ...config,
+    params,
+  });
+  return response.data;
+}
+

@@ -203,6 +203,93 @@ async def read_my_projects(
     
     return projects
 
+@router.get("/professional/my-subcategory-projects", response_model=List[Project])
+async def get_professional_subcategory_projects(
+    skip: int = 0,
+    limit: int = 100,
+    include_remote: bool = True,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Retorna projetos que correspondem às subcategorias cadastradas pelo profissional.
+    
+    - Para projetos não-remotos: filtra por localização + subcategorias
+    - Para projetos remotos: filtra apenas por subcategorias
+    - include_remote: se False, retorna apenas projetos não-remotos na área do profissional
+    """
+    if "professional" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="User is not a professional")
+    
+    # Buscar configurações do profissional
+    user = await db.users.find_one({"_id": str(current_user.id)})
+    professional_info = user.get("professional_info", {})
+    settings = professional_info.get("settings", {})
+    
+    subcategories = settings.get("subcategories", [])
+    if not subcategories:
+        return []
+    
+    coords = settings.get("establishment_coordinates")
+    radius_km = settings.get("service_radius_km", 10)
+    
+    # Construir query
+    queries = []
+    
+    # Projetos remotos (se incluído)
+    if include_remote:
+        queries.append({
+            "category.sub": {"$in": subcategories},
+            "remote_execution": True,
+            "status": "open"
+        })
+    
+    # Projetos não-remotos na área (se coordenadas disponíveis)
+    if coords and len(coords) == 2:
+        queries.append({
+            "category.sub": {"$in": subcategories},
+            "remote_execution": False,
+            "status": "open",
+            "location.coordinates": {
+                "$near": {
+                    "$geometry": {
+                        "type": "Point",
+                        "coordinates": coords
+                    },
+                    "$maxDistance": radius_km * 1000
+                }
+            }
+        })
+    
+    if not queries:
+        return []
+    
+    # Executar query
+    if len(queries) == 1:
+        final_query = queries[0]
+    else:
+        final_query = {"$or": queries}
+    
+    projects = []
+    async for project in db.projects.find(final_query).sort("created_at", -1).skip(skip).limit(limit):
+        project_dict = dict(project)
+        project_dict['id'] = str(project_dict.pop('_id'))
+        projects.append(Project(**project_dict))
+    
+    # Populate client names
+    client_ids = list(set(p.client_id for p in projects if p.client_id))
+    if client_ids:
+        users_cursor = db.users.find({"_id": {"$in": client_ids}})
+        users = {}
+        async for user_doc in users_cursor:
+            users[str(user_doc["_id"])] = user_doc.get("full_name", "")
+        
+        for project in projects:
+            if project.client_id in users:
+                project.client_name = users[project.client_id]
+    
+    return projects
+
 @router.get("/{project_id}", response_model=Project)
 async def read_project(
     project_id: str,

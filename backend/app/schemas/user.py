@@ -76,6 +76,7 @@ class ProfessionalSettings(BaseModel):
     portfolio_url: Optional[str] = None
     skills: Optional[List[str]] = []
     bio: Optional[str] = None
+    subcategories: Optional[List[str]] = []  # Subcategorias em que o profissional trabalha
 
 class ProfessionalSettingsUpdate(BaseModel):
     """Atualização de configurações de prestador"""
@@ -87,6 +88,18 @@ class ProfessionalSettingsUpdate(BaseModel):
     portfolio_url: Optional[str] = None
     skills: Optional[List[str]] = None
     bio: Optional[str] = None
+    subcategories: Optional[List[str]] = None  # Subcategorias em que o profissional trabalha
+
+class SubcategoryProjectCount(BaseModel):
+    """Contagem de projetos por subcategoria"""
+    subcategory: str
+    count: int
+
+class CategoryProjectCounts(BaseModel):
+    """Contagem de projetos agrupados por categoria"""
+    category: str
+    total_count: int
+    subcategory_counts: List[SubcategoryProjectCount]
 
 class FCMTokenRegister(BaseModel):
     """Schema para registrar FCM token"""
