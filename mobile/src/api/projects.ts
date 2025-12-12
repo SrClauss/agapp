@@ -79,6 +79,7 @@ export async function getProjects(params?: {
   limit?: number;
   category?: string;
   status?: string;
+  subcategories?: string[];
   latitude?: number;
   longitude?: number;
   radius_km?: number;

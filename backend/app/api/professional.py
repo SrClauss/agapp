@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from typing import List
@@ -133,6 +133,7 @@ async def get_nearby_projects_json(
     longitude: float,
     radius_km: float = 50,
     category: str = None,
+    subcategories: List[str] = Query(None),
     current_user: User = Depends(get_current_user_from_request),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
@@ -150,6 +151,8 @@ async def get_nearby_projects_json(
 
     if category:
         filters.category = category
+    if subcategories:
+        filters.subcategories = subcategories
 
     # Buscar projetos
     projects = await get_projects(db, limit=100, filters=filters)

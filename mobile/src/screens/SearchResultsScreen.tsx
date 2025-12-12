@@ -42,6 +42,13 @@ export default function SearchResultsScreen() {
     } as never);
   };
 
+  const handleViewProjects = (item: any) => {
+    navigation.navigate('AllProjects' as never, {
+      category: item.parent.name,
+      subcategories: [item.name]
+    } as never);
+  };
+
   const handleGoBack = () => {
     navigation.goBack();
   };
@@ -61,12 +68,20 @@ export default function SearchResultsScreen() {
               <Text style={styles.itemTitle}>{item.name}</Text>
               <Text style={styles.itemSubtitle}>{item.parent.name}</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.createProjectButton}
-              onPress={() => handleCreateProject(item)}
-            >
-              <Text style={styles.createProjectButtonText}>Criar Projeto</Text>
-            </TouchableOpacity>
+            <View style={styles.actionsRow}>
+              <TouchableOpacity 
+                style={styles.createProjectButton}
+                onPress={() => handleCreateProject(item)}
+              >
+                <Text style={styles.createProjectButtonText}>Criar Projeto</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.viewProjectsButton}
+                onPress={() => handleViewProjects(item)}
+              >
+                <Text style={styles.viewProjectsButtonText}>Ver Projetos</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
         scrollEnabled={false} // Disable FlatList scroll since parent ScrollView handles it
@@ -115,6 +130,22 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginVertical: 16,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  viewProjectsButton: {
+    marginLeft: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.primary
+  },
+  viewProjectsButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600'
   },
   backButton: {
     marginTop: 24,

@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Searchbar, Divider, ActivityIndicator, Text } from 'react-native-paper';
 import ProjectCard from '../components/ProjectCard';
 import { getProjects, Project } from '../api/projects';
+import { useRoute } from '@react-navigation/native';
 
 export default function AllProjectsScreen() {
   const navigation = useNavigation();
@@ -11,12 +12,17 @@ export default function AllProjectsScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [query, setQuery] = useState<string>('');
 
+  const route = useRoute();
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        const res = await getProjects({ limit: 100 });
+        const params = { limit: 100 } as any;
+        const routeParams = (route as any).params;
+        if (routeParams?.category) params.category = routeParams.category;
+        if (routeParams?.subcategories) params.subcategories = routeParams.subcategories;
+        const res = await getProjects(params);
         if (mounted) setProjects(res);
       } catch (err) {
         console.warn('Erro ao buscar projetos:', err);

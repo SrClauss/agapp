@@ -65,6 +65,7 @@ class ProjectFilter(BaseModel):
     budget_min: Optional[float] = None
     budget_max: Optional[float] = None
     status: Optional[str] = None
+    subcategories: Optional[List[str]] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     radius_km: Optional[float] = None

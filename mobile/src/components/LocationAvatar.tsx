@@ -28,7 +28,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
     useEffect(() => {
         async function findCachedPhoto() {
 
-            useNotificationStore.setState({ count:5});
+
             try {
                 const folder = `${FileSystem.cacheDirectory}profile/`;
                 const dirInfo = await FileSystem.getInfoAsync(folder);
@@ -155,6 +155,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                     )}
 
                 </View>
+
                 
         </View>
     );

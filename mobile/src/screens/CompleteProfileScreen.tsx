@@ -3,6 +3,7 @@ import { StyleSheet, ScrollView, Alert } from 'react-native';
 import { Button, TextInput, Surface, Title, HelperText, RadioButton } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
+import { getRouteForRoles } from '../utils/roles';
 import { completeProfile } from '../api/auth';
 import { commonStyles } from '../theme/styles';
 
@@ -52,8 +53,8 @@ export default function CompleteProfileScreen() {
       // Atualizar user com avatar_url se disponível
       const userWithPhoto = { ...updatedUser, avatar_url: user?.avatar_url };
       setUser(userWithPhoto);
-      // Navigate based on user roles
-      const destination = updatedUser.roles.includes('client') ? 'WelcomeCustomer' : 'ProfessionalHome';
+      // Navigate based on user roles using helper util
+      const destination = getRouteForRoles(updatedUser.roles, undefined);
       navigation.navigate(destination as never);
     } catch (e: any) {
       console.error('Erro ao completar perfil:', e);

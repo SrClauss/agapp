@@ -36,6 +36,7 @@ async def read_projects(
     budget_min: float = None,
     budget_max: float = None,
     status: str = None,
+    subcategories: List[str] = Query(None),
     latitude: float = None,
     longitude: float = None,
     radius_km: float = None,
@@ -44,6 +45,7 @@ async def read_projects(
     filters = ProjectFilter(
         category=category,
         skills=skills,
+        subcategories=subcategories,
         budget_min=budget_min,
         budget_max=budget_max,
         status=status,
@@ -72,9 +74,12 @@ async def read_nearby_projects(
     latitude: float,
     longitude: float,
     radius_km: float = 10,
+    subcategories: List[str] = Query(None),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     filters = ProjectFilter(latitude=latitude, longitude=longitude, radius_km=radius_km)
+    if subcategories:
+        filters.subcategories = subcategories
     projects = await get_projects(db, filters=filters)
     return projects
 
@@ -83,6 +88,7 @@ async def read_nearby_non_remote_projects(
     latitude: float = None,
     longitude: float = None,
     radius_km: float = None,
+    subcategories: List[str] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
@@ -135,6 +141,9 @@ async def read_nearby_non_remote_projects(
             }
         }
     }
+    # If subcategories filter is provided, only include those subcategories
+    if subcategories:
+        query["category.sub"] = {"$in": subcategories}
 
     projects = []
     async for project in db.projects.find(query).limit(100):

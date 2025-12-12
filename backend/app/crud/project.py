@@ -6,6 +6,63 @@ from ulid import new as new_ulid
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectFilter
 
+
+def build_project_query(filters: ProjectFilter = None, query_filter: Optional[dict] = None) -> Dict[str, Any]:
+    """
+    Helper to build a Mongo query dict from a ProjectFilter or explicit query_filter.
+    Returns a dict that can be passed directly to db.projects.find().
+    """
+    if query_filter:
+        return dict(query_filter)
+
+    base_query: Dict[str, Any] = {}
+    if not filters:
+        return base_query
+
+    # Category matching: support legacy string (category field as string) and dict field with `main`
+    if filters.category:
+        base_query["$or"] = [
+            {"category": filters.category},
+            {"category.main": filters.category}
+        ]
+
+    # Subcategories (match category.sub field, stored as dict)
+    if getattr(filters, 'subcategories', None):
+        base_query["category.sub"] = {"$in": filters.subcategories}
+
+    if filters.skills:
+        base_query["skills_required"] = {"$in": filters.skills}
+    if filters.budget_min:
+        base_query["budget_min"] = {"$gte": filters.budget_min}
+    if filters.budget_max:
+        base_query["budget_max"] = {"$lte": filters.budget_max}
+    if filters.status:
+        base_query["status"] = filters.status
+
+    # If geolocation filters provided, combine with remote projects
+    if filters.latitude and filters.longitude and filters.radius_km:
+        geo_or = [
+            {"remote_execution": True},  # Include remote projects regardless of location
+            {
+                "location.coordinates": {
+                    "$near": {
+                        "$geometry": {
+                            "type": "Point",
+                            "coordinates": [filters.longitude, filters.latitude]
+                        },
+                        "$maxDistance": filters.radius_km * 1000
+                    }
+                }
+            }
+        ]
+        if base_query:
+            # Both base_query and geo_or must apply (i.e., filter category etc. AND (geo OR remote))
+            return {"$and": [base_query, {"$or": geo_or}]}
+        return {"$or": geo_or}
+
+    return base_query
+
+
 async def get_project(db: AsyncIOMotorDatabase, project_id: str) -> Optional[Project]:
     project = await db.projects.find_one({"_id": project_id})
     if project:
@@ -15,36 +72,8 @@ async def get_project(db: AsyncIOMotorDatabase, project_id: str) -> Optional[Pro
     return None
 
 async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100, filters: ProjectFilter = None, query_filter: dict = None) -> List[Project]:
-    query = {}
-    if query_filter:
-        query.update(query_filter)
-    elif filters:
-        if filters.category:
-            query["category"] = filters.category
-        if filters.skills:
-            query["skills_required"] = {"$in": filters.skills}
-        if filters.budget_min:
-            query["budget_min"] = {"$gte": filters.budget_min}
-        if filters.budget_max:
-            query["budget_max"] = {"$lte": filters.budget_max}
-        if filters.status:
-            query["status"] = filters.status
-        # Only filter by location if not a remote project
-        if filters.latitude and filters.longitude and filters.radius_km:
-            query["$or"] = [
-                {"remote_execution": True},  # Include remote projects regardless of location
-                {
-                    "location.coordinates": {
-                        "$near": {
-                            "$geometry": {
-                                "type": "Point",
-                                "coordinates": [filters.longitude, filters.latitude]
-                            },
-                            "$maxDistance": filters.radius_km * 1000
-                        }
-                    }
-                }
-            ]
+    # Build a query dict from filters/query_filter
+    query = build_project_query(filters, query_filter)
 
     projects = []
     async for project in db.projects.find(query).skip(skip).limit(limit):

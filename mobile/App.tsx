@@ -18,6 +18,7 @@ import AdScreen from './src/screens/AdScreen';
 import ProfessionalHomeScreen from './src/screens/ProfessionalHomeScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
+import { getRouteForRoles } from './src/utils/roles';
 import { fetchCurrentUser } from './src/api/auth';
 
 const Stack = createNativeStackNavigator();
@@ -25,7 +26,7 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState<string>('Login');
-  const { token, setUser, isHydrated } = useAuthStore();
+  const { token, setUser, isHydrated, activeRole } = useAuthStore();
 
   console.log(`[App] Componente App renderizado. isHydrated: ${isHydrated}, token: ${!!token}`);
 
@@ -43,10 +44,10 @@ export default function App() {
           // Determinar rota inicial baseada no estado do usuário
           if (!currentUser.is_profile_complete) {
             setInitialRoute('CompleteProfile');
-          } else if (!currentUser.roles || currentUser.roles.length === 0) {
-            setInitialRoute('ProfileSelection');
           } else {
-            setInitialRoute('WelcomeCustomer');
+            // Usa helper para garantir comportamento consistente entre telas
+            const route = getRouteForRoles(currentUser.roles, activeRole);
+            setInitialRoute(route);
           }
         } catch (error) {
           console.log(`[App] Token inválido, fazendo logout:`, error);
