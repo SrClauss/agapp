@@ -209,8 +209,6 @@ async def startup_event():
     await database.users.create_index("email", unique=True)
     await database.users.create_index([("coordinates", "2dsphere")])
     await database.projects.create_index([("location.coordinates", "2dsphere")])
-    # Index to speed up filtering by subcategory
-    await database.projects.create_index("category.sub")
     await database.projects.create_index("client_id")
     await database.projects.create_index("status")
     await database.projects.create_index("is_featured")
