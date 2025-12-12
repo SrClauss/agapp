@@ -138,8 +138,20 @@ export default function ChatScreen() {
                   isMyMessage(message) ? styles.myMessage : styles.otherMessage,
                 ]}
               >
-                <Text style={styles.messageText}>{message.content}</Text>
-                <Text style={styles.messageTime}>
+                <Text 
+                  style={[
+                    styles.messageText,
+                    { color: isMyMessage(message) ? '#FFFFFF' : colors.text }
+                  ]}
+                >
+                  {message.content}
+                </Text>
+                <Text 
+                  style={[
+                    styles.messageTime,
+                    { color: isMyMessage(message) ? '#FFFFFF' : colors.textSecondary }
+                  ]}
+                >
                   {new Date(message.created_at).toLocaleTimeString('pt-BR', {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -245,16 +257,17 @@ const styles = StyleSheet.create({
   otherMessage: {
     alignSelf: 'flex-start',
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   messageText: {
     fontSize: 15,
-    color: colors.text,
     marginBottom: 4,
   },
   messageTime: {
     fontSize: 11,
-    color: colors.textSecondary,
     textAlign: 'right',
+    opacity: 0.7,
   },
   inputContainer: {
     flexDirection: 'row',

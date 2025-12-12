@@ -44,7 +44,7 @@ export async function createContactForProject(
 ): Promise<Contact> {
   const token = useAuthStore.getState().token;
   const config = token
-    ? { headers: { Authorization: `****** } }
+    ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
   const response = await client.post(`/contacts/${projectId}`, contactData, config);
@@ -57,7 +57,7 @@ export async function createContactForProject(
 export async function getContactHistory(userType: 'professional' | 'client' = 'professional'): Promise<Contact[]> {
   const token = useAuthStore.getState().token;
   const config = token
-    ? { headers: { Authorization: `****** } }
+    ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
   const response = await client.get('/contacts/history', {
@@ -73,7 +73,7 @@ export async function getContactHistory(userType: 'professional' | 'client' = 'p
 export async function getContactDetails(contactId: string): Promise<Contact> {
   const token = useAuthStore.getState().token;
   const config = token
-    ? { headers: { Authorization: `****** } }
+    ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
   const response = await client.get(`/contacts/${contactId}`, config);
@@ -89,7 +89,7 @@ export async function sendContactMessage(
 ): Promise<{ message: string; message_id: string }> {
   const token = useAuthStore.getState().token;
   const config = token
-    ? { headers: { Authorization: `****** } }
+    ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
   const response = await client.post(
@@ -109,7 +109,7 @@ export async function updateContactStatus(
 ): Promise<Contact> {
   const token = useAuthStore.getState().token;
   const config = token
-    ? { headers: { Authorization: `****** } }
+    ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
   const response = await client.put(
