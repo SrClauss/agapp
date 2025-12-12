@@ -133,7 +133,7 @@ async def get_professional_project_counts(
         cat_name = category.get("name")
         cat_subs = category.get("subcategories", [])
         for sub in cat_subs:
-            categories_map[sub] = cat_name
+            categories_map[sub["name"]] = cat_name
     
     # Agrupar contagens por categoria
     category_counts = {}
