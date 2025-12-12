@@ -212,11 +212,11 @@ async def get_professional_subcategory_projects(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
-    Retorna projetos que correspondem às subcategorias cadastradas pelo profissional.
+    Get projects matching the professional's registered subcategories.
     
-    - Para projetos não-remotos: filtra por localização + subcategorias
-    - Para projetos remotos: filtra apenas por subcategorias
-    - include_remote: se False, retorna apenas projetos não-remotos na área do profissional
+    - For non-remote projects: filters by location + subcategories
+    - For remote projects: filters only by subcategories
+    - include_remote: if False, returns only non-remote projects in professional's area
     """
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="User is not a professional")

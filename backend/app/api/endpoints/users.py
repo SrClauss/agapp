@@ -104,11 +104,11 @@ async def get_professional_project_counts(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
-    Retorna contagem de projetos por categoria/subcategoria baseado nas 
-    subcategorias cadastradas pelo profissional e sua localização.
+    Get project counts by category/subcategory based on professional's 
+    registered subcategories and location.
     
-    Para projetos não-remotos: filtra por localização + subcategorias
-    Para projetos remotos: filtra apenas por subcategorias
+    For non-remote projects: filters by location + subcategories
+    For remote projects: filters only by subcategories
     """
     from app.schemas.user import CategoryProjectCounts, SubcategoryProjectCount
     
