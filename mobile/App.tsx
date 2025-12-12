@@ -19,6 +19,7 @@ import ProfessionalHomeScreen from './src/screens/ProfessionalHomeScreen';
 import SubcategorySelectionScreen from './src/screens/SubcategorySelectionScreen';
 import ProjectsBySubcategoryScreen from './src/screens/ProjectsBySubcategoryScreen';
 import FilteredProjectsListScreen from './src/screens/FilteredProjectsListScreen';
+import ChatScreen from './src/screens/ChatScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
 import { getRouteForRoles } from './src/utils/roles';
@@ -111,6 +112,7 @@ export default function App() {
           <Stack.Screen name="SubcategorySelection" component={SubcategorySelectionScreen} options={{ title: 'Minhas Subcategorias' }} />
           <Stack.Screen name="ProjectsBySubcategory" component={ProjectsBySubcategoryScreen} options={{ title: 'Projetos Disponíveis' }} />
           <Stack.Screen name="FilteredProjectsList" component={FilteredProjectsListScreen} options={{ title: 'Projetos para Você' }} />
+          <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />
         </Stack.Navigator>

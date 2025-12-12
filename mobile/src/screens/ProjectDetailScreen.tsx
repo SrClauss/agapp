@@ -6,12 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator, Chip, Card, Avatar, Divider, Button } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { getProject, Project } from '../api/projects';
+import { createContactForProject } from '../api/contacts';
+import { useAuthStore } from '../stores/authStore';
 import { colors } from '../theme/colors';
 
 interface RouteParams {
@@ -22,10 +25,12 @@ export default function ProjectDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const params = route.params as RouteParams;
+  const { user } = useAuthStore();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [contacting, setContacting] = useState(false);
 
   const loadProject = async () => {
     try {
@@ -46,6 +51,57 @@ export default function ProjectDetailScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadProject();
+  };
+
+  const handleAcceptAndContact = async () => {
+    if (!user) {
+      Alert.alert('Erro', 'Você precisa estar logado');
+      return;
+    }
+
+    if (!user.roles.includes('professional')) {
+      Alert.alert('Erro', 'Apenas profissionais podem aceitar projetos');
+      return;
+    }
+
+    Alert.alert(
+      'Aceitar Projeto',
+      'Ao aceitar, você gastará 1 crédito e poderá conversar com o cliente. Deseja continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Aceitar',
+          onPress: async () => {
+            try {
+              setContacting(true);
+              const contact = await createContactForProject(params.projectId, {
+                contact_type: 'proposal',
+                contact_details: {
+                  message: 'Tenho interesse neste projeto!',
+                },
+              });
+
+              Alert.alert(
+                'Sucesso!',
+                'Contato criado com sucesso! Você já pode conversar com o cliente.',
+                [
+                  {
+                    text: 'Ver Chat',
+                    onPress: () => (navigation as any).navigate('Chat', { contactId: contact.id }),
+                  },
+                ]
+              );
+            } catch (error: any) {
+              console.error('Error creating contact:', error);
+              const errorMsg = error.response?.data?.detail || 'Falha ao criar contato';
+              Alert.alert('Erro', errorMsg);
+            } finally {
+              setContacting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -319,6 +375,25 @@ export default function ProjectDetailScreen() {
             </Card.Content>
           </Card>
         )}
+
+        {/* Accept & Contact Button for Professionals */}
+        {user && user.roles.includes('professional') && project.status === 'open' && (
+          <View style={styles.actionButtonContainer}>
+            <Button
+              mode="contained"
+              onPress={handleAcceptAndContact}
+              loading={contacting}
+              disabled={contacting}
+              style={styles.acceptButton}
+              icon="handshake"
+            >
+              Aceitar & Contatar Cliente
+            </Button>
+            <Text style={styles.actionButtonHint}>
+              * Gastará 1 crédito para iniciar conversa
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -509,5 +584,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  actionButtonContainer: {
+    padding: 16,
+  },
+  acceptButton: {
+    paddingVertical: 8,
+  },
+  actionButtonHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
