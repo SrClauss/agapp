@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Text, Card, Chip, Button, ActivityIndicator } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { Text, Card, Button, ActivityIndicator, IconButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { getCategories } from '../api/categories';
 import { getProfessionalSettings, updateProfessionalSettings } from '../api/users';
@@ -17,17 +17,26 @@ export default function ProfessionalOptionsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const isFocused = useIsFocused();
+
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isFocused) loadData();
+  }, [isFocused]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [cats, settings] = await Promise.all([
-        getCategories(),
-        getProfessionalSettings(token!),
-      ]);
+      const cats = await getCategories();
+      let settings: any = {};
+      if (token) {
+        try {
+          settings = await getProfessionalSettings(token);
+        } catch (err) {
+          console.warn('Não foi possível obter professional settings:', err);
+          // If unauthorized, don't logout here — axios interceptor handles it. Just continue with defaults.
+          settings = {};
+        }
+      }
       setCategories(cats);
 
       // Build selectedByCategory map: categoryName => [sub categories]
@@ -68,17 +77,24 @@ export default function ProfessionalOptionsScreen() {
     try {
       setSaving(true);
       const flattened = Object.values(selectedByCategory).flat();
+      if (!token) {
+        Alert.alert('Autenticação', 'Você precisa estar autenticado para salvar.');
+        return;
+      }
       await updateProfessionalSettings(token!, {
         subcategories: flattened,
         service_radius_km: parseFloat(radius) || 10,
       });
-      // Update authStore user if backend returns updated user - not mandatory
+      // After saving, go back to previous screen
+      (navigation as any).goBack();
     } catch (err) {
       console.warn('Erro ao salvar opções do profissional', err);
     } finally {
       setSaving(false);
     }
   };
+
+  // handleSave now saves settings and goes back
 
   if (loading) {
     return (
@@ -90,9 +106,9 @@ export default function ProfessionalOptionsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 24 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 240 }} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Opções do Profissional</Text>
-        <Text style={styles.subtitle}>Configure seu raio de atuação e subcategorias</Text>
+        <Text style={styles.subtitle}>Configure seu raio de atuação e suas áreas de atuação</Text>
         <View style={styles.row}>
           <Text style={styles.label}>Raio de detecção (km)</Text>
           <TextInput
@@ -103,26 +119,39 @@ export default function ProfessionalOptionsScreen() {
             placeholder="10"
           />
         </View>
+        <View style={styles.cardsGrid}>
+          {categories.map((cat) => {
+            const count = (selectedByCategory[cat.name] || []).length;
+            return (
+              <TouchableOpacity key={cat.id} onPress={() => openCategory(cat)} style={styles.cardWrapper}>
+                <Card style={styles.card}>
+                  <Card.Content style={styles.cardContent}>
+                    <View style={styles.cardText}>
+                      <Text style={styles.cardTitle}>{cat.name}</Text>
+                      <Text style={styles.cardSubtitle}>{count} selecionada(s)</Text>
+                    </View>
+                    <View style={styles.cardActions}>
+                      <IconButton icon="chevron-right" size={20} onPress={() => openCategory(cat)} />
+                    </View>
+                  </Card.Content>
+                </Card>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-        {categories.map((cat) => (
-          <Card key={cat.id} style={styles.card}>
-            <TouchableOpacity onPress={() => openCategory(cat)} style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{cat.name}</Text>
-            </TouchableOpacity>
-            <Card.Content>
-              <View style={styles.chipsContainer}>
-                {(selectedByCategory[cat.name] || []).map((s) => (
-                  <Chip key={s} style={styles.chip}>{s}</Chip>
-                ))}
-              </View>
-            </Card.Content>
-          </Card>
-        ))}
-
-        <Button mode="contained" onPress={handleSave} loading={saving} disabled={saving} style={styles.saveButton}>
-          Salvar
-        </Button>
       </ScrollView>
+      {/* Footer with action buttons - pinned to safe area */}
+      <SafeAreaView edges={["bottom"]} style={styles.footer} pointerEvents="box-none">
+        <View style={styles.footerInner} pointerEvents="box-none">
+          <Button mode="outlined" onPress={() => (navigation as any).goBack()} style={styles.cancelButton}>
+            Cancelar
+          </Button>
+          <Button mode="contained" onPress={handleSave} loading={saving} disabled={saving} style={styles.saveButton}>
+            Salvar
+          </Button>
+        </View>
+      </SafeAreaView>
     </SafeAreaView>
   );
 }
@@ -139,7 +168,30 @@ const styles = StyleSheet.create({
   card: { marginBottom: 12 },
   cardHeader: { padding: 12 },
   cardTitle: { fontSize: 16, fontWeight: '600' },
-  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { marginRight: 8, marginBottom: 8 },
-  saveButton: { marginTop: 12 }
+  cardsGrid: { flexDirection: 'column', gap: 8 },
+  cardWrapper: { width: '100%', marginBottom: 12 },
+  card: { minHeight: 110, justifyContent: 'center', borderRadius: 8 },
+  cardContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardText: { flex: 1, paddingRight: 8 },
+  cardSubtitle: { color: colors.textSecondary, marginTop: 6 },
+  cardActions: { alignItems: 'center', flexDirection: 'row' },
+  saveButton: { marginTop: 12, flex: 1, marginLeft: 8 },
+  buttonsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+  cancelButton: { marginRight: 8, flex: 1 },
+  footer: {
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  footerInner: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, justifyContent: 'space-between' }
 });
