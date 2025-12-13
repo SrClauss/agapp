@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import * as Location from 'expo-location';
 import { Text, Card, Button, ActivityIndicator, IconButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -14,6 +15,9 @@ export default function ProfessionalOptionsScreen() {
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedByCategory, setSelectedByCategory] = useState<Record<string, string[]>>({});
   const [radius, setRadius] = useState<string>('10');
+  const [establishmentAddress, setEstablishmentAddress] = useState<string>('');
+  const [establishmentCoords, setEstablishmentCoords] = useState<[number, number] | null>(null);
+  const [locating, setLocating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -56,6 +60,10 @@ export default function ProfessionalOptionsScreen() {
 
       setSelectedByCategory(map);
       setRadius((settings.service_radius_km || 10).toString());
+      setEstablishmentAddress(settings.establishment_address || '');
+      if (settings.establishment_coordinates && settings.establishment_coordinates.length === 2) {
+        setEstablishmentCoords([settings.establishment_coordinates[0], settings.establishment_coordinates[1]]);
+      }
     } catch (err) {
       console.warn('Erro ao carregar opções do profissional', err);
     } finally {
@@ -78,16 +86,50 @@ export default function ProfessionalOptionsScreen() {
         Alert.alert('Autenticação', 'Você precisa estar autenticado para salvar.');
         return;
       }
-      await updateProfessionalSettings(token!, {
+      const payload: any = {
         subcategories: flattened,
         service_radius_km: parseFloat(radius) || 10,
-      });
+      };
+      if (establishmentAddress) payload.establishment_address = establishmentAddress;
+      if (establishmentCoords) payload.establishment_coordinates = establishmentCoords;
+
+      await updateProfessionalSettings(token!, payload);
       // After saving, go back to previous screen
       (navigation as any).goBack();
     } catch (err) {
       console.warn('Erro ao salvar opções do profissional', err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const useMyLocation = async () => {
+    try {
+      setLocating(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão Negada', 'Precisamos de permissão para acessar sua localização.');
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { latitude, longitude } = location.coords;
+      setEstablishmentCoords([longitude, latitude]);
+      // Optionally reverse geocode to get a readable address
+      try {
+        const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (address) {
+          const parts = [address.street, address.streetNumber, address.district, address.city, address.region].filter(Boolean);
+          setEstablishmentAddress(parts.join(', '));
+        }
+      } catch (e) {
+        // ignore reverse geocode errors
+      }
+      Alert.alert('Localização', 'Localização atual capturada. Salve para aplicar.');
+    } catch (e) {
+      console.warn('Erro ao obter localização', e);
+      Alert.alert('Erro', 'Não foi possível obter sua localização');
+    } finally {
+      setLocating(false);
     }
   };
 
@@ -115,6 +157,22 @@ export default function ProfessionalOptionsScreen() {
             onChangeText={setRadius}
             placeholder="10"
           />
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Endereço do Estabelecimento</Text>
+          <TextInput
+            style={[styles.radiusInput, { flex: 1 }]}
+            value={establishmentAddress}
+            onChangeText={setEstablishmentAddress}
+            placeholder="Rua, número, bairro, cidade"
+          />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <Button mode="outlined" onPress={useMyLocation} loading={locating} disabled={locating}>
+            Usar localização atual
+          </Button>
+          <View style={{ width: 12 }} />
+          <Text style={{ color: colors.textSecondary }}>{establishmentCoords ? `Lat:${establishmentCoords[1].toFixed(6)} Lon:${establishmentCoords[0].toFixed(6)}` : 'Coordenadas não definidas'}</Text>
         </View>
         <View style={styles.cardsGrid}>
           {categories.map((cat, idx) => {
