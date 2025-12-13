@@ -42,7 +42,7 @@ export default function ProfessionalHomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => (navigation as any).navigate('SubcategorySelection')}
+            onPress={() => (navigation as any).navigate('ProfessionalOptions')}
           >
             <Card style={styles.menuCard}>
               <Card.Content style={styles.menuCardContent}>

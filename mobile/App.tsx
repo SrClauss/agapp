@@ -17,6 +17,8 @@ import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
 import AdScreen from './src/screens/AdScreen';
 import ProfessionalHomeScreen from './src/screens/ProfessionalHomeScreen';
 import SubcategorySelectionScreen from './src/screens/SubcategorySelectionScreen';
+import ProfessionalOptionsScreen from './src/screens/ProfessionalOptionsScreen';
+import ProfessionalSubcategorySelectScreen from './src/screens/ProfessionalSubcategorySelectScreen';
 import ProjectsBySubcategoryScreen from './src/screens/ProjectsBySubcategoryScreen';
 import FilteredProjectsListScreen from './src/screens/FilteredProjectsListScreen';
 import ChatScreen from './src/screens/ChatScreen';
@@ -110,6 +112,8 @@ export default function App() {
           <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />
           <Stack.Screen name="ProfessionalHome" component={ProfessionalHomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="SubcategorySelection" component={SubcategorySelectionScreen} options={{ title: 'Minhas Subcategorias' }} />
+          <Stack.Screen name="ProfessionalOptions" component={ProfessionalOptionsScreen} options={{ title: 'Opções do Profissional' }} />
+          <Stack.Screen name="ProfessionalSubcategorySelect" component={ProfessionalSubcategorySelectScreen} options={{ title: 'Selecionar Subcategorias' }} />
           <Stack.Screen name="ProjectsBySubcategory" component={ProjectsBySubcategoryScreen} options={{ title: 'Projetos Disponíveis' }} />
           <Stack.Screen name="FilteredProjectsList" component={FilteredProjectsListScreen} options={{ title: 'Projetos para Você' }} />
           <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
