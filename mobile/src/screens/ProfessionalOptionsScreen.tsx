@@ -66,10 +66,7 @@ export default function ProfessionalOptionsScreen() {
   const openCategory = (cat: any) => {
     navigation.navigate('ProfessionalSubcategorySelect' as any, {
       category: cat,
-      selected: selectedByCategory[cat.name] || [],
-      onSelect: (selected: string[]) => {
-        setSelectedByCategory((prev) => ({ ...prev, [cat.name]: selected }));
-      },
+      selected: selectedByCategory[cat.name] || []
     });
   };
 
@@ -120,10 +117,11 @@ export default function ProfessionalOptionsScreen() {
           />
         </View>
         <View style={styles.cardsGrid}>
-          {categories.map((cat) => {
+          {categories.map((cat, idx) => {
             const count = (selectedByCategory[cat.name] || []).length;
+            const key = cat.id || cat._id || `${cat.name}_${idx}`;
             return (
-              <TouchableOpacity key={cat.id} onPress={() => openCategory(cat)} style={styles.cardWrapper}>
+              <TouchableOpacity key={key} onPress={() => openCategory(cat)} style={styles.cardWrapper}>
                 <Card style={styles.card}>
                   <Card.Content style={styles.cardContent}>
                     <View style={styles.cardText}>

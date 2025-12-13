@@ -113,11 +113,11 @@ export default function FilteredProjectsListScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {projects.map((project) => (
+          {projects.map((project, idx) => (
             <Card
-              key={project.id}
+              key={project.id || (project as any)._id || `project_${idx}`}
               style={styles.card}
-              onPress={() => handleProjectPress(project.id)}
+              onPress={() => handleProjectPress(project.id || (project as any)._id)}
             >
               <Card.Content>
                 <View style={styles.cardHeader}>

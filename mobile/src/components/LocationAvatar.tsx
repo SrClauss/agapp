@@ -19,6 +19,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
     const [locationText, setLocationText] = useState<string>('Obtendo localização...');
     const initials = user?.full_name ? user.full_name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'U';
     const [neigbhorhood, setNeigbhorhood] = useState<string>('');
+    const [coords, setCoords] = useState<[number, number] | null>(null);
     const { localUri } = useProfilePhoto(user?.id || null, user?.avatar_url || null);
     const navigation = useNavigation();
     const notificationCount = useNotificationStore((s) => s.count);
@@ -87,6 +88,8 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                 const state = address.region || '';
                 setLocationText(`${city}, ${state}`);
                 setNeigbhorhood(neigbhorhood);
+                // store coordinates in [longitude, latitude] order to match backend
+                setCoords([location.coords.longitude, location.coords.latitude]);
             } else {
                 setLocationText('Localização desconhecida');
             }
@@ -122,6 +125,9 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                             <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">{locationText}</Text>
                             {neigbhorhood ? (
                                 <Text style={styles.neigbhorhoodText}>{neigbhorhood}</Text>
+                            ) : null}
+                            {coords ? (
+                                <Text style={styles.coordsText}>{`Lat: ${coords[1].toFixed(6)} • Lon: ${coords[0].toFixed(6)}`}</Text>
                             ) : null}
                         </View>
                     </View>

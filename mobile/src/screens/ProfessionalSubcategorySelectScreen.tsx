@@ -12,7 +12,7 @@ export default function ProfessionalSubcategorySelectScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { token } = useAuthStore();
-  const { category, selected: initialSelected, onSelect } = (route as any).params;
+  const { category, selected: initialSelected } = (route as any).params;
 
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');

@@ -101,6 +101,9 @@ async def read_nearby_non_remote_projects(
 
     Retorna apenas projetos com remote_execution=false.
     """
+    print("read_nearby_non_remote_projects called with lat:", latitude, "lon:", longitude, "radius_km:", radius_km)
+    print("Current user ID:", current_user.id)
+    print("Categories filter:", subcategories)
     # Verificar se é prestador
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="Only professionals can access this endpoint")
