@@ -8,17 +8,21 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import { Text, Card, Chip } from 'react-native-paper';
+import { Text, Card, Chip, FAB } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
-import { getProfessionalSubcategoryProjects, Project } from '../api/projects';
+import { getNearbyNonRemoteProjects, Project } from '../api/projects';
+import useAuthStore from '../stores/authStore';
 
 export default function FilteredProjectsListScreen() {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const projectsNearby = useAuthStore((s) => s.projectsNearby || []);
+  const setProjectsNearby = useAuthStore((s) => s.setProjectsNearby);
+  const { token, user } = useAuthStore();
 
   useEffect(() => {
     loadProjects();
@@ -27,11 +31,15 @@ export default function FilteredProjectsListScreen() {
   const loadProjects = async () => {
     try {
       setLoading(true);
-      const data = await getProfessionalSubcategoryProjects({
-        limit: 100,
-        include_remote: true,
-      });
-      setProjects(data);
+      // Prefer projects stored in authStore (fetched on login / last refresh)
+      if (projectsNearby && projectsNearby.length > 0) {
+        setProjects(projectsNearby as Project[]);
+      } else {
+        // Fallback: fetch from backend and store in authStore
+        const data = await getNearbyNonRemoteProjects(token || undefined);
+        setProjects(data);
+        if (setProjectsNearby) setProjectsNearby(data as any[]);
+      }
     } catch (error) {
       console.error('Erro ao carregar projetos:', error);
       Alert.alert('Erro', 'Falha ao carregar projetos');
@@ -168,6 +176,23 @@ export default function FilteredProjectsListScreen() {
             </Card>
           ))}
         </ScrollView>
+        <FAB
+          icon="refresh"
+          style={styles.fab}
+          onPress={async () => {
+            try {
+              setLoading(true);
+              const data = await getNearbyNonRemoteProjects(token || undefined);
+              setProjects(data);
+              if (setProjectsNearby) setProjectsNearby(data as any[]);
+            } catch (err) {
+              console.error('Erro ao atualizar projetos próximos', err);
+              Alert.alert('Erro', 'Falha ao atualizar projetos');
+            } finally {
+              setLoading(false);
+            }
+          }}
+        />
       </View>
     </SafeAreaView>
   );
@@ -296,5 +321,11 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 24,
+    backgroundColor: colors.primary,
   },
 });

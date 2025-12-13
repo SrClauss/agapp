@@ -40,9 +40,3 @@ export async function updateProfessionalSettings(
   return data;
 }
 
-export async function getProfessionalProjectCounts(token: string): Promise<CategoryProjectCounts[]> {
-  const { data } = await client.get('/users/me/professional/project-counts', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return data;
-}

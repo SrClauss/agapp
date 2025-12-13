@@ -101,9 +101,7 @@ async def read_nearby_non_remote_projects(
 
     Retorna apenas projetos com remote_execution=false.
     """
-    print("read_nearby_non_remote_projects called with lat:", latitude, "lon:", longitude, "radius_km:", radius_km)
-    print("Current user ID:", current_user.id)
-    print("Categories filter:", subcategories)
+    # read_nearby_non_remote_projects: use professional settings when params not provided
     # Verificar se é prestador
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="Only professionals can access this endpoint")
@@ -129,7 +127,6 @@ async def read_nearby_non_remote_projects(
 
         longitude = coords[0]
         latitude = coords[1]
-        logging.debug(f"Professional settings coords from DB: {coords}, interpreted as lon={longitude}, lat={latitude}, radius_km={radius_km}")
         radius_km = settings.get("service_radius_km", 10)
 
     # Buscar projetos não-remotos dentro do raio
@@ -149,15 +146,6 @@ async def read_nearby_non_remote_projects(
     # If subcategories filter is provided, only include those subcategories
     if subcategories:
         query["category.sub"] = {"$in": subcategories}
-
-    # Log the generated query for debugging
-    logging.debug(f"Non-remote projects query: {query}")
-    # Optionally log how many documents match
-    try:
-        matching = await db.projects.count_documents(query)
-        logging.debug(f"Non-remote projects matching count: {matching}")
-    except Exception:
-        logging.exception("Error counting non-remote projects for debug")
 
     projects = []
     async for project in db.projects.find(query).limit(100):
@@ -217,102 +205,7 @@ async def read_my_projects(
     
     return projects
 
-@router.get("/professional/my-subcategory-projects", response_model=List[Project])
-async def get_professional_subcategory_projects(
-    skip: int = 0,
-    limit: int = 100,
-    include_remote: bool = True,
-    current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
-):
-    """
-    Get projects matching the professional's registered subcategories.
-    
-    - For non-remote projects: filters by location + subcategories
-    - For remote projects: filters only by subcategories
-    - include_remote: if False, returns only non-remote projects in professional's area
-    """
-    if "professional" not in current_user.roles:
-        raise HTTPException(status_code=403, detail="User is not a professional")
-    
-    # Buscar configurações do profissional
-    user = await db.users.find_one({"_id": str(current_user.id)})
-    professional_info = user.get("professional_info", {})
-    settings = professional_info.get("settings", {})
-    
-    subcategories = settings.get("subcategories", [])
-    if not subcategories:
-        return []
-    
-    coords = settings.get("establishment_coordinates")
-    radius_km = settings.get("service_radius_km", 10)
-    logging.debug(f"Professional subcategory search - subs={subcategories}, coords={coords}, radius_km={radius_km}, include_remote={include_remote}")
-    
-    # Construir query
-    queries = []
-    
-    # Projetos remotos (se incluído)
-    if include_remote:
-        queries.append({
-            "category.sub": {"$in": subcategories},
-            "remote_execution": True,
-            "status": "open"
-        })
-    
-    # Projetos não-remotos na área (se coordenadas disponíveis)
-    if coords and len(coords) == 2:
-        queries.append({
-            "category.sub": {"$in": subcategories},
-            "remote_execution": False,
-            "status": "open",
-            "location.coordinates": {
-                "$near": {
-                    "$geometry": {
-                        "type": "Point",
-                        "coordinates": coords
-                    },
-                    "$maxDistance": radius_km * 1000
-                }
-            }
-        })
-    logging.debug(f"Built queries for professional subcategory projects: {queries}")
-    
-    if not queries:
-        return []
-    
-    # Executar query
-    if len(queries) == 1:
-        final_query = queries[0]
-    else:
-        final_query = {"$or": queries}
-    
-    projects = []
-    # Log final query and matching count for debugging
-    logging.debug(f"Final projects query for professional: {final_query}")
-    try:
-        cnt = await db.projects.count_documents(final_query)
-        logging.debug(f"Projects matching final query: {cnt}")
-    except Exception:
-        logging.exception("Error counting projects for professional final query")
-
-    async for project in db.projects.find(final_query).sort("created_at", -1).skip(skip).limit(limit):
-        project_dict = dict(project)
-        project_dict['id'] = str(project_dict.pop('_id'))
-        projects.append(Project(**project_dict))
-    
-    # Populate client names
-    client_ids = list(set(p.client_id for p in projects if p.client_id))
-    if client_ids:
-        users_cursor = db.users.find({"_id": {"$in": client_ids}})
-        users = {}
-        async for user_doc in users_cursor:
-            users[str(user_doc["_id"])] = user_doc.get("full_name", "")
-        
-        for project in projects:
-            if project.client_id in users:
-                project.client_name = users[project.client_id]
-    
-    return projects
+ 
 
 @router.get("/{project_id}", response_model=Project)
 async def read_project(

@@ -7,9 +7,28 @@ import { useNavigation } from '@react-navigation/native';
 import LocationAvatar from '../components/LocationAvatar';
 import { BannerAd } from '../components/BannerAd';
 import { colors } from '../theme/colors';
+import { useIsFocused } from '@react-navigation/native';
+import { getNearbyNonRemoteProjects } from '../api/projects';
+import useAuthStore from '../stores/authStore';
 
 export default function ProfessionalHomeScreen() {
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
+  const token = useAuthStore((s) => s.token);
+  const setProjectsNearby = useAuthStore((s) => s.setProjectsNearby);
+
+  React.useEffect(() => {
+    if (!isFocused) return;
+    (async () => {
+      try {
+        const data = await getNearbyNonRemoteProjects(token || undefined);
+        if (setProjectsNearby) setProjectsNearby(data as any[]);
+      } catch (err) {
+        // ignore errors silently; user can refresh manually
+        console.warn('Não foi possível carregar projetos próximos ao abrir Home:', err);
+      }
+    })();
+  }, [isFocused]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>

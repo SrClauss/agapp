@@ -11,14 +11,16 @@ import { Text, Card } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
-import { getProfessionalProjectCounts, CategoryProjectCounts } from '../api/users';
-import { useAuthStore } from '../stores/authStore';
+import useAuthStore from '../stores/authStore';
+import computeCountsFromProjects from '../utils/projectCounts';
 
 export default function ProjectsBySubcategoryScreen() {
   const navigation = useNavigation();
   const { token } = useAuthStore();
   const [loading, setLoading] = useState(true);
-  const [categoryCounts, setCategoryCounts] = useState<CategoryProjectCounts[]>([]);
+  const [categoryCounts, setCategoryCounts] = useState<any[]>([]);
+  const projectsNearby = useAuthStore((s) => s.projectsNearby || []);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     loadProjectCounts();
@@ -27,8 +29,11 @@ export default function ProjectsBySubcategoryScreen() {
   const loadProjectCounts = async () => {
     try {
       setLoading(true);
-      const counts = await getProfessionalProjectCounts(token!);
-      setCategoryCounts(counts);
+      // Build counts from projects stored in authStore using shared util
+      const projects = projectsNearby || [];
+      const profSubs: string[] = user?.professional_info?.settings?.subcategories || [];
+      const result = computeCountsFromProjects(projects, profSubs);
+      setCategoryCounts(result);
     } catch (error) {
       console.error('Erro ao carregar contagens:', error);
       Alert.alert('Erro', 'Falha ao carregar projetos');

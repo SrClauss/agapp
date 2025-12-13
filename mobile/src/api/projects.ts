@@ -118,22 +118,17 @@ export async function getRecommendedCategories(): Promise<string[]> {
 }
 
 /**
- * Get projects matching professional's subcategories
+ * Get non-remote projects nearby using professional settings when params absent
  */
-export async function getProfessionalSubcategoryProjects(params?: {
-  skip?: number;
-  limit?: number;
-  include_remote?: boolean;
-}): Promise<Project[]> {
-  const token = useAuthStore.getState().token;
+export async function getNearbyNonRemoteProjects(token?: string, params?: { latitude?: number; longitude?: number; radius_km?: number; subcategories?: string[] }) {
   const config = token
     ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
-  const response = await client.get('/projects/professional/my-subcategory-projects', {
+  const response = await client.get('/projects/nearby/non-remote', {
     ...config,
     params,
   });
-  return response.data;
+  return response.data as Project[];
 }
 
