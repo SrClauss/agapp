@@ -259,7 +259,7 @@
                     <button class="btn btn-info" onclick="viewProjectOnMap()">
                         <i class="fas fa-map-marked-alt me-2"></i>Ver no Mapa
                     </button>
-                    <button class="btn btn-secondary" onclick="copyProjectId()">
+                    <button class="btn btn-secondary" onclick="copyProjectId(this)">
                         <i class="fas fa-copy me-2"></i>Copiar ID
                     </button>
                 </div>
@@ -271,19 +271,18 @@
 <script>
 function viewProjectOnMap() {
     {% if project.location and project.location.coordinates %}
-    const lat = {{ project.location.coordinates[1] }};
-    const lng = {{ project.location.coordinates[0] }};
-    const url = `https://www.google.com/maps?q=${lat},${lng}`;
+    const lat = {{ project.location.coordinates[1] | tojson }};
+    const lng = {{ project.location.coordinates[0] | tojson }};
+    const url = 'https://www.google.com/maps?q=' + lat + ',' + lng;
     window.open(url, '_blank');
     {% else %}
     alert('Este projeto não possui coordenadas de localização.');
     {% endif %}
 }
 
-function copyProjectId() {
-    navigator.clipboard.writeText('{{ project.id }}').then(function() {
+function copyProjectId(btn) {
+    navigator.clipboard.writeText({{ project.id | tojson }}).then(function() {
         // Simple feedback
-        const btn = event.target;
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-check me-2"></i>Copiado!';
         setTimeout(() => {
