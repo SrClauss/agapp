@@ -47,18 +47,21 @@ async def get_professional_settings(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Retorna as configurações do prestador de serviços"""
-    if "professional" not in current_user.roles:
-        raise HTTPException(status_code=403, detail="User is not a professional")
+    try:
+        if "professional" not in current_user.roles:
+            raise HTTPException(status_code=403, detail="User is not a professional")
 
-    # Buscar usuário atualizado do banco
-    user = await db.users.find_one({"_id": str(current_user.id)})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Buscar usuário atualizado do banco
+        user = await db.users.find_one({"_id": str(current_user.id)})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    professional_info = user.get("professional_info", {})
-    settings = professional_info.get("settings", {})
+        professional_info = user.get("professional_info", {})
+        settings = professional_info.get("settings", {})
 
-    return ProfessionalSettings(**settings) if settings else ProfessionalSettings()
+        return ProfessionalSettings(**settings) if settings else ProfessionalSettings()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.put("/me/professional-settings", response_model=User)
 async def update_professional_settings(
@@ -110,84 +113,85 @@ async def get_professional_project_counts(
     For non-remote projects: filters by location + subcategories
     For remote projects: filters only by subcategories
     """
-    from app.schemas.user import CategoryProjectCounts, SubcategoryProjectCount
-    
-    if "professional" not in current_user.roles:
-        raise HTTPException(status_code=403, detail="User is not a professional")
-    
-    # Buscar configurações do profissional
-    user = await db.users.find_one({"_id": str(current_user.id)})
-    professional_info = user.get("professional_info", {})
-    settings = professional_info.get("settings", {})
-    
-    subcategories = settings.get("subcategories", [])
-    if not subcategories:
-        return []
-    
-    coords = settings.get("establishment_coordinates")
-    radius_km = settings.get("service_radius_km", 10)
-    
-    # Buscar todas as categorias para agrupar subcategorias
-    categories_map = {}
-    async for category in db.categories.find({"is_active": True}):
-        cat_name = category.get("name")
-        cat_subs = category.get("subcategories", [])
-        for sub in cat_subs:
-            categories_map[sub["name"]] = cat_name
-    
-    # Agrupar contagens por categoria
-    category_counts = {}
-    
-    for subcategory in subcategories:
-        category_name = categories_map.get(subcategory, "Outros")
+    try:
+        from app.schemas.user import CategoryProjectCounts, SubcategoryProjectCount
         
-        # Contagem de projetos não-remotos (se houver coordenadas)
-        non_remote_count = 0
-        if coords and len(coords) == 2:
-            non_remote_query = {
-                "category.sub": subcategory,
-                "remote_execution": False,
-                "status": "open",
-                "location.coordinates": {
-                    "$near": {
-                        "$geometry": {
-                            "type": "Point",
-                            "coordinates": coords
-                        },
-                        "$maxDistance": radius_km * 1000
+        if "professional" not in current_user.roles:
+            raise HTTPException(status_code=403, detail="User is not a professional")
+        
+        # Buscar configurações do profissional
+        user = await db.users.find_one({"_id": str(current_user.id)})
+        professional_info = user.get("professional_info", {})
+        settings = professional_info.get("settings", {})
+        
+        subcategories = settings.get("subcategories", [])
+        if not subcategories:
+            return []
+        
+        coords = settings.get("establishment_coordinates")
+        radius_km = settings.get("service_radius_km", 10)
+        
+        # Buscar todas as categorias para agrupar subcategorias
+        categories_map = {}
+        async for category in db.categories.find({"is_active": True}):
+            cat_name = category.get("name")
+            cat_subs = category.get("subcategories", [])
+            for sub in cat_subs:
+                categories_map[sub["name"]] = cat_name
+        
+        # Agrupar contagens por categoria
+        category_counts = {}
+        
+        for subcategory in subcategories:
+            category_name = categories_map.get(subcategory, "Outros")
+            
+            # Contagem de projetos não-remotos (se houver coordenadas)
+            non_remote_count = 0
+            if coords and len(coords) == 2:
+                non_remote_query = {
+                    "category.sub": subcategory,
+                    "remote_execution": False,
+                    "status": "open",
+                    "location.coordinates": {
+                        "$near": {
+                            "$geometry": {
+                                "type": "Point",
+                                "coordinates": coords
+                            },
+                            "$maxDistance": radius_km * 1000
+                        }
                     }
                 }
+                non_remote_count = await db.projects.count_documents(non_remote_query)
+            
+            # Contagem de projetos remotos
+            remote_query = {
+                "category.sub": subcategory,
+                "remote_execution": True,
+                "status": "open"
             }
-            non_remote_count = await db.projects.count_documents(non_remote_query)
+            remote_count = await db.projects.count_documents(remote_query)
+            
+            total_count = non_remote_count + remote_count
+            
+            if category_name not in category_counts:
+                category_counts[category_name] = {
+                    "category": category_name,
+                    "total_count": 0,
+                    "subcategory_counts": []
+                }
+            
+            category_counts[category_name]["total_count"] += total_count
+            category_counts[category_name]["subcategory_counts"].append({
+                "subcategory": subcategory,
+                "count": total_count
+            })
         
-        # Contagem de projetos remotos
-        remote_query = {
-            "category.sub": subcategory,
-            "remote_execution": True,
-            "status": "open"
-        }
-        remote_count = await db.projects.count_documents(remote_query)
-        
-        total_count = non_remote_count + remote_count
-        
-        if category_name not in category_counts:
-            category_counts[category_name] = {
-                "category": category_name,
-                "total_count": 0,
-                "subcategory_counts": []
-            }
-        
-        category_counts[category_name]["total_count"] += total_count
-        category_counts[category_name]["subcategory_counts"].append({
-            "subcategory": subcategory,
-            "count": total_count
-        })
-    
-    # Converter para lista
-    result = list(category_counts.values())
-    return result
-
-@router.post("/me/fcm-token")
+        # Converter para lista
+        result = list(category_counts.values())
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")@router.post("/me/fcm-token")
 async def register_fcm_token(
     token_data: FCMTokenRegister,
     current_user: User = Depends(get_current_user),

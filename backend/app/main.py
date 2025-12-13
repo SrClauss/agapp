@@ -142,6 +142,7 @@ Tipos de mensagens suportadas:
     license_info={
         "name": "Proprietary",
     },
+    redirect_slashes=True,
 )
 
 # Configurar rate limiting

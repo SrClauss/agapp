@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Union
 import bcrypt
+import logging
 from jose import jwt
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
@@ -57,7 +58,7 @@ async def get_current_user_from_token(token: str, db: AsyncIOMotorDatabase):
         if user_id is None:
             raise credentials_exception
     except Exception:
-        # Caso qualquer erro ocorra na validação do JWT (exp, assinatura, formato)
+        logging.error("Invalid token provided")
         raise credentials_exception
 
     user = await get_user(db, user_id)
