@@ -6,6 +6,7 @@ from app.crud.user import get_user, update_user, get_professionals_nearby, get_u
 from app.schemas.user import User, UserUpdate, UserCreate, AddressGeocode, ProfessionalSettings, ProfessionalSettingsUpdate, FCMTokenRegister
 from app.services.geocoding import geocode_address
 from motor.motor_asyncio import AsyncIOMotorDatabase
+import logging
 
 router = APIRouter()
 
@@ -130,6 +131,7 @@ async def get_professional_project_counts(
         
         coords = settings.get("establishment_coordinates")
         radius_km = settings.get("service_radius_km", 10)
+        logging.debug(f"Getting professional project counts for user {current_user.id} - subs={subcategories}, coords={coords}, radius_km={radius_km}")
         
         # Buscar todas as categorias para agrupar subcategorias
         categories_map = {}
@@ -162,7 +164,12 @@ async def get_professional_project_counts(
                         }
                     }
                 }
-                non_remote_count = await db.projects.count_documents(non_remote_query)
+                logging.debug(f"Non-remote count query for subcategory {subcategory}: {non_remote_query}")
+                try:
+                    non_remote_count = await db.projects.count_documents(non_remote_query)
+                    logging.debug(f"Non-remote count for {subcategory}: {non_remote_count}")
+                except Exception:
+                    logging.exception("Error counting non-remote projects for subcategory")
             
             # Contagem de projetos remotos
             remote_query = {

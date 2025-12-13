@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+import logging
 from typing import List, Any, Optional, Literal
 from datetime import datetime, timezone
 from app.core.database import get_database
@@ -125,6 +126,7 @@ async def read_nearby_non_remote_projects(
 
         longitude = coords[0]
         latitude = coords[1]
+        logging.debug(f"Professional settings coords from DB: {coords}, interpreted as lon={longitude}, lat={latitude}, radius_km={radius_km}")
         radius_km = settings.get("service_radius_km", 10)
 
     # Buscar projetos não-remotos dentro do raio
@@ -144,6 +146,15 @@ async def read_nearby_non_remote_projects(
     # If subcategories filter is provided, only include those subcategories
     if subcategories:
         query["category.sub"] = {"$in": subcategories}
+
+    # Log the generated query for debugging
+    logging.debug(f"Non-remote projects query: {query}")
+    # Optionally log how many documents match
+    try:
+        matching = await db.projects.count_documents(query)
+        logging.debug(f"Non-remote projects matching count: {matching}")
+    except Exception:
+        logging.exception("Error counting non-remote projects for debug")
 
     projects = []
     async for project in db.projects.find(query).limit(100):
@@ -232,6 +243,7 @@ async def get_professional_subcategory_projects(
     
     coords = settings.get("establishment_coordinates")
     radius_km = settings.get("service_radius_km", 10)
+    logging.debug(f"Professional subcategory search - subs={subcategories}, coords={coords}, radius_km={radius_km}, include_remote={include_remote}")
     
     # Construir query
     queries = []
@@ -260,6 +272,7 @@ async def get_professional_subcategory_projects(
                 }
             }
         })
+    logging.debug(f"Built queries for professional subcategory projects: {queries}")
     
     if not queries:
         return []
@@ -271,6 +284,14 @@ async def get_professional_subcategory_projects(
         final_query = {"$or": queries}
     
     projects = []
+    # Log final query and matching count for debugging
+    logging.debug(f"Final projects query for professional: {final_query}")
+    try:
+        cnt = await db.projects.count_documents(final_query)
+        logging.debug(f"Projects matching final query: {cnt}")
+    except Exception:
+        logging.exception("Error counting projects for professional final query")
+
     async for project in db.projects.find(final_query).sort("created_at", -1).skip(skip).limit(limit):
         project_dict = dict(project)
         project_dict['id'] = str(project_dict.pop('_id'))

@@ -42,10 +42,26 @@ export default function ProfessionalSubcategorySelectScreen() {
   };
 
   const handleConfirm = () => {
-    // Call parent callback if present
-    if (onSelect && typeof onSelect === 'function') {
-      onSelect(selected);
-    }
+    // Update professional settings on server: merge selection per category with other saved subcategories
+    (async () => {
+      try {
+        if (!token) {
+          Alert.alert('Autenticação', 'Você precisa estar autenticado para salvar.');
+          return;
+        }
+        // Load current settings
+        const settings = await getProfessionalSettings(token);
+        const existing = settings.subcategories || [];
+        // Remove subcategories from this category from existing, and add selected ones
+        const otherSubs = existing.filter((s: string) => ! (category.subcategories || []).find((x: any) => x.name === s));
+        const newSubs = [...otherSubs, ...selected];
+        await updateProfessionalSettings(token, { subcategories: newSubs });
+      } catch (err) {
+        console.warn('Erro ao atualizar subcategorias:', err);
+        Alert.alert('Erro', 'Falha ao salvar seleção');
+        return;
+      }
+    })();
     navigation.goBack();
   };
 
