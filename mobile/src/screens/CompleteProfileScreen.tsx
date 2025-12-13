@@ -53,7 +53,7 @@ export default function CompleteProfileScreen() {
       // Atualizar user com avatar_url se disponível
       const userWithPhoto = { ...updatedUser, avatar_url: user?.avatar_url };
       setUser(userWithPhoto);
-      // Navigate based on user roles using helper util
+      // Navigate based on user roles using helper util (professionals temporarily routed to ProfileSelection)
       const destination = getRouteForRoles(updatedUser.roles, undefined);
       navigation.navigate(destination as never);
     } catch (e: any) {

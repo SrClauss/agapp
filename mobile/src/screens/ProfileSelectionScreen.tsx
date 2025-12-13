@@ -12,6 +12,7 @@ export default function ProfileSelectionScreen() {
   const handleRoleSelection = (role: string) => {
     setActiveRole(role);
     // Navigate to the appropriate screen based on role
+    // Route clients to the customer flow and professionals to the new placeholder
     const destination = role === 'client' ? 'WelcomeCustomer' : 'ProfessionalHome';
     navigation.navigate(destination as never);
   };

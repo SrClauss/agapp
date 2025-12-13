@@ -48,7 +48,8 @@ export default function AdScreen() {
     }
 
     if (isProfessional) {
-      navigation.navigate('ProfessionalHome' as never);
+      // Professional flows are deprecated for now; send to profile selection so user can continue
+      navigation.navigate('ProfileSelection' as never);
       return;
     }
 
