@@ -213,6 +213,65 @@ async def admin_projects(
         "client_id": client_id
     })
 
+@router.get("/projects/{project_id}", response_class=HTMLResponse)
+async def admin_project_detail(
+    request: Request,
+    project_id: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Página de detalhes do projeto no painel admin"""
+    try:
+        # Buscar projeto pelo ID
+        from app.crud.project import get_project
+        project = await get_project(db, project_id)
+        
+        if not project:
+            raise HTTPException(status_code=404, detail="Projeto não encontrado")
+        
+        # Buscar informações do cliente
+        client = None
+        if project.client_id:
+            client = await get_user(db, project.client_id)
+        
+        # Buscar informações do profissional
+        professional = None
+        if project.professional_id:
+            professional = await get_user(db, project.professional_id)
+        
+        # Buscar contatos relacionados ao projeto
+        contacts = await get_contacts(db, query_filter={"project_id": project_id})
+        
+        # Buscar categorias
+        from app.crud.category import get_categories
+        categories = await get_categories(db)
+        categories_dict = {str(cat.id): cat for cat in categories}
+        
+        # Preparar dados da categoria
+        category_info = None
+        if project.category and project.category.get("name"):
+            category_info = project.category
+        
+        # Preparar dados da subcategoria
+        subcategory_info = None
+        if project.category and project.category.get("sub"):
+            subcategory_info = project.category.get("sub")
+        
+        return templates.TemplateResponse("admin/project_detail.html", {
+            "request": request,
+            "current_user": current_user,
+            "project": project,
+            "client": client,
+            "professional": professional,
+            "contacts": contacts,
+            "category_info": category_info,
+            "subcategory_info": subcategory_info
+        })
+        
+    except Exception as e:
+        logging.error(f"Erro ao carregar detalhes do projeto {project_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
 @router.get("/contacts", response_class=HTMLResponse)
 async def admin_contacts(
     request: Request,

@@ -1,0 +1,296 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Detalhes do Projeto - Painel Administrativo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Detalhes do Projeto</h1>
+            <p class="text-muted">Informações completas do projeto #{{ project.id }}</p>
+        </div>
+        <div>
+            <a href="/system-admin/projects" class="btn btn-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            <a href="/system-admin/projects/{{ project.id }}/edit" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Project Status Badge -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="h4 mb-0">{{ project.title }}</h2>
+            <span class="badge fs-6 px-3 py-2 bg-{{ 'warning' if project.status == 'pending' else 'success' if project.status == 'active' else 'secondary' if project.status == 'completed' else 'danger' }}">
+                {{ project.status.title() }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Project Information -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações do Projeto</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Título</h6>
+                        <p class="mb-3">{{ project.title }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Status</h6>
+                        <p class="mb-3">
+                            <span class="badge bg-{{ 'warning' if project.status == 'pending' else 'success' if project.status == 'active' else 'secondary' if project.status == 'completed' else 'danger' }}">
+                                {{ project.status.title() }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Orçamento</h6>
+                        <p class="mb-3">
+                            {% if project.budget_min and project.budget_max %}
+                                R$ {{ "%.2f"|format(project.budget_min) }} - R$ {{ "%.2f"|format(project.budget_max) }}
+                            {% else %}
+                                Não informado
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Execução Remota</h6>
+                        <p class="mb-3">
+                            {% if project.remote_execution %}
+                                <i class="fas fa-check text-success"></i> Sim
+                            {% else %}
+                                <i class="fas fa-times text-danger"></i> Não
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Categoria</h6>
+                        <p class="mb-3">
+                            {% if category_info %}
+                                {{ category_info.name }}
+                            {% else %}
+                                Não informado
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Subcategoria</h6>
+                        <p class="mb-3">
+                            {% if subcategory_info %}
+                                {{ subcategory_info }}
+                            {% else %}
+                                Não informado
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Data de Criação</h6>
+                        <p class="mb-3">{{ project.created_at.strftime('%d/%m/%Y %H:%M') if project.created_at else 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Última Atualização</h6>
+                        <p class="mb-3">{{ project.updated_at.strftime('%d/%m/%Y %H:%M') if project.updated_at else 'N/A' }}</p>
+                    </div>
+                </div>
+
+                {% if project.description %}
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-muted">Descrição</h6>
+                        <p class="mb-0">{{ project.description }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Location Information -->
+        {% if project.location %}
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Localização</h5>
+            </div>
+            <div class="card-body">
+                {% if project.location.address %}
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-muted">Endereço</h6>
+                        <p class="mb-3">{{ project.location.address }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if project.location.coordinates %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Latitude</h6>
+                        <p class="mb-3">{{ project.location.coordinates[1] }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Longitude</h6>
+                        <p class="mb-3">{{ project.location.coordinates[0] }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Skills Required -->
+        {% if project.skills %}
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Habilidades Necessárias</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for skill in project.skills %}
+                    <span class="badge bg-primary">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Client Information -->
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Cliente</h5>
+            </div>
+            <div class="card-body">
+                {% if client %}
+                <div class="text-center mb-3">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 24px;">
+                        {{ client.full_name[0].upper() if client.full_name else '?' }}
+                    </div>
+                </div>
+                <h6 class="text-center mb-3">{{ client.full_name or 'N/A' }}</h6>
+                <p class="text-muted small mb-2"><i class="fas fa-envelope me-1"></i>{{ client.email or 'N/A' }}</p>
+                {% if client.phone %}
+                <p class="text-muted small mb-2"><i class="fas fa-phone me-1"></i>{{ client.phone }}</p>
+                {% endif %}
+                <p class="text-muted small mb-0"><i class="fas fa-calendar me-1"></i>Cadastrado em {{ client.created_at.strftime('%d/%m/%Y') if client.created_at else 'N/A' }}</p>
+                {% else %}
+                <p class="text-muted text-center">Cliente não encontrado</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Professional Information -->
+        {% if professional %}
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Profissional</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 24px;">
+                        {{ professional.full_name[0].upper() if professional.full_name else '?' }}
+                    </div>
+                </div>
+                <h6 class="text-center mb-3">{{ professional.full_name or 'N/A' }}</h6>
+                <p class="text-muted small mb-2"><i class="fas fa-envelope me-1"></i>{{ professional.email or 'N/A' }}</p>
+                {% if professional.phone %}
+                <p class="text-muted small mb-2"><i class="fas fa-phone me-1"></i>{{ professional.phone }}</p>
+                {% endif %}
+                <p class="text-muted small mb-0"><i class="fas fa-calendar me-1"></i>Cadastrado em {{ professional.created_at.strftime('%d/%m/%Y') if professional.created_at else 'N/A' }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Contacts -->
+        {% if contacts %}
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Contatos ({{ contacts|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% for contact in contacts %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <small class="fw-bold">{{ contact.professional_name or 'Profissional' }}</small>
+                        <br>
+                        <small class="text-muted">{{ contact.status.title() }}</small>
+                    </div>
+                    <span class="badge bg-{{ 'warning' if contact.status == 'pending' else 'success' if contact.status == 'accepted' else 'secondary' }}">
+                        {{ contact.status }}
+                    </span>
+                </div>
+                {% if not loop.last %}
+                <hr class="my-2">
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Project Actions -->
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Ações</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/system-admin/projects/{{ project.id }}/edit" class="btn btn-warning">
+                        <i class="fas fa-edit me-2"></i>Editar Projeto
+                    </a>
+                    <button class="btn btn-info" onclick="viewProjectOnMap()">
+                        <i class="fas fa-map-marked-alt me-2"></i>Ver no Mapa
+                    </button>
+                    <button class="btn btn-secondary" onclick="copyProjectId()">
+                        <i class="fas fa-copy me-2"></i>Copiar ID
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewProjectOnMap() {
+    {% if project.location and project.location.coordinates %}
+    const lat = {{ project.location.coordinates[1] }};
+    const lng = {{ project.location.coordinates[0] }};
+    const url = `https://www.google.com/maps?q=${lat},${lng}`;
+    window.open(url, '_blank');
+    {% else %}
+    alert('Este projeto não possui coordenadas de localização.');
+    {% endif %}
+}
+
+function copyProjectId() {
+    navigator.clipboard.writeText('{{ project.id }}').then(function() {
+        // Simple feedback
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-2"></i>Copiado!';
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+        }, 2000);
+    });
+}
+</script>
+
+{% endblock %}
