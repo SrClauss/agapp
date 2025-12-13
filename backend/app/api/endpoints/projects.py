@@ -148,6 +148,7 @@ async def read_nearby_non_remote_projects(
 
     if effective_subcategories:
         query["category.sub"] = {"$in": effective_subcategories}
+    logging.info(f"Nearby non-remote search for professional {current_user.id}: coords=({latitude},{longitude}) radius_km={radius_km} subcategories={effective_subcategories}")
 
     projects = []
     async for project in db.projects.find(query).limit(100):
