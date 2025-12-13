@@ -107,27 +107,25 @@ async def read_nearby_non_remote_projects(
         raise HTTPException(status_code=403, detail="Only professionals can access this endpoint")
 
     # Se coordenadas não fornecidas, buscar das configurações do prestador
+    settings = None
     if latitude is None or longitude is None or radius_km is None:
         user = await db.users.find_one({"_id": str(current_user.id)})
         professional_info = user.get("professional_info", {})
         settings = professional_info.get("settings", {})
 
-        if not settings:
-            raise HTTPException(
-                status_code=400,
-                detail="No location parameters provided and no professional settings configured"
-            )
-
-        coords = settings.get("establishment_coordinates")
-        if not coords or len(coords) != 2:
-            raise HTTPException(
-                status_code=400,
-                detail="No valid establishment coordinates configured. Please update your professional settings."
-            )
-
-        longitude = coords[0]
-        latitude = coords[1]
-        radius_km = settings.get("service_radius_km", 10)
+        if settings:
+            coords = settings.get("establishment_coordinates")
+            if coords and isinstance(coords, (list, tuple)) and len(coords) == 2:
+                longitude = coords[0]
+                latitude = coords[1]
+                radius_km = settings.get("service_radius_km", 10)
+            else:
+                # Missing or invalid coords in settings: return empty list instead of 400 to be more tolerant
+                logging.warning(f"Professional {current_user.id} has no valid establishment coordinates; returning empty list")
+                return []
+        else:
+            logging.warning(f"Professional {current_user.id} has no professional settings; returning empty list")
+            return []
 
     # Buscar projetos não-remotos dentro do raio
     query = {
@@ -143,9 +141,13 @@ async def read_nearby_non_remote_projects(
             }
         }
     }
-    # If subcategories filter is provided, only include those subcategories
-    if subcategories:
-        query["category.sub"] = {"$in": subcategories}
+    # Determine effective subcategories: prefer explicit query params, otherwise fall back to professional settings
+    effective_subcategories = subcategories
+    if not effective_subcategories and settings:
+        effective_subcategories = settings.get("subcategories")
+
+    if effective_subcategories:
+        query["category.sub"] = {"$in": effective_subcategories}
 
     projects = []
     async for project in db.projects.find(query).limit(100):
