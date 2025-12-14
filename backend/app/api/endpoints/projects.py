@@ -120,8 +120,31 @@ async def read_nearby_combined(
     (establishment_coordinates and service_radius_km) as fallback. The
     function returns an object with `all` and `non_remote` arrays.
     """
+    logging.info(f"read_nearby_combined called with latitude={latitude} longitude={longitude} radius_km={radius_km} subcategories={subcategories} current_user_id={(getattr(current_user,'id',None) if current_user else None)}")
     settings = None
-    if latitude is None or longitude is None or radius_km is None:
+    try:
+        if latitude is None or longitude is None or radius_km is None:
+            if current_user:
+                user = await db.users.find_one({"_id": str(current_user.id)})
+                professional_info = user.get("professional_info", {})
+                settings = professional_info.get("settings", {})
+
+                if settings:
+                    coords = settings.get("establishment_coordinates")
+                    if coords and isinstance(coords, (list, tuple)) and len(coords) == 2:
+                        longitude = coords[0]
+                        latitude = coords[1]
+                        radius_km = settings.get("service_radius_km", 10)
+                    else:
+                        logging.warning(f"Professional {current_user.id} has no valid establishment coordinates; returning empty lists")
+                        return NearbyResponse(all=[], non_remote=[])
+                else:
+                    logging.warning(f"Professional {current_user.id} has no professional settings; returning empty lists")
+                    return NearbyResponse(all=[], non_remote=[])
+            else:
+                # No coords and no authenticated professional settings: nothing to search
+                logging.warning("Nearby search without coords and without authenticated professional settings; returning empty lists")
+                return NearbyResponse(all=[], non_remote=[])
         if current_user:
             user = await db.users.find_one({"_id": str(current_user.id)})
             professional_info = user.get("professional_info", {})
@@ -181,9 +204,13 @@ async def read_nearby_combined(
         project_dict['id'] = str(project_dict.pop('_id'))
         projects_non_remote.append(Project(**project_dict))
 
-    logging.info(f"Nearby combined search: coords=({latitude},{longitude}) radius_km={radius_km} subcategories={effective_subcategories}")
+        logging.info(f"Nearby combined search: coords=({latitude},{longitude}) radius_km={radius_km} subcategories={effective_subcategories} results_all={len(projects_all)} non_remote={len(projects_non_remote)}")
 
-    return NearbyResponse(all=projects_all, non_remote=projects_non_remote)
+        return NearbyResponse(all=projects_all, non_remote=projects_non_remote)
+    except Exception:
+        logging.exception("Error while executing /nearby/combined")
+        # Return a generic error to the client but log full traceback server-side
+        raise HTTPException(status_code=500, detail="internal_server_error")
 
 @router.get("/nearby/non-remote", response_model=List[Project])
 async def read_nearby_non_remote_projects(
