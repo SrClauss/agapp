@@ -5,6 +5,7 @@ import { Text, FAB} from 'react-native-paper';
 import { colors } from '../theme/colors';
 import { useNavigation } from '@react-navigation/native';
 import LocationAvatar from '../components/LocationAvatar';
+import NearbySummary from '../components/NearbySummary';
 import { BannerAd } from '../components/BannerAd';
 import { useLocationStore } from '../stores/locationStore';
 import useProjectsNearbyStore from '../stores/projectsNearbyStore';
@@ -49,19 +50,15 @@ export default function WelcomeProfessionalScreen() {
 
         <LocationAvatar />
         <BannerAd adType="banner_professional" minHeight={90} maxHeight={200} />
-        <Text>{coords ? `Coords: ${coords[1].toFixed(6)}, ${coords[0].toFixed(6)}` : 'Coords: -'}</Text>
-        <Text>{`Projetos próximos (todos): ${projectsAll?.length ?? 0} ${loading ? '(carregando...)' : ''}`}</Text>
-        <Text>{`Projetos próximos (não-remotos): ${projectsNonRemote?.length ?? 0}`}</Text>
+        <NearbySummary />
         <FAB 
-          style={[styles.FAB, { right: 88 }]}
+          style={[styles.FAB, { right: 150 }]}
           color='white'
           small
           icon={loading ? 'loading' : 'reload'}
           onPress={async () => await fetchNearby({ token: token ?? undefined })}
         />
-        <Text>{`all: ${JSON.stringify(projectsAll)}`}</Text>
-        <Text>{`non_remote: ${JSON.stringify(projectsNonRemote)}`}</Text>
-        <FAB 
+         <FAB 
           style={styles.FAB}
           color='white'
           icon="logout"

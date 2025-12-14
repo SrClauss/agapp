@@ -1,17 +1,20 @@
 import { create } from 'zustand';
 import useAuthStore from './authStore';
 import useLocationStore from './locationStore';
-import { Project, getNearbyNonRemoteProjects, getNearbyCombinedProjects } from '../api/projects';
+import { Project, getNearbyCombinedProjects } from '../api/projects';
 
 export type ProjectsNearbyState = {
   projectsNearby: Project[]; // DEPRECATED: prefer using projectsAll and projectsNonRemote
   projectsAll: Project[];
   projectsNonRemote: Project[];
+  // last used radius (km) from the latest fetch call, if any
+  lastRadiusKm?: number;
   loading: boolean;
   error?: string;
   setProjectsNearby: (projects: Project[]) => void;
   setProjectsAll: (projects: Project[]) => void;
   setProjectsNonRemote: (projects: Project[]) => void;
+  setLastRadiusKm: (radius?: number) => void;
   fetchProjectsNearby: (options?: {
     token?: string;
     latitude?: number;
@@ -26,11 +29,13 @@ export const useProjectsNearbyStore = create<ProjectsNearbyState>((set, get) => 
   projectsNearby: [],
   projectsAll: [],
   projectsNonRemote: [],
+  lastRadiusKm: undefined,
   loading: false,
   error: undefined,
   setProjectsNearby: (projects: Project[]) => set({ projectsNearby: projects, error: undefined }),
   setProjectsAll: (projects: Project[]) => set({ projectsAll: projects, error: undefined }),
   setProjectsNonRemote: (projects: Project[]) => set({ projectsNonRemote: projects, error: undefined }),
+  setLastRadiusKm: (radius?: number) => set({ lastRadiusKm: radius }),
   clear: () => set({ projectsNearby: [], projectsAll: [], projectsNonRemote: [], error: undefined }),
   fetchProjectsNearby: async (options = {}) => {
     console.log('[ProjectsNearbyStore] fetchProjectsNearby chamado com opções:', options);
@@ -66,6 +71,9 @@ export const useProjectsNearbyStore = create<ProjectsNearbyState>((set, get) => 
       if ((latitude !== undefined && longitude !== undefined) && radius_km === undefined) {
         radius_km = 50;
       }
+
+      // store last used radius (may be undefined)
+      set({ lastRadiusKm: radius_km });
 
       const params: any = {};
       if (latitude !== undefined) params.latitude = latitude;
