@@ -44,7 +44,6 @@ export type User = {
 export type AuthState = {
   token: string | null;
   user: User | null;
-  projectsNearby?: any[];
   activeRole: string | null;
   isHydrated: boolean;
   setToken: (token: string | null) => Promise<void>;
@@ -53,7 +52,6 @@ export type AuthState = {
   setHydrated: () => void;
   logout: () => Promise<void>;
   getToken: () => string | null;
-  setProjectsNearby?: (projects: any[]) => void;
 };
 
 const SECURE_KEY = 'auth_token_v1';
@@ -72,8 +70,7 @@ export const useAuthStore = create<AuthState>()(
         console.log(`[AuthStore] Token definido no estado (persistirá automaticamente)`);
       },
       setUser: (user: User | null) => set({ user }),
-      projectsNearby: [],
-      setProjectsNearby: (projects: any[]) => set({ projectsNearby: projects }),
+      // projectsNearby moved to dedicated store `useProjectsNearbyStore`
       setActiveRole: (role: string) => set({ activeRole: role }),
       setHydrated: () => set({ isHydrated: true }),
       getToken: () => get().token,
