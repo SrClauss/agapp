@@ -8,13 +8,7 @@ import DynamicIcon from './DynamicIcon';
 export default function CategoryGrid() {
   const [categories, setCategories] = useState<CategoryAPI[]>([]);
   const navigation = useNavigation();
-  function convertSnakeToPascal(str: string) {
-    return str
-      .toLowerCase()
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join('');
-  }
+
   useEffect(() => {
     let mounted = true;
     getCategories()

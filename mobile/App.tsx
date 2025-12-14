@@ -15,11 +15,7 @@ import ProjectSummaryScreen from './src/screens/ProjectSummaryScreen';
 import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
 import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
 import AdScreen from './src/screens/AdScreen';
-import ProfessionalImplementationScreen from './src/screens/ProfessionalImplementationScreen';
-// Professional screens removed (being reimplemented later)
-import SubcategorySelectionScreen from './src/screens/SubcategorySelectionScreen';
-// Professional screens removed (being reimplemented later)
-import ChatScreen from './src/screens/ChatScreen';
+import WelcomeProfessionalScreen from './src/screens/WelcomeProfessionalScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
 import { getRouteForRoles } from './src/utils/roles';
@@ -71,6 +67,7 @@ export default function App() {
     }
   };
 
+
   useEffect(() => {
     async function initializeApp() {
       console.log(`[App] Inicializando app...`);
@@ -94,7 +91,7 @@ export default function App() {
       </View>
     );
   }
-
+  
   return (
     <PaperProvider theme={theme}>
       <NavigationContainer>
@@ -108,10 +105,7 @@ export default function App() {
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ProjectSummary" component={ProjectSummaryScreen} options={{ title: 'Resumo do Projeto' }} />
           <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />
-          <Stack.Screen name="ProfessionalHome" component={ProfessionalImplementationScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="SubcategorySelection" component={SubcategorySelectionScreen} options={{ title: 'Minhas Subcategorias' }} />
-          {/* Professional-specific screens removed */}
-          <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
+          <Stack.Screen name="WelcomeProfessional" component={WelcomeProfessionalScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
@@ -120,3 +114,4 @@ export default function App() {
     </PaperProvider>
   );
 }
+ 

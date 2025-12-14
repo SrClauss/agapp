@@ -2,7 +2,7 @@ export function getRouteForRoles(roles: string[] | undefined | null, activeRole?
   // Se tiver um activeRole salvo, use ele
   if (activeRole) {
     if (activeRole === 'client') return 'WelcomeCustomer';
-    if (activeRole === 'professional') return 'ProfessionalHome';
+    if (activeRole === 'professional') return 'WelcomeProfessional';
   }
 
   if (!roles || roles.length === 0) return 'ProfileSelection';
@@ -11,7 +11,7 @@ export function getRouteForRoles(roles: string[] | undefined | null, activeRole?
   const isProfessional = roles.includes('professional');
 
   if (isClient && isProfessional) return 'ProfileSelection';
-  if (isProfessional) return 'ProfessionalHome';
+  if (isProfessional) return 'WelcomeProfessional';
   return 'WelcomeCustomer';
 }
 

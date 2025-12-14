@@ -4,7 +4,7 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import { IconButton, Badge } from 'react-native-paper';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
-import * as Location from 'expo-location';
+import useLocationStore from '../stores/locationStore';
 import * as FileSystem from 'expo-file-system';
 import useAuthStore from "../stores/authStore";
 import useNotificationStore from '../stores/notificationStore';
@@ -16,10 +16,11 @@ interface LocationAvatarProps {
 
 export default function LocationAvatar({ showLocation = true }: LocationAvatarProps) {
     const user = useAuthStore((state) => state.user);
-    const [locationText, setLocationText] = useState<string>('Obtendo localização...');
     const initials = user?.full_name ? user.full_name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'U';
-    const [neigbhorhood, setNeigbhorhood] = useState<string>('');
-    const [coords, setCoords] = useState<[number, number] | null>(null);
+    const locationText = useLocationStore((s) => s.locationText);
+    const neigbhorhood = useLocationStore((s) => s.neighborhood);
+    const coords = useLocationStore((s) => s.coords);
+    const fetchLocation = useLocationStore((s) => s.fetchLocation);
     const { localUri } = useProfilePhoto(user?.id || null, user?.avatar_url || null);
     const navigation = useNavigation();
     const notificationCount = useNotificationStore((s) => s.count);
@@ -58,46 +59,13 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
 
     useEffect(() => {
         if (showLocation) {
-            getCurrentLocation();
+            fetchLocation();
         }
     }, [showLocation]);
 
     // localUri provided by useProfilePhoto hook contains a cached local path if available.
 
-    const getCurrentLocation = async () => {
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setLocationText('Localização não permitida');
-                return;
-            }
-
-            const location = await Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.Balanced,
-            });
-
-            // Reverse geocoding to get city and state
-            const [address] = await Location.reverseGeocodeAsync({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-            });
-
-            if (address) {
-                const neigbhorhood = address.district || '';
-                const city = address.city || address.subregion || '';
-                const state = address.region || '';
-                setLocationText(`${city}, ${state}`);
-                setNeigbhorhood(neigbhorhood);
-                // store coordinates in [longitude, latitude] order to match backend
-                setCoords([location.coords.longitude, location.coords.latitude]);
-            } else {
-                setLocationText('Localização desconhecida');
-            }
-        } catch (error) {
-            console.error('Erro ao obter localização:', error);
-            setLocationText('Erro ao obter localização');
-        }
-    };
+    // Now location is managed by the global location store (see ../stores/locationStore.ts)
 
 
     const openNotifications = () => {
@@ -183,6 +151,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         paddingBottom: 25,
+    },
+
+    coordsText: {
+        fontSize: 10,
+        color: '#999',
+        marginTop: 2,
     },
     locationContainer: {
         flex: 1,

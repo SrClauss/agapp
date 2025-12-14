@@ -66,7 +66,11 @@ export default function LoginScreen() {
     }
 
     // Se não houver anúncios ou erro, vai direto para tela principal
-    const destination = user.roles.includes('client') ? 'WelcomeCustomer' : 'ProfileSelection';
+    const destination = user.roles.includes('client')
+      ? 'WelcomeCustomer'
+      : user.roles.includes('professional')
+      ? 'WelcomeProfessional'
+      : 'WelcomeCustomer';
     navigation.navigate(destination as never);
   };
 
