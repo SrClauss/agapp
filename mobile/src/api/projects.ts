@@ -55,6 +55,7 @@ export interface Project {
   final_budget?: number;
   closed_by?: string;
   closed_by_name?: string;
+  // Note: featured fields exist on backend but are omitted here for compatibility
 }
 
 /**
@@ -120,7 +121,7 @@ export async function getRecommendedCategories(): Promise<string[]> {
 /**
  * Get non-remote projects nearby using professional settings when params absent
  */
-export async function getNearbyNonRemoteProjects(token?: string, params?: { latitude?: number; longitude?: number; radius_km?: number; subcategories?: string[] }) {
+export async function getNearbyNonRemoteProjects(token?: string, params?: { latitude?: number; longitude?: number; radius_km?: number; subcategories?: string[] }): Promise<Project[]> {
   const config = token
     ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
