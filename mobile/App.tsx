@@ -74,6 +74,16 @@ export default function App() {
 
       // Aguardar hidratação do store
       if (isHydrated) {
+        // Em dev: logue o conteúdo persistido parcialmente (mas não exponha token inteiro)
+        if (__DEV__) {
+          // debugCheckPersisted foi adicionado em authStore para ajudar a diagnosticar
+          // situações em que o token não é re-hidratado corretamente.
+          try {
+            await useAuthStore.getState().debugCheckPersisted?.();
+          } catch (e) {
+            console.log('[App][debug] Erro ao checar estado persistido:', e);
+          }
+        }
         console.log(`[App] Store hidratado, executando checkAuth`);
         checkAuth();
       } else {

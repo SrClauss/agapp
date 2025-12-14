@@ -42,35 +42,30 @@ const adTypeToLocation = (adTypeParam: string): string | null => {
 // Ensure image is saved locally; returns local URI (file://) or an empty string
 const ensureImageLocal = async (img: ImageItem, adTypeParam: string): Promise<string> => {
   if (!img) {
-    console.log('[ensureImageLocal] No image provided');
     return '';
   }
 
   const folder = `${FileSystem.cacheDirectory}ads/${adTypeParam}/`;
-  console.log('[ensureImageLocal] Creating folder:', folder);
+  
 
   try {
     await FileSystem.makeDirectoryAsync(folder, { intermediates: true });
   } catch (e) {
-    console.log('[ensureImageLocal] Error creating folder:', e);
+    // ignore
   }
 
   const filename = img.filename || `${Date.now()}.png`;
   const localPath = `${folder}${filename}`;
-  console.log('[ensureImageLocal] Local path:', localPath);
 
   const info = await FileSystem.getInfoAsync(localPath);
   if (info.exists) {
-    console.log('[ensureImageLocal] File already exists locally');
     return localPath;
   }
 
   if (img.content && img.content.startsWith('data:image')) {
-    console.log('[ensureImageLocal] Saving base64 image to file system');
     try {
       const base64 = img.content.split(',')[1];
       await FileSystem.writeAsStringAsync(localPath, base64, { encoding: FileSystem.EncodingType.Base64 });
-      console.log('[ensureImageLocal] Successfully saved base64 image');
       return localPath;
     } catch (error) {
       console.error('[ensureImageLocal] Error saving base64 image:', error);
@@ -240,11 +235,8 @@ export function useAd(
       setLoading(true);
       setError(null);
 
-      console.log('[useAd] Loading ad for type:', adType);
-
       // Tentar carregar do cache primeiro
       const cachedAd = await loadAdFromCache();
-      console.log('[useAd] Cached ad:', cachedAd ? 'found' : 'not found');
       if (cachedAd) {
         // If cached includes images metadata, we might not have image content cached (we dropped it)
         if (cachedAd.images && cachedAd.images.length > 0) {
@@ -252,14 +244,11 @@ export function useAd(
           // Note: cached image content may be null (we don't persist base64). UI should try to render only if uri is set.
           const availableImgs = imgs.filter(i => i.uri);
           if (availableImgs.length > 0) {
-            console.log('[useAd] Using cached images with content');
             setImages(availableImgs);
             setExists(true);
             setLoading(false);
             return;
           }
-          // if no cached image URIs, fallthrough to load from server
-          console.log('[useAd] Cached images have no content, fetching from server');
         } else if (cachedAd.html) {
           // Only use cached HTML if it exists
           const html = buildHtmlWithAssets(cachedAd);
@@ -269,7 +258,6 @@ export function useAd(
           return;
         }
         // If no valid cached content, fallthrough to load from server
-        console.log('[useAd] No valid cached content, fetching from server');
       }
 
       // Verificar se o anúncio existe
@@ -278,46 +266,36 @@ export function useAd(
       });
 
       const checkData = checkResponse.data;
-      console.log('[useAd] Check response:', checkData);
+      
 
       if (!checkData.exists) {
-        console.log('[useAd] Ad does not exist');
         setExists(false);
         setLoading(false);
         return;
       }
 
       // Carregar anúncio completo
-      console.log('[useAd] Fetching ad data from:', `/system-admin/api/public/ads/${adType}`);
       const adResponse = await client.get(`/system-admin/api/public/ads/${adType}`, {
         timeout: 10000,
       });
 
       const adData: AdData = adResponse.data;
-      console.log('[useAd] Ad data received:', {
-        has_html: !!adData.html,
-        has_assets: !!adData.assets,
-        has_images: !!adData.images,
-        images_count: adData.images?.length || 0
-      });
+      
 
       // If the payload includes images, set them and skip building HTML
       if (adData.images && adData.images.length > 0) {
-        console.log('[useAd] Processing images:', adData.images.length);
+        
         const imgs: Array<{ uri: string; link?: string }> = [];
         for (const i of adData.images) {
-          console.log('[useAd] Image:', i.filename, 'has content:', !!i.content, 'content preview:', i.content?.substring(0, 50));
           try {
             const local = await ensureImageLocal(i, adType);
-            console.log('[useAd] Local path for', i.filename, ':', local);
             imgs.push({ uri: local || i.content, link: i.link });
           } catch (err) {
             console.error('[useAd] Error ensuring image local:', err);
             imgs.push({ uri: i.content, link: i.link });
           }
         }
-
-        console.log('[useAd] Final images array:', imgs.map(i => ({ uri: i.uri?.substring(0, 50), link: i.link })));
+        
 
         // Salvar no cache com o mesmo formato que o objeto completo (but not base64 content)
         await saveAdToCache(adData as AdData);

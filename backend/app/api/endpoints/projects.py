@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 import logging
-from typing import List, Any, Optional, Literal
+from typing import List, Any, Optional, Literal, Dict
+from pydantic import BaseModel
+from fastapi import Request
 from datetime import datetime, timezone
 from app.core.database import get_database
 from app.core.security import get_current_user, get_current_admin_user
@@ -63,7 +65,7 @@ async def read_projects(
         async for prof in prof_cursor:
             profs[str(prof["_id"])] = {
                 "id": str(prof["_id"]),
-                "name": prof.get("full_name", ""),
+                "full_name": prof.get("full_name", ""),
                 "avatar_url": prof.get("avatar_url")
             }
         for project in projects:
@@ -78,11 +80,110 @@ async def read_nearby_projects(
     subcategories: List[str] = Query(None),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    filters = ProjectFilter(latitude=latitude, longitude=longitude, radius_km=radius_km)
-    if subcategories:
-        filters.subcategories = subcategories
-    projects = await get_projects(db, filters=filters)
-    return projects
+    # This endpoint was removed in favor of `/projects/nearby/combined`.
+    # Return 410 Gone to indicate the client should use the combined endpoint.
+    raise HTTPException(status_code=410, detail="This endpoint was removed. Use /projects/nearby/combined")
+
+# NOTE: The `/nearby` and `/nearby/non-remote` endpoints were removed in favor
+# of the combined `/nearby/combined` endpoint which returns both `all` and
+# `non_remote` arrays in a single response. This simplifies client usage and
+# reduces duplicate queries.
+
+
+class NearbyResponse(BaseModel):
+    all: List[Project]
+    non_remote: List[Project]
+
+
+async def _get_optional_current_user(request: Request, db: AsyncIOMotorDatabase = Depends(get_database)):
+    """Attempt to retrieve current user from request; return None if no auth provided."""
+    try:
+        return await get_current_user_from_request(request, db)
+    except HTTPException:
+        return None
+
+
+@router.get("/nearby/combined", response_model=NearbyResponse)
+async def read_nearby_combined(
+    latitude: float = None,
+    longitude: float = None,
+    radius_km: float = None,
+    subcategories: List[str] = Query(None),
+    current_user: Optional[User] = Depends(_get_optional_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Return both all nearby projects and nearby non-remote projects in one response.
+
+    If latitude/longitude/radius_km are not provided and an authenticated
+    professional calls the endpoint, use their professional settings
+    (establishment_coordinates and service_radius_km) as fallback. The
+    function returns an object with `all` and `non_remote` arrays.
+    """
+    settings = None
+    if latitude is None or longitude is None or radius_km is None:
+        if current_user:
+            user = await db.users.find_one({"_id": str(current_user.id)})
+            professional_info = user.get("professional_info", {})
+            settings = professional_info.get("settings", {})
+
+            if settings:
+                coords = settings.get("establishment_coordinates")
+                if coords and isinstance(coords, (list, tuple)) and len(coords) == 2:
+                    longitude = coords[0]
+                    latitude = coords[1]
+                    radius_km = settings.get("service_radius_km", 10)
+                else:
+                    logging.warning(f"Professional {current_user.id} has no valid establishment coordinates; returning empty lists")
+                    return NearbyResponse(all=[], non_remote=[])
+            else:
+                logging.warning(f"Professional {current_user.id} has no professional settings; returning empty lists")
+                return NearbyResponse(all=[], non_remote=[])
+        else:
+            # No coords and no authenticated professional settings: nothing to search
+            logging.warning("Nearby search without coords and without authenticated professional settings; returning empty lists")
+            return NearbyResponse(all=[], non_remote=[])
+
+    # Build base query for location
+    base_query = {
+        "status": "open",
+        "location.coordinates": {
+            "$near": {
+                "$geometry": {
+                    "type": "Point",
+                    "coordinates": [longitude, latitude]
+                },
+                "$maxDistance": radius_km * 1000
+            }
+        }
+    }
+
+    effective_subcategories = subcategories
+    if not effective_subcategories and settings:
+        effective_subcategories = settings.get("subcategories")
+
+    if effective_subcategories:
+        base_query["category.sub"] = {"$in": effective_subcategories}
+
+    # All nearby (includes remote and non-remote)
+    projects_all = []
+    async for project in db.projects.find(base_query).limit(200):
+        project_dict = dict(project)
+        project_dict['id'] = str(project_dict.pop('_id'))
+        projects_all.append(Project(**project_dict))
+
+    # Non-remote nearby
+    non_remote_query = dict(base_query)
+    non_remote_query["remote_execution"] = False
+    projects_non_remote = []
+    async for project in db.projects.find(non_remote_query).limit(200):
+        project_dict = dict(project)
+        project_dict['id'] = str(project_dict.pop('_id'))
+        projects_non_remote.append(Project(**project_dict))
+
+    logging.info(f"Nearby combined search: coords=({latitude},{longitude}) radius_km={radius_km} subcategories={effective_subcategories}")
+
+    return NearbyResponse(all=projects_all, non_remote=projects_non_remote)
 
 @router.get("/nearby/non-remote", response_model=List[Project])
 async def read_nearby_non_remote_projects(
@@ -127,36 +228,9 @@ async def read_nearby_non_remote_projects(
             logging.warning(f"Professional {current_user.id} has no professional settings; returning empty list")
             return []
 
-    # Buscar projetos não-remotos dentro do raio
-    query = {
-        "remote_execution": False,  # Apenas projetos NÃO-remotos
-        "status": "open",  # Apenas projetos abertos
-        "location.coordinates": {
-            "$near": {
-                "$geometry": {
-                    "type": "Point",
-                    "coordinates": [longitude, latitude]
-                },
-                "$maxDistance": radius_km * 1000  # Converter km para metros
-            }
-        }
-    }
-    # Determine effective subcategories: prefer explicit query params, otherwise fall back to professional settings
-    effective_subcategories = subcategories
-    if not effective_subcategories and settings:
-        effective_subcategories = settings.get("subcategories")
-
-    if effective_subcategories:
-        query["category.sub"] = {"$in": effective_subcategories}
-    logging.info(f"Nearby non-remote search for professional {current_user.id}: coords=({latitude},{longitude}) radius_km={radius_km} subcategories={effective_subcategories}")
-
-    projects = []
-    async for project in db.projects.find(query).limit(100):
-        project_dict = dict(project)
-        project_dict['id'] = str(project_dict.pop('_id'))
-        projects.append(Project(**project_dict))
-
-    return projects
+    # This endpoint was removed in favor of `/projects/nearby/combined`.
+    # Return 410 Gone to indicate the client should use the combined endpoint.
+    raise HTTPException(status_code=410, detail="This endpoint was removed. Use /projects/nearby/combined")
 
 @router.get("/my/projects", response_model=List[Project])
 async def read_my_projects(
@@ -200,7 +274,7 @@ async def read_my_projects(
         async for prof in prof_cursor:
             profs[str(prof["_id"])] = {
                 "id": str(prof["_id"]),
-                "name": prof.get("full_name", ""),
+                "full_name": prof.get("full_name", ""),
                 "avatar_url": prof.get("avatar_url")
             }
         for project in projects:
@@ -298,7 +372,8 @@ async def close_project(
     
     # Fetch professional name
     professional = await db.users.find_one({"_id": close_data.professional_id})
-    professional_name = professional.get("name") if professional else None
+    # Use full_name field consistently
+    professional_name = professional.get("full_name") if professional else None
     
     # Update project directly in DB
     from datetime import datetime, timezone

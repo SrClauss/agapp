@@ -52,6 +52,8 @@ export type AuthState = {
   setHydrated: () => void;
   logout: () => Promise<void>;
   getToken: () => string | null;
+  // DEV helper to inspect persisted storage (may be undefined in production)
+  debugCheckPersisted?: () => Promise<any>;
 };
 
 const SECURE_KEY = 'auth_token_v1';
@@ -64,79 +66,81 @@ export const useAuthStore = create<AuthState>()(
       activeRole: null,
       isHydrated: false,
       setToken: async (token: string | null) => {
-        console.log(`[AuthStore] setToken chamado com token: ${token ? 'Presente' : 'Null'}`);
         set({ token });
         // O middleware persist vai salvar automaticamente no SecureStore
-        console.log(`[AuthStore] Token definido no estado (persistirá automaticamente)`);
-      },
+        },
       setUser: (user: User | null) => set({ user }),
       // projectsNearby moved to dedicated store `useProjectsNearbyStore`
       setActiveRole: (role: string) => set({ activeRole: role }),
       setHydrated: () => set({ isHydrated: true }),
       getToken: () => get().token,
       logout: async () => {
-        console.log(`[AuthStore] Fazendo logout`);
         set({ token: null, user: null, activeRole: null });
-        // O middleware persist vai limpar automaticamente do SecureStore
-        console.log(`[AuthStore] Logout completo`);
+      },
+      // DEV helper: inspect what's stored in SecureStore under the persist key
+      // This is a safe, masked debug helper only intended for development.
+      debugCheckPersisted: async () => {
+        try {
+          const raw = await SecureStore.getItemAsync('auth-storage');
+          if (!raw) {
+            console.log('[AuthStore][debug] Nenhum valor em SecureStore para key "auth-storage"');
+            return null;
+          }
+          let parsed: any = null;
+          try {
+            parsed = JSON.parse(raw);
+          } catch (e) {
+            console.log('[AuthStore][debug] Conteúdo não é JSON válido; length:', raw.length);
+            return { rawLength: raw.length };
+          }
+          const maskedToken = parsed?.state?.token ? `${parsed.state.token.slice(0, 6)}...${parsed.state.token.slice(-6)}` : null;
+          console.log('[AuthStore][debug] persisted state found. token (masked):', maskedToken, 'userPresent:', !!parsed?.state?.user);
+          return parsed;
+        } catch (e) {
+          console.log('[AuthStore][debug] Erro ao acessar SecureStore:', e);
+          return null;
+        }
       },
     }),
     {
       name: 'auth-storage',
       // override storage to use expo-secure-store with JSON serialization
       storage: {
+        // The persist middleware expects getItem to return the raw string (or null).
+        // SecureStore stores strings, so we should return the value as-is and
+        // let the middleware parse it. Returning an already-parsed object
+        // causes hard-to-debug runtime errors / TransformErrors.
         getItem: async (name: string) => {
           try {
-            console.log(`[AuthStore] Tentando recuperar ${name} do SecureStore`);
-            const value = await SecureStore.getItemAsync(name);
-            if (value) {
-              const parsed = JSON.parse(value);
-              console.log(`[AuthStore] Valor recuperado e parseado:`, {
-                hasToken: !!parsed.state?.token,
-                hasUser: !!parsed.state?.user,
-                activeRole: parsed.state?.activeRole
-              });
-              return parsed;
-            }
-            console.log(`[AuthStore] Nenhum valor encontrado`);
-            return null;
+            return await SecureStore.getItemAsync(name);
           } catch (e) {
-            console.error(`[AuthStore] Erro ao recuperar ${name}:`, e);
             return null;
           }
         },
         setItem: async (name: string, value: any) => {
           try {
-            console.log(`[AuthStore] Salvando ${name} no SecureStore`);
-            const serialized = JSON.stringify(value);
-            await SecureStore.setItemAsync(name, serialized);
-            console.log(`[AuthStore] ${name} salvo com sucesso`);
+            // persist passes a stringified value; store it directly
+            await SecureStore.setItemAsync(name, value);
           } catch (e) {
-            console.error(`[AuthStore] Erro ao salvar ${name}:`, e);
+            // swallow: persist will retry later if necessary
           }
         },
         removeItem: async (name: string) => {
           try {
-            console.log(`[AuthStore] Removendo ${name} do SecureStore`);
             await SecureStore.deleteItemAsync(name);
-            console.log(`[AuthStore] ${name} removido com sucesso`);
           } catch (e) {
-            console.error(`[AuthStore] Erro ao remover ${name}:`, e);
+            // ignore
           }
         },
       } as any,
       onRehydrateStorage: () => (state) => {
-        console.log(`[AuthStore] Rehidratação iniciada`);
         if (state) {
-          console.log(`[AuthStore] Estado rehidratado:`, {
-            hasToken: !!state.token,
-            hasUser: !!state.user,
-            activeRole: state.activeRole
-          });
+          // Log succinctly so we can audit hydration without noisy debug spam
+          console.log('[AuthStore] Estado rehidratado do storage');
           state.setHydrated();
-          console.log(`[AuthStore] Hidratação marcada como completa`);
+          console.log('[AuthStore] Hidratação marcada como completa');
         } else {
-          console.log(`[AuthStore] Nenhum estado para rehidratar`);
+          console.log('[AuthStore] Nenhum estado para rehidratar');
         }
       },
     }

@@ -49,7 +49,6 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
 
     // Rastrear cliques
     if (message === 'click') {
-      console.log('Usuário clicou no banner');
       onPress?.();
       // Aqui você pode enviar analytics
     }
@@ -57,21 +56,17 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
 
   // Não mostrar se não existir
   if (!exists) {
-    console.log('[BannerAd] Not rendering - ad does not exist');
     return null;
   }
 
   // Skeleton loader
   if (loading) {
-    console.log('[BannerAd] Showing skeleton loader');
     return (
       <View style={[styles.skeletonContainer, { width: containerWidth, height: minHeight }]}>
         <View style={styles.skeletonShimmer} />
       </View>
     );
   }
-
-  console.log('[BannerAd] Rendering banner - images:', images?.length, 'adHtml:', !!adHtml, 'bannerHeight:', bannerHeight);
 
   return (
     <View style={[styles.container, { width: containerWidth, height: bannerHeight }]}>
@@ -95,7 +90,6 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
             setIndex(newIndex);
           }}
           renderItem={({ item, index: itemIndex }) => {
-            console.log('[BannerAd] Rendering image', itemIndex, 'uri:', item.uri?.substring(0, 100));
             return (
               <TouchableOpacity
                 style={[styles.itemContainer, { width: containerWidth }]}
@@ -118,18 +112,16 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
                   ]}
                   resizeMode="cover"
                   onLoad={(e) => {
-                    console.log('[BannerAd] Image loaded:', itemIndex);
                     // Apenas a primeira imagem define a altura do banner
                     if (itemIndex === 0 && !firstImageLoaded) {
                       const { width: imgW, height: imgH } = e.nativeEvent.source;
                       const newHeight = calculateHeight(imgW, imgH);
-                      console.log('[BannerAd] Setting banner height from first image:', newHeight);
                       setBannerHeight(newHeight);
                       setFirstImageLoaded(true);
                     }
                   }}
                   onError={(e) => {
-                    console.error('[BannerAd] Image load error:', itemIndex, e.nativeEvent.error);
+                    // Image failed to load; swallow silently or track via analytics if needed
                   }}
                 />
               </TouchableOpacity>

@@ -37,7 +37,7 @@ export function useProfilePhoto(userId?: string | null, remoteAvatarUrl?: string
 
         // If remote is already a local file URI (file://), just set it
         if (remoteAvatarUrl.startsWith('file://')) {
-          if (mounted) setLocalUri(remotePhotoUrl);
+          if (mounted) setLocalUri(remoteAvatarUrl);
           if (user && user.avatar_local !== remoteAvatarUrl) {
             setUser({ ...user, avatar_local: remoteAvatarUrl });
           }

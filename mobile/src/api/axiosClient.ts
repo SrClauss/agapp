@@ -3,9 +3,39 @@ import axiosRetry from 'axios-retry';
 import * as SecureStore from 'expo-secure-store';
 import useAuthStore from '../stores/authStore';
 
-// Função para obter token diretamente do store
-const getAuthToken = (): string | null => {
-  return useAuthStore.getState().token;
+// Função para obter token: preferir in-memory, mas caso esteja ausente tentar
+// recuperar do SecureStore (persistência). Retorna string|null.
+const getAuthToken = async (): Promise<string | null> => {
+  const inMemory = useAuthStore.getState().token;
+  if (inMemory) return inMemory;
+
+  try {
+    const raw = await SecureStore.getItemAsync('auth-storage');
+    if (!raw) return null;
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      try {
+        parsed = JSON.parse(JSON.parse(raw));
+      } catch (e2) {
+        parsed = null;
+      }
+    }
+    const token = parsed?.state?.token ?? parsed?.token ?? null;
+    if (token && typeof token === 'string') {
+      // update in-memory for future requests
+      try {
+        await useAuthStore.getState().setToken(token);
+      } catch (e) {
+        // ignore
+      }
+      return token;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
 };
 
 // Get base URL from environment
@@ -37,11 +67,16 @@ axiosRetry(client, {
 client.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
-      // Get token from auth store
-      const token = getAuthToken();
+      // Get token (may read SecureStore if in-memory missing)
+      const token = await getAuthToken();
 
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
+        if (__DEV__) {
+          // Masked log for debugging only
+          const masked = `${token.slice(0,6)}...${token.slice(-6)}`;
+          console.log('[axios] Enviando Authorization (mascarado):', masked);
+        }
       }
     } catch (error) {
       console.error('Error getting auth token:', error);
@@ -67,17 +102,26 @@ client.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        // TODO: Implement token refresh logic here if you have a refresh endpoint
-        // For now, just clear the token and let the user re-authenticate
-        useAuthStore.getState().logout();
-
-        // You could also trigger a navigation to login screen here
-        // or emit an event that the app listens to
-      } catch (refreshError) {
-        console.error('Error handling 401:', refreshError);
-        return Promise.reject(error);
-      }
+        // Only perform logout if the request actually sent an Authorization
+        // header (i.e., we attempted an authenticated request). If the
+        // request had no Authorization header, it's an unauthenticated
+        // request and we should not clear the user's token (this caused the
+        // app to log out users when background/unauthenticated requests got 401).
+        const sentAuth = Boolean((originalRequest.headers as any)?.Authorization);
+        if (sentAuth) {
+          try {
+            // TODO: Implement token refresh logic here if you have a refresh endpoint
+            // For now, clear the token and let the user re-authenticate
+            useAuthStore.getState().logout();
+          } catch (refreshError) {
+            console.error('Error handling 401:', refreshError);
+            return Promise.reject(error);
+          }
+        } else {
+          if (__DEV__) {
+            console.log('[axios] Received 401 for unauthenticated request; not logging out');
+          }
+        }
     }
 
     return Promise.reject(error);

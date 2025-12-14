@@ -94,9 +94,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                             {neigbhorhood ? (
                                 <Text style={styles.neigbhorhoodText}>{neigbhorhood}</Text>
                             ) : null}
-                            {coords ? (
-                                <Text style={styles.coordsText}>{`Lat: ${coords[1].toFixed(6)} • Lon: ${coords[0].toFixed(6)}`}</Text>
-                            ) : null}
+                            
                         </View>
                     </View>
                 </View>

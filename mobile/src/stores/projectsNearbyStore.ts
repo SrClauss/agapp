@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 import useAuthStore from './authStore';
 import useLocationStore from './locationStore';
-import { Project, getNearbyNonRemoteProjects } from '../api/projects';
+import { Project, getNearbyNonRemoteProjects, getNearbyCombinedProjects } from '../api/projects';
 
 export type ProjectsNearbyState = {
-  projectsNearby: Project[];
+  projectsNearby: Project[]; // DEPRECATED: prefer using projectsAll and projectsNonRemote
+  projectsAll: Project[];
+  projectsNonRemote: Project[];
   loading: boolean;
-  error: string | null;
+  error?: string;
   setProjectsNearby: (projects: Project[]) => void;
+  setProjectsAll: (projects: Project[]) => void;
+  setProjectsNonRemote: (projects: Project[]) => void;
   fetchProjectsNearby: (options?: {
     token?: string;
     latitude?: number;
@@ -20,15 +24,33 @@ export type ProjectsNearbyState = {
 
 export const useProjectsNearbyStore = create<ProjectsNearbyState>((set, get) => ({
   projectsNearby: [],
+  projectsAll: [],
+  projectsNonRemote: [],
   loading: false,
-  error: null,
-  setProjectsNearby: (projects: Project[]) => set({ projectsNearby: projects, error: null }),
-  clear: () => set({ projectsNearby: [], error: null }),
+  error: undefined,
+  setProjectsNearby: (projects: Project[]) => set({ projectsNearby: projects, error: undefined }),
+  setProjectsAll: (projects: Project[]) => set({ projectsAll: projects, error: undefined }),
+  setProjectsNonRemote: (projects: Project[]) => set({ projectsNonRemote: projects, error: undefined }),
+  clear: () => set({ projectsNearby: [], projectsAll: [], projectsNonRemote: [], error: undefined }),
   fetchProjectsNearby: async (options = {}) => {
-    set({ loading: true, error: null });
+    console.log('[ProjectsNearbyStore] fetchProjectsNearby chamado com opções:', options);
+    console.log('[ProjectsNearbyStore] Estado atual antes da busca:', get());
+    console.log('[ProjectsNearbyStore] Token usado na busca:', options.token ?? useAuthStore.getState().token);
+    console.log('[ProjectsNearbyStore] Coordenadas usadas na busca:', {
+      latitude: options.latitude,
+      longitude: options.longitude,
+    });
+    console.log('[ProjectsNearbyStore] Raio usado na busca (km):', options.radius_km ?? '(não definido — será 50 se houver coords)');
+
+    // Resolve token: prefer explicit option, fallback to auth store. Do NOT
+    // read SecureStore directly; other routes rely on the `authStore` and
+    // axios interceptors to attach Authorization headers.
+    const effectiveToken = options.token ?? useAuthStore.getState().token ?? undefined;
+
+    set({ loading: true, error: undefined });
+    const token = effectiveToken;
     try {
-      // Resolve token: prefer explicit option, fallback to auth store
-      const token = options.token ?? useAuthStore.getState().token ?? undefined;
+      // token already resolved above
 
       // Resolve coords: prefer explicit options, fallback to locationStore
       let { latitude, longitude, radius_km, subcategories } = options;
@@ -40,15 +62,29 @@ export const useProjectsNearbyStore = create<ProjectsNearbyState>((set, get) => 
         }
       }
 
+      // If we have coords but no explicit radius, use sensible default (50 km)
+      if ((latitude !== undefined && longitude !== undefined) && radius_km === undefined) {
+        radius_km = 50;
+      }
+
       const params: any = {};
       if (latitude !== undefined) params.latitude = latitude;
       if (longitude !== undefined) params.longitude = longitude;
       if (radius_km !== undefined) params.radius_km = radius_km;
       if (subcategories !== undefined) params.subcategories = subcategories;
 
-      const data = await getNearbyNonRemoteProjects(token, Object.keys(params).length ? params : undefined);
-      set({ projectsNearby: data, loading: false });
-      return data;
+      if (__DEV__) {
+        if (token) {
+          console.log('[ProjectsNearbyStore] Fazendo requisição com token (mascarado):', `${token.slice(0,6)}...${token.slice(-6)}`);
+        } else {
+          console.log('[ProjectsNearbyStore] Fazendo requisição sem token');
+        }
+      }
+
+      // Use the combined endpoint to fetch both arrays in a single call
+      const combined = await getNearbyCombinedProjects(token, Object.keys(params).length ? params : undefined);
+      set({ projectsNonRemote: combined.non_remote, projectsAll: combined.all, projectsNearby: combined.non_remote, loading: false });
+      return combined.non_remote;
     } catch (err: any) {
       console.warn('Failed to fetch nearby projects:', err);
       set({ error: err?.message || 'failed_fetch', loading: false });
