@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from fastapi import Request
 from datetime import datetime, timezone
 from app.core.database import get_database
-from app.core.security import get_current_user, get_current_admin_user
+from app.core.security import get_current_user, get_current_admin_user, get_current_user_from_request
 from app.crud.document import get_documents_by_project
 from app.crud.project import get_projects, create_project, update_project, delete_project, get_project
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectFilter, ProjectClose, EvaluationCreate
