@@ -145,68 +145,46 @@ async def read_nearby_combined(
                 # No coords and no authenticated professional settings: nothing to search
                 logging.warning("Nearby search without coords and without authenticated professional settings; returning empty lists")
                 return NearbyResponse(all=[], non_remote=[])
-        if current_user:
-            user = await db.users.find_one({"_id": str(current_user.id)})
-            professional_info = user.get("professional_info", {})
-            settings = professional_info.get("settings", {})
-
-            if settings:
-                coords = settings.get("establishment_coordinates")
-                if coords and isinstance(coords, (list, tuple)) and len(coords) == 2:
-                    longitude = coords[0]
-                    latitude = coords[1]
-                    radius_km = settings.get("service_radius_km", 10)
-                else:
-                    logging.warning(f"Professional {current_user.id} has no valid establishment coordinates; returning empty lists")
-                    return NearbyResponse(all=[], non_remote=[])
-            else:
-                logging.warning(f"Professional {current_user.id} has no professional settings; returning empty lists")
-                return NearbyResponse(all=[], non_remote=[])
-        else:
-            # No coords and no authenticated professional settings: nothing to search
-            logging.warning("Nearby search without coords and without authenticated professional settings; returning empty lists")
-            return NearbyResponse(all=[], non_remote=[])
-
-    # Build base query for location
-    base_query = {
-        "status": "open",
-        "location.coordinates": {
-            "$near": {
-                "$geometry": {
-                    "type": "Point",
-                    "coordinates": [longitude, latitude]
-                },
-                "$maxDistance": radius_km * 1000
+        # Build base query for location
+        base_query = {
+            "status": "open",
+            "location.coordinates": {
+                "$near": {
+                    "$geometry": {
+                        "type": "Point",
+                        "coordinates": [longitude, latitude]
+                    },
+                    "$maxDistance": radius_km * 1000
+                }
             }
         }
-    }
 
-    effective_subcategories = subcategories
-    if not effective_subcategories and settings:
-        effective_subcategories = settings.get("subcategories")
+        effective_subcategories = subcategories
+        if not effective_subcategories and settings:
+            effective_subcategories = settings.get("subcategories")
 
-    if effective_subcategories:
-        base_query["category.sub"] = {"$in": effective_subcategories}
+        if effective_subcategories:
+            base_query["category.sub"] = {"$in": effective_subcategories}
 
-    # All nearby (includes remote and non-remote)
-    projects_all = []
-    async for project in db.projects.find(base_query).limit(200):
-        project_dict = dict(project)
-        project_dict['id'] = str(project_dict.pop('_id'))
-        projects_all.append(Project(**project_dict))
+        # All nearby (includes remote and non-remote)
+        projects_all = []
+        async for project in db.projects.find(base_query).limit(200):
+            project_dict = dict(project)
+            project_dict['id'] = str(project_dict.pop('_id'))
+            projects_all.append(Project(**project_dict))
 
-    # Non-remote nearby
-    non_remote_query = dict(base_query)
-    non_remote_query["remote_execution"] = False
-    projects_non_remote = []
-    async for project in db.projects.find(non_remote_query).limit(200):
-        project_dict = dict(project)
-        project_dict['id'] = str(project_dict.pop('_id'))
-        projects_non_remote.append(Project(**project_dict))
-
+        # Non-remote nearby
+        non_remote_query = dict(base_query)
+        non_remote_query["remote_execution"] = False
+        projects_non_remote = []
+        async for project in db.projects.find(non_remote_query).limit(200):
+            project_dict = dict(project)
+            project_dict['id'] = str(project_dict.pop('_id'))
+            projects_non_remote.append(Project(**project_dict))
         logging.info(f"Nearby combined search: coords=({latitude},{longitude}) radius_km={radius_km} subcategories={effective_subcategories} results_all={len(projects_all)} non_remote={len(projects_non_remote)}")
 
         return NearbyResponse(all=projects_all, non_remote=projects_non_remote)
+
     except Exception:
         logging.exception("Error while executing /nearby/combined")
         # Return a generic error to the client but log full traceback server-side
