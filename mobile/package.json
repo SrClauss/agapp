@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/slider": "^5.1.1",
     "@react-native-google-signin/google-signin": "^16.0.0",
     "@react-navigation/native": "^7.1.21",
     "@react-navigation/native-stack": "^7.6.4",
@@ -17,8 +18,10 @@
     "axios-retry": "^4.5.0",
     "expo": "~54.0.25",
     "expo-auth-session": "^7.0.9",
+    "expo-blur": "~12.2.0",
     "expo-dev-client": "~6.0.18",
     "expo-device": "~8.0.9",
+    "expo-file-system": "~17.0.0",
     "expo-linear-gradient": "^15.0.7",
     "expo-location": "~19.0.7",
     "expo-notifications": "~0.32.13",
@@ -38,8 +41,6 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-webview": "13.15.0",
     "react-native-worklets": "0.5.1",
-    "expo-file-system": "~17.0.0",
-    "expo-blur": "~12.2.0",
     "reconnecting-websocket": "^4.4.0",
     "zustand": "^5.0.8"
   },

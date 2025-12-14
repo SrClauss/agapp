@@ -118,23 +118,6 @@ export async function getRecommendedCategories(): Promise<string[]> {
   return response.data;
 }
 
-/**
- * Get non-remote projects nearby using professional settings when params absent
- */
-export async function getNearbyNonRemoteProjects(token?: string, params?: { latitude?: number; longitude?: number; radius_km?: number; subcategories?: string[] }): Promise<Project[]> {
-  // DEPRECATED: use `getNearbyCombinedProjects` instead. This will proxy to
-  // the combined endpoint and return only the non_remote array for
-  // compatibility with older callers.
-  const config = token
-    ? { headers: { Authorization: `Bearer ${token}` } }
-    : undefined;
-
-  const response = await client.get('/projects/nearby/combined', {
-    ...config,
-    params,
-  });
-  return response.data?.non_remote as Project[];
-}
 
 export async function getNearbyCombinedProjects(token?: string, params?: { latitude?: number; longitude?: number; radius_km?: number; subcategories?: string[] }): Promise<{ all: Project[]; non_remote: Project[] }> {
   const config = token

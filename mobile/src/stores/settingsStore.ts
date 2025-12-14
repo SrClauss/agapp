@@ -1,0 +1,75 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getProfessionalSettings, updateProfessionalSettings } from '../api/users';
+
+export type SettingsState = {
+  service_radius_km?: number;
+  loading: boolean;
+  error?: string;
+  setServiceRadiusKm: (radius?: number) => void;
+  loadFromServer: (token: string) => Promise<void>;
+  saveToServer: (token: string) => Promise<void>;
+  clear: () => void;
+};
+
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set, get) => ({
+      service_radius_km: undefined,
+      loading: false,
+      error: undefined,
+      setServiceRadiusKm: (radius?: number) => set({ service_radius_km: radius, error: undefined }),
+      loadFromServer: async (token: string) => {
+        set({ loading: true, error: undefined });
+        try {
+          const data = await getProfessionalSettings(token);
+          set({ service_radius_km: data?.service_radius_km, loading: false });
+        } catch (err: any) {
+          console.warn('[SettingsStore] erro ao carregar configurações do servidor', err);
+          set({ error: err?.message || 'load_error', loading: false });
+        }
+      },
+      saveToServer: async (token: string) => {
+        set({ loading: true, error: undefined });
+        try {
+          const { service_radius_km } = get();
+          await updateProfessionalSettings(token, { service_radius_km });
+          set({ loading: false });
+        } catch (err: any) {
+          console.warn('[SettingsStore] erro ao salvar configurações no servidor', err);
+          set({ error: err?.message || 'save_error', loading: false });
+        }
+      },
+      clear: () => set({ service_radius_km: undefined, loading: false, error: undefined }),
+    }),
+    {
+      name: 'settings-storage',
+      storage: {
+        getItem: async (name: string) => {
+          try {
+            return await AsyncStorage.getItem(name);
+          } catch (e) {
+            return null;
+          }
+        },
+        setItem: async (name: string, value: any) => {
+          try {
+            await AsyncStorage.setItem(name, value);
+          } catch (e) {
+            // ignore
+          }
+        },
+        removeItem: async (name: string) => {
+          try {
+            await AsyncStorage.removeItem(name);
+          } catch (e) {
+            // ignore
+          }
+        },
+      } as any,
+    }
+  )
+);
+
+export default useSettingsStore;

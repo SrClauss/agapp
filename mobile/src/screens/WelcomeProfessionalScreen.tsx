@@ -51,13 +51,6 @@ export default function WelcomeProfessionalScreen() {
         <LocationAvatar />
         <BannerAd adType="banner_professional" minHeight={90} maxHeight={200} />
         <NearbySummary />
-        <FAB 
-          style={[styles.FAB, { right: 150 }]}
-          color='white'
-          small
-          icon={loading ? 'loading' : 'reload'}
-          onPress={async () => await fetchNearby({ token: token ?? undefined })}
-        />
          <FAB 
           style={styles.FAB}
           color='white'
