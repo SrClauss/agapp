@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Editar Projeto - Painel Administrativo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12 d-flex justify-content-between align-items-center">
+    <div>
+      <h1 class="h3 mb-0 text-gray-800">Editar Projeto</h1>
+      <p class="text-muted">Edite os detalhes do projeto</p>
+    </div>
+    <a href="/system-admin/projects/{{ project.id }}" class="btn btn-secondary">Cancelar</a>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-body">
+    <form method="POST" action="/system-admin/projects/{{ project.id }}/edit">
+      <div class="mb-3">
+        <label class="form-label">Título</label>
+        <input type="text" name="title" class="form-control" value="{{ project.title }}" required maxlength="80">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Descrição</label>
+        <textarea name="description" class="form-control" rows="6" required>{{ project.description }}</textarea>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            <option value="open" {{ 'selected' if project.status == 'open' else '' }}>Open</option>
+            <option value="in_progress" {{ 'selected' if project.status == 'in_progress' else '' }}>In Progress</option>
+            <option value="closed" {{ 'selected' if project.status == 'closed' else '' }}>Closed</option>
+            <option value="cancelled" {{ 'selected' if project.status == 'cancelled' else '' }}>Cancelled</option>
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Orçamento mínimo (R$)</label>
+          <input type="number" step="0.01" name="budget_min" class="form-control" value="{{ project.budget_min or '' }}">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Orçamento máximo (R$)</label>
+          <input type="number" step="0.01" name="budget_max" class="form-control" value="{{ project.budget_max or '' }}">
+        </div>
+      </div>
+
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="remote_execution" id="remoteExecution" value="true" {% if project.remote_execution %}checked{% endif %}>
+        <label class="form-check-label" for="remoteExecution">Aceita execução remota</label>
+      </div>
+
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

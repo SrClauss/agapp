@@ -272,6 +272,76 @@ async def admin_project_detail(
         logging.error(f"Erro ao carregar detalhes do projeto {project_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@router.get("/projects/{project_id}/edit", response_class=HTMLResponse)
+async def admin_project_edit_page(
+    request: Request,
+    project_id: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Página de edição de um projeto"""
+    from app.crud.project import get_project
+    project = await get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Projeto não encontrado")
+
+    # categorias para seleção
+    from app.crud.category import get_categories
+    categories = await get_categories(db)
+
+    return templates.TemplateResponse("admin/project_edit.html", {
+        "request": request,
+        "current_user": current_user,
+        "project": project,
+        "categories": categories
+    })
+
+@router.post("/projects/{project_id}/edit")
+async def admin_project_edit(
+    request: Request,
+    project_id: str,
+    title: str = Form(...),
+    description: str = Form(...),
+    status: str = Form(None),
+    budget_min: float = Form(None),
+    budget_max: float = Form(None),
+    remote_execution: bool = Form(False),
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    from app.crud.project import update_project
+    from app.schemas.project import ProjectUpdate
+
+    update_data = ProjectUpdate(
+        title=title.strip() if title else None,
+        description=description.strip() if description else None,
+        status=status or None,
+        budget_min=budget_min if budget_min and budget_min > 0 else None,
+        budget_max=budget_max if budget_max and budget_max > 0 else None,
+        remote_execution=bool(remote_execution)
+    )
+
+    project = await update_project(db, project_id, update_data)
+    if not project:
+        raise HTTPException(status_code=404, detail="Projeto não encontrado")
+
+    return RedirectResponse(url=f"/system-admin/projects/{project_id}", status_code=303)
+
+@router.post("/projects/{project_id}/delete")
+async def admin_project_delete(
+    project_id: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    from app.crud.project import delete_project
+    try:
+        deleted = await delete_project(db, project_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Projeto não encontrado")
+        return RedirectResponse(url="/system-admin/projects", status_code=303)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/contacts", response_class=HTMLResponse)
 async def admin_contacts(
     request: Request,

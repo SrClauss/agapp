@@ -135,7 +135,7 @@
                                 <a href="/system-admin/projects/{{ project.id }}/edit" class="btn btn-sm btn-outline-warning" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <form method="POST" action="/admin/projects/{{ project.id }}/delete" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.')">
+                                <form method="POST" action="/system-admin/projects/{{ project.id }}/delete" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.')">
                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
                                         <i class="fas fa-trash"></i>
                                     </button>
