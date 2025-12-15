@@ -13,7 +13,8 @@ export interface CustomAddress {
   postalCode?: string;
 }
 
-export type ProjectAddress = LocationGeocodedAddress | CustomAddress;
+// Use only LocationGeocodedAddress on the client for address representation
+export type ProjectAddress = LocationGeocodedAddress;
 
 export interface ProjectLocation {
   /**

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Project } from '../api/projects';
 import { Card, Title, Paragraph, Chip, Divider, Avatar as PaperAvatar, List, useTheme } from 'react-native-paper';
-import formatProjectAddress from '../utils/address';
+// formatted address is available on project.location.address as `.formatted` (if geocoded)
 
 interface Props {}
 
@@ -72,7 +72,7 @@ export default function ProjectSummaryScreen(props: Props) {
             <Divider />
             <List.Item
               title="Localização"
-              description={formatProjectAddress(project.location.address)}
+              description={(project.location.address as any)?.formatted || (project.location.address as any)?.name || (project.location.address as any)?.display_name || String((project.location.address as any) || '')}
               left={props => <List.Icon {...props} icon="map-marker" />}
             />
           </>

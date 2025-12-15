@@ -15,7 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import axios from 'axios';
-import { createProject, ProjectCreateData, ProjectLocation, ProjectAddress } from '../api/projects';
+import { createProject, ProjectCreateData, ProjectLocation } from '../api/projects';
 import useAuthStore from '../stores/authStore';
 import { colors } from '../theme/colors';
 import { MAX_PROJECT_TITLE_LENGTH } from '../constants';
@@ -43,7 +43,7 @@ export default function CreateProjectScreen() {
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
-    address?: ProjectAddress;
+    address?: LocationGeocodedAddress;
   } | null>(null);
   const [customAddress, setCustomAddress] = useState('');
   const [customCity, setCustomCity] = useState('');
@@ -56,12 +56,9 @@ export default function CreateProjectScreen() {
     provider?: string;
     raw?: any;
   } | null>(null);
-  const [confirmedLocation, setConfirmedLocation] = useState<{
-    address?: string;
-    coordinates?: { type: 'Point'; coordinates: [number, number] };
-    geocode_source?: string;
-    geocode_confidence?: number | null;
-  } | null>(null);
+  // confirmedLocation will hold the geocoded address (LocationGeocodedAddress)
+  const [confirmedLocation, setConfirmedLocation] = useState<LocationGeocodedAddress | null>(null);
+  const [confirmedCoordinates, setConfirmedCoordinates] = useState<{ type: 'Point'; coordinates: [number, number] } | null>(null);
   
   // Loading states
   const [loadingLocation, setLoadingLocation] = useState(false);
@@ -113,21 +110,8 @@ export default function CreateProjectScreen() {
   };
 
     // Helper: format a ProjectAddress (geocoded object or custom) into a single display string
-    function formatAddress(address?: ProjectAddress | string) {
-      if (!address) return undefined;
-      if (typeof address === 'string') return address;
-      if ((address as any).formatted) return (address as any).formatted;
-
-      const parts: string[] = [];
-      const addr: any = address;
-      if (addr.name) parts.push(addr.name);
-      if (addr.street) parts.push(addr.street);
-      if (addr.district) parts.push(addr.district);
-      if (addr.city) parts.push(addr.city);
-      if (addr.region) parts.push(addr.region);
-      if (addr.postalCode) parts.push(addr.postalCode);
-      return parts.join(', ');
-    }
+    // Note: LocationGeocodedAddress includes a formatted address. Use
+    // `location.formatted` or `location.name`/`location.display_name` directly.
 
     async function handleCepLookup(cepRaw: string) {
       const cep = (cepRaw || '').replace(/\D+/g, '');
@@ -168,12 +152,10 @@ export default function CreateProjectScreen() {
 
     function applySuggestedLocation() {
       if (!tempGeocode || !tempGeocode.coordinates) return;
-      setConfirmedLocation({
-        address: tempGeocode.address,
-        coordinates: { type: 'Point', coordinates: tempGeocode.coordinates },
-        geocode_source: tempGeocode.provider,
-        geocode_confidence: null,
-      });
+      // Map geocode result into LocationGeocodedAddress-like object
+      const addrObj: any = { name: tempGeocode.address, formatted: tempGeocode.address };
+      setConfirmedLocation(addrObj as LocationGeocodedAddress);
+      setConfirmedCoordinates({ type: 'Point', coordinates: tempGeocode.coordinates });
       setCustomAddress(tempGeocode.address || customAddress);
     }
 
@@ -237,10 +219,10 @@ export default function CreateProjectScreen() {
         }
       } else {
         // Prefer confirmed location (from suggestion or map) if present
-        if (confirmedLocation && confirmedLocation.coordinates) {
-          location.coordinates = confirmedLocation.coordinates as any;
-          location.address = { formatted: confirmedLocation.address } as any;
-          location.geocode_source = confirmedLocation.geocode_source;
+        if (confirmedCoordinates && confirmedLocation) {
+          location.coordinates = confirmedCoordinates as any;
+          location.address = { formatted: (confirmedLocation as any).formatted || (confirmedLocation as any).name || (confirmedLocation as any).display_name } as any;
+          location.geocode_source = tempGeocode?.provider;
         } else {
           // Store custom address using the CustomAddress shape (formatted + optional fields)
           location.address = {
@@ -435,7 +417,7 @@ export default function CreateProjectScreen() {
                     <Text style={styles.loadingText}>Obtendo localização...</Text>
                   </View>
                 ) : currentLocation?.address ? (
-                  <Text style={styles.locationAddress}>{formatAddress(currentLocation.address)}</Text>
+                  <Text style={styles.locationAddress}>{currentLocation.address.city}</Text>
                 ) : (
                   <Text style={styles.locationHint}>Toque para obter sua localização</Text>
                 )}
@@ -516,7 +498,7 @@ export default function CreateProjectScreen() {
                   </View>
                 ) : null}
                 {confirmedLocation ? (
-                  <Text style={{ marginTop: 8, color: colors.success }}>Local confirmado: {confirmedLocation.address}</Text>
+                  <Text style={{ marginTop: 8, color: colors.success }}>Local confirmado: {(confirmedLocation as any).formatted || (confirmedLocation as any).name || (confirmedLocation as any).display_name}</Text>
                 ) : null}
               </View>
             )}
