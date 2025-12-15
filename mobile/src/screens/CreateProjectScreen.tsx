@@ -15,7 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import axios from 'axios';
-import { createProject, ProjectCreateData, ProjectLocation } from '../api/projects';
+import { createProject, ProjectCreateData, ProjectLocation, GeocodedAddress } from '../api/projects';
 import useAuthStore from '../stores/authStore';
 import { colors } from '../theme/colors';
 import { MAX_PROJECT_TITLE_LENGTH } from '../constants';
@@ -57,7 +57,7 @@ export default function CreateProjectScreen() {
     raw?: any;
   } | null>(null);
   // confirmedLocation will hold the geocoded address (LocationGeocodedAddress)
-  const [confirmedLocation, setConfirmedLocation] = useState<LocationGeocodedAddress | null>(null);
+  const [confirmedLocation, setConfirmedLocation] = useState<GeocodedAddress | null>(null);
   const [confirmedCoordinates, setConfirmedCoordinates] = useState<{ type: 'Point'; coordinates: [number, number] } | null>(null);
   
   // Loading states
@@ -153,8 +153,8 @@ export default function CreateProjectScreen() {
     function applySuggestedLocation() {
       if (!tempGeocode || !tempGeocode.coordinates) return;
       // Map geocode result into LocationGeocodedAddress-like object
-      const addrObj: any = { name: tempGeocode.address, formatted: tempGeocode.address };
-      setConfirmedLocation(addrObj as LocationGeocodedAddress);
+      const addrObj: GeocodedAddress = { name: tempGeocode.address, formatted: tempGeocode.address } as GeocodedAddress;
+      setConfirmedLocation(addrObj);
       setConfirmedCoordinates({ type: 'Point', coordinates: tempGeocode.coordinates });
       setCustomAddress(tempGeocode.address || customAddress);
     }
@@ -498,7 +498,7 @@ export default function CreateProjectScreen() {
                   </View>
                 ) : null}
                 {confirmedLocation ? (
-                  <Text style={{ marginTop: 8, color: colors.success }}>Local confirmado: {(confirmedLocation as any).formatted || (confirmedLocation as any).name || (confirmedLocation as any).display_name}</Text>
+                      <Text style={{ marginTop: 8, color: colors.success }}>Local confirmado: {confirmedLocation?.formatted || confirmedLocation?.name || (confirmedLocation as any)?.display_name}</Text>
                 ) : null}
               </View>
             )}

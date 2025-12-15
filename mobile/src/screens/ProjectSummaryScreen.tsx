@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { Project } from '../api/projects';
+import { Project, GeocodedAddress } from '../api/projects';
 import { Card, Title, Paragraph, Chip, Divider, Avatar as PaperAvatar, List, useTheme } from 'react-native-paper';
 // formatted address is available on project.location.address as `.formatted` (if geocoded)
 
@@ -72,7 +72,7 @@ export default function ProjectSummaryScreen(props: Props) {
             <Divider />
             <List.Item
               title="Localização"
-              description={(project.location.address as any)?.formatted || (project.location.address as any)?.name || (project.location.address as any)?.display_name || String((project.location.address as any) || '')}
+              description={(project.location.address as GeocodedAddress)?.formatted || (project.location.address as GeocodedAddress)?.name || (project.location.address as GeocodedAddress)?.display_name || String(project.location.address || '')}
               left={props => <List.Icon {...props} icon="map-marker" />}
             />
           </>

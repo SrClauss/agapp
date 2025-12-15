@@ -2,6 +2,15 @@ import client from './axiosClient';
 import useAuthStore from '../stores/authStore';
 import { LocationGeocodedAddress } from 'expo-location';
 
+// Geocoded address used on the client: LocationGeocodedAddress extended
+// with common provider fields that we may receive (formatted, display_name, name)
+export type GeocodedAddress = LocationGeocodedAddress & {
+  formatted?: string;
+  display_name?: string;
+  name?: string;
+  formattedAddress?: string;
+};
+
 /**
  * A custom address type that unifies geocoded addresses and simple formatted addresses
  * used when the user types an address manually.

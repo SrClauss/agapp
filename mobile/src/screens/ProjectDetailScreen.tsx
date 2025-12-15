@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator, Chip, Card, Avatar, Divider, Button } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { getProject, Project } from '../api/projects';
+import { getProject, Project, GeocodedAddress } from '../api/projects';
 // formatted address is available on project.location.address as `.formatted` (if geocoded)
 import { createContactForProject } from '../api/contacts';
 import { useAuthStore } from '../stores/authStore';
@@ -224,7 +224,7 @@ export default function ProjectDetailScreen() {
             {project.location?.address && (
               <View style={styles.infoRow}>
                 <MaterialIcons name="location-on" size={20} color={colors.textSecondary} />
-                <Text style={styles.infoText}>{(project.location.address as any)?.formatted || (project.location.address as any)?.name || (project.location.address as any)?.display_name || String((project.location.address as any) || '')}</Text>
+                <Text style={styles.infoText}>{(project.location.address as GeocodedAddress)?.formatted || (project.location.address as GeocodedAddress)?.name || (project.location.address as GeocodedAddress)?.display_name || String(project.location.address || '')}</Text>
               </View>
             )}
 
