@@ -15,11 +15,11 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import axios from 'axios';
-import { createProject, ProjectCreateData, ProjectLocation } from '../api/projects';
+import { createProject, ProjectCreateData, ProjectLocation, ProjectAddress } from '../api/projects';
 import useAuthStore from '../stores/authStore';
 import { colors } from '../theme/colors';
 import { MAX_PROJECT_TITLE_LENGTH } from '../constants';
-
+import { LocationGeocodedAddress } from 'expo-location';
 interface RouteParams {
   categoryName: string;
   subcategoryName: string;
@@ -43,12 +43,25 @@ export default function CreateProjectScreen() {
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
-    address?: string;
+    address?: ProjectAddress;
   } | null>(null);
   const [customAddress, setCustomAddress] = useState('');
   const [customCity, setCustomCity] = useState('');
   const [customState, setCustomState] = useState('');
   const [customZipCode, setCustomZipCode] = useState('');
+  const [cepSearching, setCepSearching] = useState(false);
+  const [tempGeocode, setTempGeocode] = useState<{
+    address?: string;
+    coordinates?: [number, number];
+    provider?: string;
+    raw?: any;
+  } | null>(null);
+  const [confirmedLocation, setConfirmedLocation] = useState<{
+    address?: string;
+    coordinates?: { type: 'Point'; coordinates: [number, number] };
+    geocode_source?: string;
+    geocode_confidence?: number | null;
+  } | null>(null);
   
   // Loading states
   const [loadingLocation, setLoadingLocation] = useState(false);
@@ -85,22 +98,10 @@ export default function CreateProjectScreen() {
         longitude: location.coords.longitude,
       });
 
-      let address = '';
-      if (geocoded) {
-        const parts = [
-          geocoded.street,
-          geocoded.streetNumber,
-          geocoded.district,
-          geocoded.city,
-          geocoded.region,
-        ].filter(Boolean);
-        address = parts.join(', ');
-      }
-
       setCurrentLocation({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        address,
+        address: geocoded,
       });
     } catch (error) {
       console.warn('Erro ao obter localização:', error);
@@ -110,6 +111,71 @@ export default function CreateProjectScreen() {
       setLoadingLocation(false);
     }
   };
+
+    // Helper: format a ProjectAddress (geocoded object or custom) into a single display string
+    function formatAddress(address?: ProjectAddress | string) {
+      if (!address) return undefined;
+      if (typeof address === 'string') return address;
+      if ((address as any).formatted) return (address as any).formatted;
+
+      const parts: string[] = [];
+      const addr: any = address;
+      if (addr.name) parts.push(addr.name);
+      if (addr.street) parts.push(addr.street);
+      if (addr.district) parts.push(addr.district);
+      if (addr.city) parts.push(addr.city);
+      if (addr.region) parts.push(addr.region);
+      if (addr.postalCode) parts.push(addr.postalCode);
+      return parts.join(', ');
+    }
+
+    async function handleCepLookup(cepRaw: string) {
+      const cep = (cepRaw || '').replace(/\D+/g, '');
+      if (cep.length !== 8) return;
+      setCepSearching(true);
+      try {
+        const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await resp.json();
+        if (data.erro) {
+          Alert.alert('CEP não encontrado');
+          setCepSearching(false);
+          return;
+        }
+        const endereco = `${data.logradouro || ''}${data.bairro ? ' - ' + data.bairro : ''}`.trim();
+        setCustomAddress(endereco);
+        setCustomCity(data.localidade || '');
+        setCustomState(data.uf || '');
+        setCustomZipCode(cep);
+
+        // Try to geocode the composed address via backend
+        try {
+          const full = `${data.logradouro || ''} ${data.bairro || ''} ${data.localidade || ''} ${data.uf || ''}`.trim();
+          const projectsApi = await import('../api/projects');
+          const geocodeResult = await projectsApi.geocodeAddress(full);
+          if (geocodeResult && geocodeResult.coordinates) {
+            setTempGeocode({ address: geocodeResult.address, coordinates: geocodeResult.coordinates, provider: geocodeResult.provider, raw: geocodeResult.raw });
+          }
+        } catch (err) {
+          console.warn('Geocode failed after CEP lookup', err);
+        }
+      } catch (err) {
+        console.warn('CEP lookup error', err);
+        Alert.alert('Erro', 'Não foi possível buscar CEP agora.');
+      } finally {
+        setCepSearching(false);
+      }
+    }
+
+    function applySuggestedLocation() {
+      if (!tempGeocode || !tempGeocode.coordinates) return;
+      setConfirmedLocation({
+        address: tempGeocode.address,
+        coordinates: { type: 'Point', coordinates: tempGeocode.coordinates },
+        geocode_source: tempGeocode.provider,
+        geocode_confidence: null,
+      });
+      setCustomAddress(tempGeocode.address || customAddress);
+    }
 
   const validateForm = (): boolean => {
     if (!title.trim()) {
@@ -126,6 +192,11 @@ export default function CreateProjectScreen() {
     }
     if (!useCurrentLocation && !customAddress.trim()) {
       Alert.alert('Erro', 'Por favor, informe o endereço para o serviço.');
+      return false;
+    }
+    // If non-remote and using custom address, require confirmed precise location
+    if (!remoteExecution && !useCurrentLocation && !confirmedLocation) {
+      Alert.alert('Confirme a localização', 'Por favor confirme a localização no mapa ou use a sugestão de endereço para fornecer coordenadas precisas.');
       return false;
     }
     if (useCurrentLocation && !currentLocation) {
@@ -154,12 +225,34 @@ export default function CreateProjectScreen() {
       
       if (useCurrentLocation && currentLocation) {
         location.coordinates = [currentLocation.longitude, currentLocation.latitude];
-        location.address = currentLocation.address;
+        const addr = currentLocation.address;
+        if (addr) {
+          location.address = addr;
+          if (typeof addr !== 'string') {
+            // geocoded object fields
+            if ((addr as any).city) location.city = (addr as any).city;
+            if ((addr as any).region) location.state = (addr as any).region;
+            if ((addr as any).postalCode) location.zip_code = (addr as any).postalCode || (addr as any).postal_code;
+          }
+        }
       } else {
-        location.address = customAddress.trim();
-        if (customCity.trim()) location.city = customCity.trim();
-        if (customState.trim()) location.state = customState.trim();
-        if (customZipCode.trim()) location.zip_code = customZipCode.trim();
+        // Prefer confirmed location (from suggestion or map) if present
+        if (confirmedLocation && confirmedLocation.coordinates) {
+          location.coordinates = confirmedLocation.coordinates as any;
+          location.address = { formatted: confirmedLocation.address } as any;
+          location.geocode_source = confirmedLocation.geocode_source;
+        } else {
+          // Store custom address using the CustomAddress shape (formatted + optional fields)
+          location.address = {
+            formatted: customAddress.trim(),
+            city: customCity.trim() || undefined,
+            region: customState.trim() || undefined,
+            postalCode: customZipCode.trim() || undefined,
+          } as any;
+          if (customCity.trim()) location.city = customCity.trim();
+          if (customState.trim()) location.state = customState.trim();
+          if (customZipCode.trim()) location.zip_code = customZipCode.trim();
+        }
       }
 
       // Build project data
@@ -342,7 +435,7 @@ export default function CreateProjectScreen() {
                     <Text style={styles.loadingText}>Obtendo localização...</Text>
                   </View>
                 ) : currentLocation?.address ? (
-                  <Text style={styles.locationAddress}>{currentLocation.address}</Text>
+                  <Text style={styles.locationAddress}>{formatAddress(currentLocation.address)}</Text>
                 ) : (
                   <Text style={styles.locationHint}>Toque para obter sua localização</Text>
                 )}
@@ -400,12 +493,31 @@ export default function CreateProjectScreen() {
                   label="CEP"
                   value={customZipCode}
                   onChangeText={setCustomZipCode}
+                  onEndEditing={() => handleCepLookup(customZipCode)}
                   mode="outlined"
                   style={styles.input}
                   keyboardType="numeric"
                   maxLength={9}
                   placeholder="00000-000"
                 />
+                {cepSearching ? (
+                  <Text style={styles.loadingText}>Buscando CEP...</Text>
+                ) : tempGeocode ? (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={{ color: colors.info }}>Sugestão: {tempGeocode.address}</Text>
+                    <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                      <Button compact onPress={() => applySuggestedLocation()}>
+                        Usar sugestão
+                      </Button>
+                      <Button compact onPress={() => setTempGeocode(null)} style={{ marginLeft: 8 }}>
+                        Ignorar
+                      </Button>
+                    </View>
+                  </View>
+                ) : null}
+                {confirmedLocation ? (
+                  <Text style={{ marginTop: 8, color: colors.success }}>Local confirmado: {confirmedLocation.address}</Text>
+                ) : null}
               </View>
             )}
           </View>

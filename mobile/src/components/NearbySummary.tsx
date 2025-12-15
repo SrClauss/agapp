@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { Card, Paragraph, Portal, Modal, Button, useTheme, IconButton } from 'react-native-paper';
-import Slider from '@react-native-community/slider';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Card, Portal, Modal, Button, useTheme, IconButton, Divider, TextInput } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 import useSettingsStore from '../stores/settingsStore';
 import useAuthStore from '../stores/authStore';
 import useProjectsNearbyStore from '../stores/projectsNearbyStore';
 import useLocationStore from '../stores/locationStore';
+import DynamicIcon from './DynamicIcon';
+import { colors } from '../theme/colors';
+
 
 export default function NearbySummary() {
   const theme = useTheme();
+  const navigation = useNavigation();
   const projectsAll = useProjectsNearbyStore((s) => s.projectsAll);
-  const projectsNonRemote = useProjectsNearbyStore((s) => s.projectsNonRemote);
   const fetchProjectsNearby = useProjectsNearbyStore((s) => s.fetchProjectsNearby);
   const loading = useProjectsNearbyStore((s) => s.loading);
-  
+
   const serviceRadiusKm = useSettingsStore((s) => s.service_radius_km);
   const loadFromServer = useSettingsStore((s) => s.loadFromServer);
   const saveToServer = useSettingsStore((s) => s.saveToServer);
@@ -23,6 +26,8 @@ export default function NearbySummary() {
 
   const [visible, setVisible] = useState(false);
   const [tempRadius, setTempRadius] = useState<number>(10);
+  const [tempRadiusStr, setTempRadiusStr] = useState<string>(String(10));
+  const [inputError, setInputError] = useState<string | null>(null);
 
   // Carregar configurações do servidor quando o componente montar
   useEffect(() => {
@@ -34,14 +39,16 @@ export default function NearbySummary() {
   // Sincronizar tempRadius com o valor do store quando ele mudar
   useEffect(() => {
     setTempRadius(serviceRadiusKm ?? 10);
+    setTempRadiusStr(String(serviceRadiusKm ?? 10));
   }, [serviceRadiusKm]);
 
   const total = projectsAll?.length ?? 0;
-  const nonRemote = projectsNonRemote?.length ?? 0;
-  const remote = Math.max(0, total - nonRemote);
+
 
   function openRadiusModal() {
     setTempRadius(serviceRadiusKm ?? 10);
+    setTempRadiusStr(String(serviceRadiusKm ?? 10));
+    setInputError(null);
     setVisible(true);
   }
 
@@ -53,8 +60,16 @@ export default function NearbySummary() {
     }
   }
 
+  // Atualizar a função saveRadius para garantir que valores inválidos não sejam gravados
   async function saveRadius() {
-    setServiceRadiusKm(tempRadius);
+    const parsed = parseFloat(tempRadiusStr);
+    if (isNaN(parsed) || parsed <= 0 || parsed > 70) {
+      setInputError('Insira um número válido entre 0 e 70');
+      return; // Impede qualquer tentativa de salvar valores inválidos
+    }
+
+    // Apenas grava se o valor for válido
+    setServiceRadiusKm(parsed);
 
     if (token) {
       try {
@@ -68,126 +83,169 @@ export default function NearbySummary() {
       console.warn('No token; configuração salva apenas localmente');
     }
 
-    setVisible(false);
+    setVisible(false); // Fecha o modal apenas após salvar com sucesso
   }
-
   return (
-    <>
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={2}> 
-        <Card.Title
-          title="Projetos Próximos"
-          titleStyle={styles.cardTitle}
-          left={(props) => <IconButton {...props} icon="map-marker-radius" size={24} iconColor={theme.colors.primary} />}
-        />
-        <Card.Content style={styles.content}>
-          <View style={styles.contentRow}>
-            <View style={styles.info}>
-              <View style={styles.row}>
-                <View style={styles.stat}>
-                  <Text style={styles.statNumber}>{total}</Text>
-                  <Paragraph style={styles.label}>Total</Paragraph>
-                </View>
-                <View style={styles.separator} />
 
-                <View style={styles.stat}>
-                  <Text style={styles.statNumber}>{serviceRadiusKm ?? 10} km</Text>
-                  <Paragraph style={styles.label}>Raio</Paragraph>
-                </View>
-                <View style={styles.separator} />
+    <Card style={styles.cardRoot} elevation={2}>
 
-                <View style={styles.stat}>
-                  <Text style={styles.statNumber}>{nonRemote}</Text>
-                  <Paragraph style={styles.label}>Não-remotos</Paragraph>
-                </View>
-                <View style={styles.separator} />
+      <Card.Title
+        title="Projetos Próximos"
+        titleStyle={styles.titleStyle}
+        subtitle={loading ? 'Carregando...' : `${total} projeto(s) encontrado(s)`}
+        subtitleStyle={styles.subtitleStyle}
+        left={(props) => <DynamicIcon color={colors.primary} name="location-on" size={36} />}
+        right={(props) => (
 
-                <View style={styles.stat}>
-                  <Text style={styles.statNumber}>{remote}</Text>
-                  <Paragraph style={styles.label}>Remotos</Paragraph>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.actions}>
-              <Text style={styles.actionsLabel}>Ações</Text>
-              <View style={styles.actionButtons}>
-                <IconButton
-                  icon={loading ? 'loading' : 'reload'}
-                  iconColor={theme.colors.primary}
-                  size={24}
-                  onPress={handleRefresh}
-                  disabled={loading}
-                />
-                <IconButton
-                  icon="tune"
-                  iconColor={theme.colors.primary}
-                  size={24}
-                  onPress={openRadiusModal}
-                />
-              </View>
-            </View>
-          </View>
-        </Card.Content>
-      </Card>
-
-      <Portal>
-        <Modal visible={visible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Raio de Detecção</Text>
-          <Paragraph style={styles.modalSubtitle}>Ajuste o raio para buscar projetos próximos</Paragraph>
-          
-          <View style={styles.sliderContainer}>
-            <Text style={styles.sliderValue}>{tempRadius} km</Text>
-            <Slider
-              value={tempRadius}
-              onValueChange={(v: number) => setTempRadius(Math.round(v))}
-              minimumValue={1}
-              maximumValue={500}
-              step={1}
-              style={styles.slider}
-              minimumTrackTintColor={theme.colors.primary}
-              maximumTrackTintColor="#ddd"
-              thumbTintColor={theme.colors.primary}
+          <>
+            <IconButton
+              icon="tune"
+              size={28}
+              onPress={openRadiusModal}
+              accessibilityLabel="Configurar raio de detecção"
             />
-            <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabelText}>1 km</Text>
-              <Text style={styles.sliderLabelText}>500 km</Text>
-            </View>
-          </View>
+            <IconButton
+              icon="refresh"
+              size={28}
+              onPress={handleRefresh}
+              accessibilityLabel="Atualizar lista de projetos"
+            />
 
-          <View style={styles.modalActions}>
-            <Button mode="text" onPress={() => setVisible(false)}>Cancelar</Button>
-            <Button mode="contained" onPress={saveRadius}>Aplicar</Button>
+
+
+          </>
+
+        )}
+      />
+      <Card.Content>
+
+
+        <Divider style={styles.divider} />
+        <View>
+          <View style={styles.centerContainer}>
+            <Text style={styles.centerText}>Raio de Serviço</Text>
+            <TouchableOpacity
+              onPress={() => (navigation as any).navigate('ProjectsList')}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir lista de projetos"
+              style={styles.touchable}
+            >
+              <DynamicIcon name='radar' size={24} color={colors.info} />
+              <Text style={{ fontSize: 24, marginLeft: 8 }}> {serviceRadiusKm ?? 'N/A'} km</Text>
+            </TouchableOpacity>
           </View>
-        </Modal>
-      </Portal>
-    </>
-  );
+        </View>
+        {/* Modal para editar o raio (aceita somente float) */}
+        <Portal>
+          <Modal
+            visible={visible}
+            onDismiss={() => setVisible(false)}
+            contentContainerStyle={styles.modalContainer}
+          >
+            <Text style={styles.modalTitle}>Editar Raio de Detecção (km)</Text>
+            <TextInput
+              label="Raio (km)"
+              value={tempRadiusStr}
+              onChangeText={(text) => {
+                // Permitir apenas números entre 0 e 70 enquanto digita
+                if (text === '' || (/^[0-9]*\.?[0-9]*$/.test(text) && parseFloat(text) <= 70)) {
+                  setTempRadiusStr(text);
+                  setInputError(null);
+                } else if (parseFloat(text) > 70) {
+                  setInputError('O valor não pode ser maior que 70');
+                }
+              }}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.textInput}
+            />
+            {inputError ? <Text style={styles.errorText}>{inputError}</Text> : null}
+            <View style={styles.buttonRow}>
+              <Button onPress={() => setVisible(false)} compact>Cancelar</Button>
+              <Button
+                mode="contained"
+                onPress={saveRadius}
+                style={styles.saveButton}
+                disabled={isNaN(parseFloat(tempRadiusStr)) || parseFloat(tempRadiusStr) <= 0 || parseFloat(tempRadiusStr) > 70}
+              >
+                Salvar
+              </Button>
+            </View>
+          </Modal>
+        </Portal>
+      </Card.Content>
+    </Card>
+
+
+
+
+
+
+  )
 }
 
 const styles = StyleSheet.create({
-  card: { width: '100%', marginVertical: 8 },
-  cardTitle: { fontSize: 16, fontWeight: '600' },
-  content: { paddingVertical: 8, paddingHorizontal: 12 },
-  contentRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  
-  info: { flex: 1, paddingRight: 12 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  stat: { alignItems: 'center', flex: 1, paddingVertical: 8 },
-  statNumber: { fontSize: 24, fontWeight: '700', color: '#222' },
-  label: { fontSize: 11, color: '#666', marginTop: 4, textTransform: 'uppercase' },
-  separator: { width: 1, backgroundColor: '#e0e0e0', height: 50, alignSelf: 'center' },
-
-  actions: { alignItems: 'center', justifyContent: 'flex-start', paddingTop: 4 },
-  actionsLabel: { fontSize: 10, color: '#666', marginBottom: 4, textTransform: 'uppercase', fontWeight: '600' },
-  actionButtons: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-
-  modalContainer: { backgroundColor: 'white', marginHorizontal: 24, padding: 24, borderRadius: 12 },
-  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8, color: '#222' },
-  modalSubtitle: { fontSize: 14, color: '#666', marginBottom: 24 },
-  sliderContainer: { marginBottom: 16 },
-  sliderValue: { fontSize: 32, fontWeight: '700', textAlign: 'center', marginBottom: 16, color: '#222' },
-  slider: { width: '100%', height: 40 },
-  sliderLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  sliderLabelText: { fontSize: 12, color: '#999' },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
+  cardRoot: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  cardContent: {
+    paddingBottom: 16,
+  },
+  titleStyle: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    alignSelf: 'center',
+  },
+  subtitleStyle: {
+    color: colors.textSecondary,
+    alignSelf: 'center',
+  },
+  divider: {
+    marginVertical: 8,
+    backgroundColor: colors.border,
+    height: 1,
+  },
+  centerContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  centerText: {
+    fontSize: 16,
+    fontWeight: '500',
+    alignSelf: 'center',
+  },
+  touchable: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalContainer: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    margin: 20,
+    borderRadius: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  textInput: {
+    marginBottom: 8,
+  },
+  errorText: {
+    color: colors.error,
+    marginBottom: 8,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  saveButton: {
+    marginLeft: 8,
+  },
 });

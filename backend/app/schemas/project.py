@@ -1,6 +1,27 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any, Union
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict, Any, Union, Literal
 from datetime import datetime
+
+class GeoPoint(BaseModel):
+    type: Literal['Point'] = 'Point'
+    coordinates: List[float]  # [longitude, latitude]
+
+    @validator('coordinates')
+    def coordinates_must_be_lonlat(cls, v):
+        if not isinstance(v, list) or len(v) != 2:
+            raise ValueError('coordinates must be [longitude, latitude]')
+        return v
+
+
+class ProjectLocation(BaseModel):
+    address: Optional[Dict[str, Any]] = None  # can store geocoded fields or formatted address
+    coordinates: Optional[GeoPoint] = None
+    geocode_source: Optional[str] = None
+    geocode_confidence: Optional[float] = None
+    approximate: bool = False
+    confirmed_at: Optional[datetime] = None
+    raw_geocode: Optional[Dict[str, Any]] = None
+
 
 class ProjectBase(BaseModel):
     # Limit title length to 80 characters to keep layout consistent with mobile
@@ -10,7 +31,7 @@ class ProjectBase(BaseModel):
     skills_required: List[str] = []
     budget_min: Optional[float] = None
     budget_max: Optional[float] = None
-    location: Dict[str, Any]
+    location: Optional[ProjectLocation] = None
     attachments: List[str] = []
     deadline: Optional[datetime] = None
     remote_execution: bool = False  # Permite execução remota do projeto

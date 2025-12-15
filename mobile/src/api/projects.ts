@@ -1,12 +1,38 @@
 import client from './axiosClient';
 import useAuthStore from '../stores/authStore';
+import { LocationGeocodedAddress } from 'expo-location';
+
+/**
+ * A custom address type that unifies geocoded addresses and simple formatted addresses
+ * used when the user types an address manually.
+ */
+export interface CustomAddress {
+  formatted: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+}
+
+export type ProjectAddress = LocationGeocodedAddress | CustomAddress;
 
 export interface ProjectLocation {
-  address?: string;
+  /**
+   * Prefer GeoJSON Point shape for coordinates (type + coordinates array) for compatibility with backend.
+   * We keep the older array form for compatibility, but new code should use `geojson`.
+   */
+  coordinates?: { type: 'Point'; coordinates: [number, number] } | [number, number];
+  /**
+   * `address` may be a geocoded object (from expo-location) or a small
+   * custom object with formatted text and optional city/region/postalCode.
+   */
+  address?: ProjectAddress;
+  geocode_source?: string;
+  geocode_confidence?: number;
+  approximate?: boolean;
+  confirmed_at?: string; // ISO timestamp when user confirmed location on map
   city?: string;
   state?: string;
   zip_code?: string;
-  coordinates?: [number, number]; // [longitude, latitude]
 }
 
 export interface ProjectCategory {
@@ -106,6 +132,11 @@ export async function getMyProjects(status?: string): Promise<Project[]> {
  */
 export async function getProject(projectId: string): Promise<Project> {
   const response = await client.get(`/projects/${projectId}`);
+  return response.data;
+}
+
+export async function geocodeAddress(address: string): Promise<{ address: string; coordinates: [number, number]; provider?: string; raw?: any }> {
+  const response = await client.post('/users/address/geocode', { address });
   return response.data;
 }
 

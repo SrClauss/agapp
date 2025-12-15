@@ -35,12 +35,18 @@ async def get_nearby_professionals(
     professionals = await get_professionals_nearby(db, longitude, latitude, radius_km)
     return professionals
 
-@router.post("/address/geocode")
+@router.post("/address/geocode", response_model=AddressGeocodeResult)
 async def geocode_user_address(geocode: AddressGeocode):
     result = await geocode_address(geocode.address)
     if not result:
         raise HTTPException(status_code=400, detail="Could not geocode address")
-    return result
+    # result expected to contain address, coordinates, provider, raw
+    return AddressGeocodeResult(
+        address=result.get("address"),
+        coordinates=result.get("coordinates"),
+        provider=result.get("provider"),
+        raw=result.get("raw")
+    )
 
 @router.get("/me/professional-settings", response_model=ProfessionalSettings)
 async def get_professional_settings(

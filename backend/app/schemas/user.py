@@ -58,6 +58,13 @@ class TokenData(BaseModel):
 class AddressGeocode(BaseModel):
     address: str
 
+
+class AddressGeocodeResult(BaseModel):
+    address: str
+    coordinates: List[float]
+    provider: Optional[str] = None
+    raw: Optional[Dict[str, Any]] = None
+
 class LoginRequest(BaseModel):
     username: str  # Email
     password: str

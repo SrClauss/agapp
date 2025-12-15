@@ -13,6 +13,7 @@ import { ActivityIndicator, Chip, Card, Avatar, Divider, Button } from 'react-na
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { getProject, Project } from '../api/projects';
+import formatProjectAddress from '../utils/address';
 import { createContactForProject } from '../api/contacts';
 import { useAuthStore } from '../stores/authStore';
 import { colors } from '../theme/colors';
@@ -223,7 +224,7 @@ export default function ProjectDetailScreen() {
             {project.location?.address && (
               <View style={styles.infoRow}>
                 <MaterialIcons name="location-on" size={20} color={colors.textSecondary} />
-                <Text style={styles.infoText}>{project.location.address}</Text>
+                <Text style={styles.infoText}>{formatProjectAddress(project.location.address)}</Text>
               </View>
             )}
 

@@ -20,12 +20,47 @@ async def create_new_project(
     current_user: User = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    # Geocode address if provided
+    # Geocode address if provided and ensure coordinates for non-remote projects
     from app.services.geocoding import geocode_address
-    if project.location.get("address"):
-        geocoded = await geocode_address(project.location["address"])
+
+    def _extract_address_str(addr):
+        if not addr:
+            return None
+        if isinstance(addr, str):
+            return addr
+        # dict-like: prefer formatted
+        if isinstance(addr, dict):
+            if addr.get("formatted"):
+                return addr.get("formatted")
+            parts = [str(addr.get(k)) for k in ("street", "district", "city", "region") if addr.get(k)]
+            if parts:
+                return ", ".join(parts)
+        return None
+
+    addr_str = _extract_address_str(project.location.address) if project.location else None
+    if addr_str and (not project.location.coordinates):
+        geocoded = await geocode_address(addr_str)
         if geocoded:
-            project.location.update(geocoded)
+            # geocoded is expected to contain 'address' and 'coordinates'
+            try:
+                lng, lat = geocoded["coordinates"]
+                project.location.coordinates = {"type": "Point", "coordinates": [lng, lat]}
+                project.location.address = {"formatted": geocoded.get("address")}
+                project.location.geocode_source = "google"
+                project.location.raw_geocode = geocoded.get("raw", geocoded)
+            except Exception:
+                # ignore malformed geocode and continue to validation below
+                pass
+
+    # If project is non-remote, require coordinates or an explicit approximate flag
+    if not project.remote_execution:
+        coords = project.location.coordinates if project.location else None
+        if not coords:
+            raise HTTPException(status_code=400, detail={
+                "loc": ["body", "location"],
+                "msg": "Endereço sem coordenadas. Use CEP/autocomplete e confirme a posição no mapa.",
+                "type": "value_error.coordinates_required"
+            })
     
     db_project = await create_project(db, project, str(current_user.id))
     return db_project
