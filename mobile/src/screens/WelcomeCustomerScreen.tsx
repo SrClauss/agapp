@@ -33,6 +33,7 @@ interface Category {
 export default function WelcomeCustomerScreen() {
   const navigation = useNavigation();
   const logout = useAuthStore((s: AuthState) => s.logout);
+  const user = useAuthStore((s: AuthState) => s.user);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [subcategories, setSubcategories] = useState<SubcategoryWithParent[]>([]);
@@ -196,6 +197,7 @@ export default function WelcomeCustomerScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.containerWelcome}>
         <LocationAvatar />
+        <Text>{user?.cpf}</Text>
 
         <Divider style={styles.divider} />
 

@@ -122,7 +122,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                         try { navigation.navigate('Login' as never); } catch (err) { console.warn('Login screen not configured'); }
                         return;
                     }
-                    try { navigation.navigate('SignUp' as never, { completeProfile: true } as any); } catch (err) { console.warn('SignUp screen not configured'); }
+                    try { navigation.navigate('CompleteProfile' as never, { completeProfile: true } as any); } catch (err) { console.warn('SignUp screen not configured'); }
                 }}>
                     {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
                         <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />

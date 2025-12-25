@@ -113,7 +113,7 @@ export default function CompleteProfileScreen() {
           onChangeText={setCpf}
           keyboardType="numeric"
           style={commonStyles.input}
-          editable={!user?.cpf}
+          //editable={!user?.cpf}
         />
         {user?.cpf ? <HelperText type="info">CPF já cadastrado e não pode ser alterado</HelperText> : null}
 

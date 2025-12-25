@@ -175,8 +175,20 @@ async def complete_profile(
     # Preparar dados de atualização (somente campos setados)
     update_dict = profile_data.model_dump(exclude_unset=True)
 
+    # Log resumo para depuração (mascarando valores sensíveis como CPF)
+    def _mask(val: str | None) -> str | None:
+        if not val:
+            return None
+        s = str(val)
+        return '***' + s[-2:]
+
+    logger.info("complete-profile called for user %s (%s); incoming fields: %s", current_user.id, current_user.email, list(update_dict.keys()))
+    if 'cpf' in update_dict:
+        logger.info("CPF update requested. current CPF: %s, incoming CPF (masked): %s", _mask(current_user.cpf), _mask(update_dict.get('cpf')))
+
     # Proibir alteração de CPF se já existir
     if 'cpf' in update_dict and current_user.cpf and update_dict['cpf'] != current_user.cpf:
+        logger.warning("Attempt to change CPF for user %s blocked (current: %s, incoming masked: %s)", current_user.id, _mask(current_user.cpf), _mask(update_dict.get('cpf')))
         raise HTTPException(status_code=400, detail="CPF não pode ser alterado uma vez cadastrado")
 
     # Capturar senha limpa antes de fazer hash (se fornecida)
@@ -201,9 +213,18 @@ async def complete_profile(
             logger.warning("Firebase user sync failed for %s: %s", current_user.email, str(e))
 
     # Atualizar usuário
-    updated_user = await update_user(db, current_user.id, update_dict)
+    try:
+        updated_user = await update_user(db, current_user.id, update_dict)
+    except Exception as e:
+        logger.error("Error updating user %s: %s", current_user.id, str(e))
+        raise HTTPException(status_code=500, detail="Error updating user")
+
     if not updated_user:
+        logger.warning("User not found when updating profile: %s", current_user.id)
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Log resultado do CPF após atualização (mascarado)
+    logger.info("Profile updated for user %s; CPF after update (masked): %s", current_user.id, _mask(getattr(updated_user, 'cpf', None)))
 
     logger.debug("Profile updated for user %s", current_user.id)
     return updated_user
