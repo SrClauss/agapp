@@ -108,6 +108,16 @@ export async function createProject(data: ProjectCreateData): Promise<Project> {
     ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
+  // Debug logging: masked token and payload (non-sensitive)
+  if (__DEV__) {
+    const masked = token ? `${token.slice(0,6)}...${token.slice(-6)}` : null;
+    console.log('[projects.createProject] POST /projects/ token=', masked, 'payload=', {
+      title: data.title,
+      category: data.category,
+      remote_execution: data.remote_execution,
+    });
+  }
+
   const response = await client.post('/projects/', data, config);
   return response.data;
 }
@@ -118,6 +128,14 @@ export async function updateProject(projectId: string, data: ProjectCreateData):
   const config = token
     ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
+
+  if (__DEV__) {
+    const masked = token ? `${token.slice(0,6)}...${token.slice(-6)}` : null;
+    console.log('[projects.updateProject] PUT /projects/' + projectId + ' token=', masked, 'payload=', {
+      title: data.title,
+      category: data.category,
+    });
+  }
 
   const response = await client.put(`/projects/${projectId}`, data, config);
   return response.data;
