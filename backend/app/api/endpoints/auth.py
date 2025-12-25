@@ -175,6 +175,10 @@ async def complete_profile(
     # Preparar dados de atualização (somente campos setados)
     update_dict = profile_data.model_dump(exclude_unset=True)
 
+    # Proibir alteração de CPF se já existir
+    if 'cpf' in update_dict and current_user.cpf and update_dict['cpf'] != current_user.cpf:
+        raise HTTPException(status_code=400, detail="CPF não pode ser alterado uma vez cadastrado")
+
     # Capturar senha limpa antes de fazer hash (se fornecida)
     raw_password = None
     if 'password' in update_dict:

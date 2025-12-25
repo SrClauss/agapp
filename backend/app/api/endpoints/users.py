@@ -22,6 +22,11 @@ async def update_user_me(
     current_user: User = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
+    # Proibir alteração do CPF se já estiver definido
+    update_data = user_update.model_dump(exclude_unset=True)
+    if 'cpf' in update_data and current_user.cpf and update_data['cpf'] != current_user.cpf:
+        raise HTTPException(status_code=400, detail="CPF não pode ser alterado uma vez cadastrado")
+
     user = await update_user(db, str(current_user.id), user_update)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

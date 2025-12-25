@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, ScrollView, Alert } from 'react-native';
 import { Button, TextInput, Surface, Title, HelperText, RadioButton, Snackbar } from 'react-native-paper';
+import { isValidCPF } from '../utils/cpf';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { getRouteForRoles } from '../utils/roles';
@@ -33,6 +34,15 @@ export default function CompleteProfileScreen() {
     }
   };
 
+  // Prefill cpf/phone/roles from current user when available
+  React.useEffect(() => {
+    if (user) {
+      setCpf(user.cpf || '');
+      setPhone(user.phone || '');
+      setRoles(user.roles || ['client']);
+    }
+  }, [user]);
+
   const onCompleteProfile = async () => {
     if (!token || !user) {
       setError('Token ou usuário não encontrado');
@@ -42,6 +52,13 @@ export default function CompleteProfileScreen() {
       setError('Senhas não coincidem');
       return;
     }
+
+    // CPF validation
+    if (!isValidCPF(cpf)) {
+      setError('CPF inválido');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -96,7 +113,9 @@ export default function CompleteProfileScreen() {
           onChangeText={setCpf}
           keyboardType="numeric"
           style={commonStyles.input}
+          editable={!user?.cpf}
         />
+        {user?.cpf ? <HelperText type="info">CPF já cadastrado e não pode ser alterado</HelperText> : null}
 
         <TextInput
           label="Telefone"

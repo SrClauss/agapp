@@ -3,6 +3,7 @@ import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'r
 import { Button, TextInput, Surface, Title, HelperText, Checkbox, Text, Snackbar } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { signUpWithEmail, loginWithEmail, completeProfile } from '../api/auth';
+import { isValidCPF, onlyDigits } from '../utils/cpf';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { commonStyles } from '../theme/styles';
 
@@ -22,6 +23,8 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [cpf, setCpf] = useState('');
+  // Format helpers and validators
+
   const [phone, setPhone] = useState('');
   const [isProfessional, setIsProfessional] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export default function SignUpScreen() {
       setError('E-mail inválido');
       return false;
     }
-    if (!cpf.trim() || cpf.replace(/\D/g, '').length !== 11) {
+    if (!cpf.trim() || !isValidCPF(cpf)) {
       setError('CPF inválido');
       return false;
     }
@@ -212,7 +215,9 @@ export default function SignUpScreen() {
             keyboardType="numeric"
             style={commonStyles.input}
             maxLength={14}
+            editable={!isCompleting || !currentUser?.cpf}
           />
+          {isCompleting && currentUser?.cpf ? <HelperText type="info">CPF já cadastrado e não pode ser alterado</HelperText> : null}
 
           <TextInput
             label="Telefone (opcional)"
