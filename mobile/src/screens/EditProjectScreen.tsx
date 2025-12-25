@@ -6,7 +6,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 export default function EditProjectScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  // We will reuse CreateProjectScreen but set the header/title via params
-  // Navigate here with param `project`
-  return <CreateProjectScreen />;
+  const params = route.params as { project?: Project };
+  // Reuse CreateProjectScreen but explicitly pass the project param so it has the id
+  return <CreateProjectScreen overrideParams={params as any} />;
 }
