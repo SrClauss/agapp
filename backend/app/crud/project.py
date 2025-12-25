@@ -63,11 +63,24 @@ def build_project_query(filters: ProjectFilter = None, query_filter: Optional[di
     return base_query
 
 
+def _normalize_project_dict(project_dict: Dict[str, Any]) -> Dict[str, Any]:
+    # Normalize legacy coordinate formats (list [lng, lat]) into GeoJSON Point dict
+    loc = project_dict.get('location') if isinstance(project_dict, dict) else None
+    if isinstance(loc, dict):
+        coords = loc.get('coordinates')
+        if isinstance(coords, list) and len(coords) == 2:
+            # convert [lng, lat] -> {"type":"Point","coordinates":[lng,lat]}
+            loc['coordinates'] = {"type": "Point", "coordinates": coords}
+            project_dict['location'] = loc
+    return project_dict
+
+
 async def get_project(db: AsyncIOMotorDatabase, project_id: str) -> Optional[Project]:
     project = await db.projects.find_one({"_id": project_id})
     if project:
         project_dict = dict(project)
         project_dict['_id'] = str(project_dict['_id'])
+        project_dict = _normalize_project_dict(project_dict)
         return Project(**project_dict)
     return None
 
@@ -79,6 +92,7 @@ async def get_projects(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100
     async for project in db.projects.find(query).skip(skip).limit(limit):
         project_dict = dict(project)
         project_dict['_id'] = str(project_dict['_id'])
+        project_dict = _normalize_project_dict(project_dict)
         projects.append(Project(**project_dict))
     return projects
 

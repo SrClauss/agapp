@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from app.core.database import get_database
 from app.core.security import get_current_user, get_current_admin_user, get_current_user_from_request
 from app.crud.document import get_documents_by_project
-from app.crud.project import get_projects, create_project, update_project, delete_project, get_project
+from app.crud.project import get_projects, create_project, update_project, delete_project, get_project, _normalize_project_dict
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectFilter, ProjectClose, EvaluationCreate
 from app.schemas.user import User
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -206,6 +206,7 @@ async def read_nearby_combined(
         async for project in db.projects.find(base_query).limit(200):
             project_dict = dict(project)
             project_dict['id'] = str(project_dict.pop('_id'))
+            project_dict = _normalize_project_dict(project_dict)
             projects_all.append(Project(**project_dict))
 
         # Non-remote nearby
@@ -215,6 +216,7 @@ async def read_nearby_combined(
         async for project in db.projects.find(non_remote_query).limit(200):
             project_dict = dict(project)
             project_dict['id'] = str(project_dict.pop('_id'))
+            project_dict = _normalize_project_dict(project_dict)
             projects_non_remote.append(Project(**project_dict))
         logging.info(f"Nearby combined search: coords=({latitude},{longitude}) radius_km={radius_km} subcategories={effective_subcategories} results_all={len(projects_all)} non_remote={len(projects_non_remote)}")
 
@@ -292,6 +294,7 @@ async def read_my_projects(
     async for project in db.projects.find(query).sort("created_at", -1).skip(skip).limit(limit):
         project_dict = dict(project)
         project_dict['id'] = str(project_dict.pop('_id'))
+        project_dict = _normalize_project_dict(project_dict)
         projects.append(Project(**project_dict))
     
     # Populate client_name for each project
