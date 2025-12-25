@@ -163,29 +163,45 @@ async def complete_profile(
     Completa o perfil do usuário autenticado.
     Atualiza campos como phone, cpf, full_name, password, roles e marca como completo.
     """
-    print(f"Complete profile for user {current_user.id}: {profile_data.model_dump()}")
+    import logging
+    logger = logging.getLogger(__name__)
     from app.crud.user import get_password_hash
+    from app.core.firebase import create_or_update_firebase_user
 
     # Validar roles se fornecidas
     if profile_data.roles and not validate_roles(profile_data.roles):
         raise HTTPException(status_code=400, detail="Invalid roles")
 
-    # Hash da nova senha se fornecida
+    # Preparar dados de atualização (somente campos setados)
     update_dict = profile_data.model_dump(exclude_unset=True)
+
+    # Capturar senha limpa antes de fazer hash (se fornecida)
+    raw_password = None
     if 'password' in update_dict:
+        raw_password = update_dict['password']
         update_dict['hashed_password'] = get_password_hash(update_dict.pop('password'))
 
     # Marcar perfil como completo
     update_dict['is_profile_complete'] = True
 
-    print(f"Update dict: {update_dict}")
+    # Log seguro: não incluir valores sensíveis
+    safe_fields = {k: v for k, v in update_dict.items() if k != 'hashed_password'}
+    logger.debug("Completing profile for user %s with fields: %s", current_user.id, safe_fields)
+
+    # Se havia senha, sincronizar com Firebase Auth (não bloquear o usuário em caso de falha)
+    if raw_password:
+        try:
+            create_or_update_firebase_user(current_user.email, raw_password, display_name=update_dict.get('full_name') or current_user.full_name)
+            logger.info("Firebase user created/updated for %s", current_user.email)
+        except Exception as e:
+            logger.warning("Firebase user sync failed for %s: %s", current_user.email, str(e))
 
     # Atualizar usuário
     updated_user = await update_user(db, current_user.id, update_dict)
     if not updated_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    print(f"Updated user: {updated_user}")
+    logger.debug("Profile updated for user %s", current_user.id)
     return updated_user
 
 @router.get("/me", response_model=User)

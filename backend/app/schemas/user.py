@@ -21,6 +21,7 @@ class UserUpdate(BaseModel):
     address: Optional[Dict[str, Any]] = None
     professional_info: Optional[Dict[str, Any]] = None
     roles: Optional[List[str]] = None
+    password: Optional[str] = None  # Permitir setar/atualizar senha durante complete-profile
     is_profile_complete: Optional[bool] = None  # Novo campo opcional para updates
     avatar_url: Optional[str] = None  # Novo campo opcional
 

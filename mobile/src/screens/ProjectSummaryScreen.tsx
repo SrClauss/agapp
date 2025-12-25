@@ -37,7 +37,7 @@ export default function ProjectSummaryScreen(props: Props) {
               <Chip mode="flat" style={styles.statusChip} textStyle={styles.statusText}>
                 {project.status === 'open' ? 'Aberto' : project.status === 'closed' ? 'Fechado' : project.status}
               </Chip>
-              <Button mode="outlined" onPress={() => navigation.navigate('EditProject' as never, { project })}>
+              <Button mode="outlined" icon="pencil" onPress={() => navigation.navigate('EditProject' as never, { project })}>
                 Editar Projeto
               </Button>
             </View>

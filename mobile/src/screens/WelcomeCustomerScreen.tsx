@@ -247,7 +247,12 @@ export default function WelcomeCustomerScreen() {
           </View>
         )}
 
-        <Button onPress={handleSearch} mode="contained" style={{ marginTop: 20 }}>
+        <Button
+        onPress={handleSearch}
+        mode="contained"
+        style={{ marginTop: 20 }}
+        icon={'magnify'}
+        >
           Buscar
         </Button>
 
@@ -284,7 +289,14 @@ export default function WelcomeCustomerScreen() {
         {/* User's Projects Carousel */}
         <MyProjectsCarousel />
 
-        <Button mode="outlined" onPress={handleLogout} loading={loading} style={{ marginTop: 12, marginBottom: 24 }}>
+        <Button 
+        mode="outlined" 
+        onPress={handleLogout} 
+        loading={loading} 
+        style={{ marginTop: 12, marginBottom: 24 }}
+        icon={'logout'}
+        
+        >
           Sair
         </Button>
       </ScrollView>

@@ -9,10 +9,28 @@ export default function ProfileSelectionScreen() {
   const navigation = useNavigation();
   const setActiveRole = useAuthStore((s: AuthState) => s.setActiveRole);
 
-  const handleRoleSelection = (role: string) => {
+  const handleRoleSelection = async (role: string) => {
     setActiveRole(role);
-    // Navigate to the appropriate screen based on role
-    // Route clients to the customer flow and professionals to the new placeholder
+
+    // Determine adType and location for this role
+    const adType = role === 'client' ? 'publi_client' : 'publi_professional';
+    const location = role === 'client' ? 'publi_screen_client' : 'publi_screen_professional';
+
+    try {
+      // Check if an ad exists for this role
+      const clientApi = require('../api/axiosClient').default;
+      const checkResponse = await clientApi.get(`/system-admin/api/public/ads/${adType}/check`);
+      if (checkResponse.data?.exists) {
+        // If ad exists, show AdScreen which will navigate to the correct welcome screen afterward
+        navigation.navigate('AdScreen' as never, { location, role } as never);
+        return;
+      }
+    } catch (err) {
+      console.warn('Erro ao verificar anúncio após seleção de perfil:', err);
+      // If check fails, fall through to navigate normally
+    }
+
+    // No ad — navigate to the appropriate screen based on role
     const destination = role === 'client' ? 'WelcomeCustomer' : 'WelcomeProfessional';
     navigation.navigate(destination as never);
   };

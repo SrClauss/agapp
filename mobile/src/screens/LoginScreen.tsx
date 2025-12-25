@@ -56,7 +56,9 @@ export default function LoginScreen() {
         console.log('✅ Anúncio encontrado, navegando para AdScreen');
         // Converter adType para location para compatibilidade com AdScreen
         const location = adType === 'publi_client' ? 'publi_screen_client' : 'publi_screen_professional';
-        navigation.navigate('AdScreen' as never, { location });
+        // Determine role when user already has a single role
+        const roleParam = user.roles.includes('client') && !user.roles.includes('professional') ? 'client' : user.roles.includes('professional') && !user.roles.includes('client') ? 'professional' : undefined;
+        navigation.navigate('AdScreen' as never, { location, role: roleParam } as any);
         return;
       }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useProfilePhoto } from '../hooks/useProfilePhoto';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { IconButton, Badge } from 'react-native-paper';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -117,7 +117,13 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                     )}
                 </View>
 
-                <View style={styles.avatarWrapper}>
+                <TouchableOpacity style={styles.avatarWrapper} onPress={() => {
+                    if (!user) {
+                        try { navigation.navigate('Login' as never); } catch (err) { console.warn('Login screen not configured'); }
+                        return;
+                    }
+                    try { navigation.navigate('SignUp' as never, { completeProfile: true } as any); } catch (err) { console.warn('SignUp screen not configured'); }
+                }}>
                     {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
                         <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
                     ) : (
@@ -125,8 +131,7 @@ export default function LocationAvatar({ showLocation = true }: LocationAvatarPr
                             <Text style={styles.fallbackText}>{initials}</Text>
                         </View>
                     )}
-
-                </View>
+                </TouchableOpacity>
 
                 
         </View>

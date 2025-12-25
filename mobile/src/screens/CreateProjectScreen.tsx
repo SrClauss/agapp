@@ -268,9 +268,10 @@ export default function CreateProjectScreen({ overrideParams }: CreateProjectPro
 
       // Create or update the project
       let project: Project;
+      let resolvedId: string | undefined;
       if (params.project) {
         // Resolve project id (support both id and _id from different sources)
-        const resolvedId = (params.project as any).id || (params.project as any)._id;
+        resolvedId = (params.project as any).id || (params.project as any)._id;
         if (__DEV__) {
           console.log('[CreateProjectScreen] Editing project param:', params.project, 'resolvedId=', resolvedId);
         }
@@ -283,6 +284,9 @@ export default function CreateProjectScreen({ overrideParams }: CreateProjectPro
         project = await createProject(projectData);
       }
 
+      // Compute navigation id (prefer returned id, then _id, then resolvedId)
+      const navProjectId = (project as any).id || (project as any)._id || resolvedId;
+
       Alert.alert(
         params.project ? 'Projeto Atualizado!' : 'Projeto Criado!',
         params.project 
@@ -293,8 +297,14 @@ export default function CreateProjectScreen({ overrideParams }: CreateProjectPro
             text: 'OK',
             onPress: () => {
               if (params.project) {
-                // Go to project detail after update
-                navigation.navigate('ProjectDetail' as never, { projectId: project.id } as never);
+                // After editing, reset the navigation stack so ProjectSummary sits on top of WelcomeCustomer
+                navigation.reset({
+                  index: 1,
+                  routes: [
+                    { name: 'WelcomeCustomer' as never },
+                    { name: 'ProjectSummary' as never, params: { project } as any },
+                  ],
+                });
               } else {
                 navigation.navigate('WelcomeCustomer' as never);
               }

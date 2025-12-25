@@ -64,6 +64,37 @@ def initialize_firebase():
         return None
 
 
+def create_or_update_firebase_user(email: str, password: str, display_name: Optional[str] = None) -> str:
+    """Cria ou atualiza um usuário no Firebase Auth.
+
+    Retorna o UID do usuário criado/atualizado.
+    """
+    if _firebase_app is None:
+        initialize_firebase()
+
+    if _firebase_app is None:
+        raise Exception("Firebase not initialized")
+
+    try:
+        from firebase_admin import auth
+        # Tenta buscar usuário existente
+        try:
+            fb_user = auth.get_user_by_email(email)
+            # Atualiza senha (e display name se fornecido)
+            update_kwargs = {"password": password}
+            if display_name:
+                update_kwargs["display_name"] = display_name
+            auth.update_user(fb_user.uid, **update_kwargs)
+            return fb_user.uid
+        except Exception:
+            # Se não existe, cria novo usuário
+            fb_user = auth.create_user(email=email, password=password, display_name=display_name)
+            return fb_user.uid
+    except Exception as e:
+        # Não expor detalhes sensíveis
+        raise Exception(f"Firebase user create/update failed: {str(e)}")
+
+
 async def send_push_notification(
     fcm_token: str,
     title: str,

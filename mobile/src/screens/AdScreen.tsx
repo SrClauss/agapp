@@ -25,36 +25,52 @@ interface AdContent {
 export default function AdScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { location } = route.params as { location: 'publi_screen_client' | 'publi_screen_professional' };
+  const { location, role } = route.params as { location: 'publi_screen_client' | 'publi_screen_professional'; role?: 'client' | 'professional' };
   const [adContent, setAdContent] = useState<AdContent | null>(null);
+  const [debugPayload, setDebugPayload] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
+  const setActiveRole = useAuthStore((s) => s.setActiveRole);
 
   // Navigate based on the user's role (client vs professional)
   const handleContinue = () => {
+    // If a role was explicitly passed (ProfileSelection or single-role login), honor it
+    if (role) {
+      // Persist active role and replace current route with the respective welcome
+      setActiveRole(role);
+      if (role === 'client') {
+        navigation.replace('WelcomeCustomer' as never);
+        return;
+      }
+      if (role === 'professional') {
+        navigation.replace('WelcomeProfessional' as never);
+        return;
+      }
+    }
+
     const isClient = user?.roles?.includes('client');
     const isProfessional = user?.roles?.includes('professional');
 
-    // If user has both roles, send them to profile selection
+    // If user has both roles, replace with ProfileSelection
     if (isClient && isProfessional) {
-      navigation.navigate('ProfileSelection' as never);
+      navigation.replace('ProfileSelection' as never);
       return;
     }
 
     if (isClient) {
-      navigation.navigate('WelcomeCustomer' as never);
+      navigation.replace('WelcomeCustomer' as never);
       return;
     }
 
     if (isProfessional) {
-      // Professional flows are deprecated for now; send to profile selection so user can continue
-      navigation.navigate('ProfileSelection' as never);
+      // Professional flows are deprecated for now; replace with ProfileSelection so user can continue
+      navigation.replace('ProfileSelection' as never);
       return;
     }
 
     // Fallback
-    navigation.navigate('WelcomeCustomer' as never);
+    navigation.replace('WelcomeCustomer' as never);
   };
 
   const fetchAdContent = async () => {
@@ -88,7 +104,9 @@ export default function AdScreen() {
 
         if (imagesList.length === 0) {
           console.log('⚠️ Nenhuma imagem válida encontrada');
-          handleContinue();
+          // Keep debug info so we can inspect payload in the app and retry manually
+          setDebugPayload({ reason: 'no_valid_images', data });
+          setLoading(false);
           return;
         }
 
@@ -117,18 +135,23 @@ export default function AdScreen() {
         setAdContent(adaptedAd);
       } else {
         console.log('ℹ️ Dados de anúncio inválidos ou vazios');
-        handleContinue();
+        setDebugPayload({ reason: 'invalid_payload', data });
+        setLoading(false);
+        return;
       }
     } catch (error: any) {
       // Status 204 = sem anúncio configurado
       if (error.response?.status === 204) {
         console.log('ℹ️ Nenhum anúncio configurado para esta location');
-        handleContinue();
+        setDebugPayload({ reason: 'no_ad_configured', status: 204 });
+        setLoading(false);
         return;
       }
 
       console.error('🚨 Erro ao buscar anúncio:', error);
-      handleContinue();
+      setDebugPayload({ reason: 'fetch_error', error: error?.message || error, status: error.response?.status });
+      setLoading(false);
+      return;
     } finally {
       setLoading(false);
     }
@@ -166,11 +189,45 @@ export default function AdScreen() {
   }
 
   if (!adContent) {
+    // If we have debug information (no ad / error), show a debug UI so devs can inspect and retry
+    if (!loading && debugPayload) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugTitle}>Anúncio indisponível</Text>
+            <Text style={styles.debugText}>{JSON.stringify(debugPayload, null, 2)}</Text>
+            <View style={styles.debugActions}>
+              <TouchableOpacity
+                style={styles.debugButton}
+                onPress={() => {
+                  setDebugPayload(null);
+                  setLoading(true);
+                  fetchAdContent();
+                }}
+              >
+                <Text>Repetir</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.debugButton}
+                onPress={() => {
+                  setDebugPayload(null);
+                  handleContinue();
+                }}
+              >
+                <Text>Continuar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
     return null;
   }
 
   const handleClose = () => {
-    // Close the ad and continue
+    // Close the ad and continue (respecting a passed role if any)
     handleContinue();
   };
 
@@ -287,4 +344,10 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
   },
+  /* Debug UI styles */
+  debugContainer: { flex: 1, padding: 16, justifyContent: 'center', alignItems: 'center' },
+  debugTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  debugText: { fontSize: 12, color: '#333', textAlign: 'left' },
+  debugActions: { flexDirection: 'row', marginTop: 16 },
+  debugButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#eee' },
 });
