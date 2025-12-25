@@ -5,6 +5,7 @@ from app.core.security import get_current_user, get_current_admin_user
 from app.crud.user import get_user, update_user, get_professionals_nearby, get_users, delete_user
 from app.schemas.user import User, UserUpdate, UserCreate, AddressGeocode, ProfessionalSettings, ProfessionalSettingsUpdate, FCMTokenRegister
 from app.services.geocoding import geocode_address
+from app.services.geocoding import reverse_geocode
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
 
@@ -47,6 +48,19 @@ async def geocode_user_address(geocode: AddressGeocode):
         provider=result.get("provider"),
         raw=result.get("raw")
     )
+
+
+class ReverseGeocodeRequest(BaseModel):
+    latitude: float
+    longitude: float
+
+
+@router.post('/address/reverse')
+async def reverse_user_address(req: ReverseGeocodeRequest):
+    address = await reverse_geocode(req.latitude, req.longitude)
+    if not address:
+        raise HTTPException(status_code=400, detail='Could not reverse geocode coordinates')
+    return {"address": address}
 
 @router.get("/me/professional-settings", response_model=ProfessionalSettings)
 async def get_professional_settings(

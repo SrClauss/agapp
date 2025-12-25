@@ -219,6 +219,8 @@ export default function ProjectDetailScreen() {
             <View style={styles.infoRow}>
               <MaterialIcons name="event" size={20} color={colors.textSecondary} />
               <Text style={styles.infoText}>Criado em {formatDate(project.created_at)}</Text>
+
+              
             </View>
 
             {project.location?.address && (

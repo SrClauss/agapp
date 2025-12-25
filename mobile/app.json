@@ -17,6 +17,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.agilizapro.agapp"
+      ,"config": {
+        "googleMapsApiKey": "AIzaSyCWq_TnbeMxdYUQbTqJ7yyUo_prvz8Zl54"
+      }
     },
     "android": {
       "adaptiveIcon": {

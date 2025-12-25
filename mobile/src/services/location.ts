@@ -9,10 +9,26 @@ export async function requestAndGetLocation() {
   return location;
 }
 
-export async function geocodeAddress(address: string) {
-  // We can use react-native-geocoding or a backend endpoint for geocoding to avoid exposing keys
-  // This is a simple wrapper for the backend geocode endpoint if needed
-  return null;
+export async function geocodeAddress(address: string): Promise<Location.LocationGeocodedLocation[]> {
+  try {
+    const results = await Location.geocodeAsync(address);
+    return results;
+  } catch (error) {
+    console.error('Geocoding failed:', error);
+    return [];
+  }
 }
 
-export default { requestAndGetLocation, geocodeAddress };
+export async function searchCEPByAddress(uf: string, cidade: string, logradouro: string): Promise<any[]> {
+  try {
+    const url = `https://viacep.com.br/ws/${uf}/${cidade}/${logradouro}/json/`;
+    const response = await fetch(url);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('ViaCEP search failed:', error);
+    return [];
+  }
+}
+
+export default { requestAndGetLocation, geocodeAddress, searchCEPByAddress };

@@ -70,3 +70,24 @@ async def test_create_new_project_geocodes_and_creates(monkeypatch):
     assert result['id'] == 'proj-123'
     # Coordinates should have been set by geocoding step
     assert result['location']['coordinates'] == {'type': 'Point', 'coordinates': [-46.0, -23.5]}
+
+
+def test_reverse_geocode_returns_address(monkeypatch):
+    async def fake_reverse(lat, lon):
+        return 'Rua Teste 456, Cidade'
+
+    import app.services.geocoding as geocode_mod
+    monkeypatch.setattr(geocode_mod, 'reverse_geocode', fake_reverse)
+
+    from app.api.endpoints.users import reverse_user_address
+
+    class Req: pass
+    req = Req()
+    req.latitude = -23.5
+    req.longitude = -46.0
+
+    res = None
+    # reverse_user_address is async
+    import asyncio
+    res = asyncio.get_event_loop().run_until_complete(reverse_user_address(req))
+    assert res['address'] == 'Rua Teste 456, Cidade'

@@ -20,10 +20,14 @@ export interface CustomAddress {
   city?: string;
   region?: string;
   postalCode?: string;
+  // Additional address details collected from user
+  number?: string; // house number
+  complement?: string;
+  reference?: string;
 }
 
 // Use only LocationGeocodedAddress on the client for address representation
-export type ProjectAddress = LocationGeocodedAddress;
+export type ProjectAddress = LocationGeocodedAddress | CustomAddress;
 
 export interface ProjectLocation {
   /**
@@ -108,6 +112,17 @@ export async function createProject(data: ProjectCreateData): Promise<Project> {
   return response.data;
 }
 
+export async function updateProject(projectId: string, data: ProjectCreateData): Promise<Project> {
+  // Ensure Authorization header present in case axios interceptor didn't run or token not set
+  const token = useAuthStore.getState().token;
+  const config = token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : undefined;
+
+  const response = await client.put(`/projects/${projectId}`, data, config);
+  return response.data;
+}
+
 /**
  * Get projects with optional filters
  */
@@ -147,6 +162,11 @@ export async function getProject(projectId: string): Promise<Project> {
 
 export async function geocodeAddress(address: string): Promise<{ address: string; coordinates: [number, number]; provider?: string; raw?: any }> {
   const response = await client.post('/users/address/geocode', { address });
+  return response.data;
+}
+
+export async function reverseGeocode(latitude: number, longitude: number): Promise<{ address: string }> {
+  const response = await client.post('/users/address/reverse', { latitude, longitude });
   return response.data;
 }
 

@@ -113,6 +113,7 @@ export default function App() {
           <Stack.Screen name="WelcomeCustomer" component={WelcomeCustomerScreen} options={{ headerShown: false }} />
           <Stack.Screen name="SearchResults" component={SearchResultsScreen} options={{ title: 'Resultados' }} />
           <Stack.Screen name="CreateProject" component={CreateProjectScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="EditProject" component={require('./src/screens/EditProjectScreen').default} options={{ headerShown: false }} />
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ProjectSummary" component={ProjectSummaryScreen} options={{ title: 'Resumo do Projeto' }} />
           <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />

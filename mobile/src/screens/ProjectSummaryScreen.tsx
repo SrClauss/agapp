@@ -1,14 +1,15 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { Project, GeocodedAddress } from '../api/projects';
-import { Card, Title, Paragraph, Chip, Divider, Avatar as PaperAvatar, List, useTheme } from 'react-native-paper';
+import { Card, Title, Text as PaperText, Chip, Divider, Avatar as PaperAvatar, List, useTheme, Button } from 'react-native-paper';
 // formatted address is available on project.location.address as `.formatted` (if geocoded)
 
 interface Props {}
 
 export default function ProjectSummaryScreen(props: Props) {
   const route = useRoute();
+  const navigation = useNavigation();
   const { project }: { project: Project } = route.params as any;
   const theme = useTheme();
 
@@ -32,12 +33,17 @@ export default function ProjectSummaryScreen(props: Props) {
         <Card.Content>
           <View style={styles.headerTop}>
             <Title style={styles.projectTitle}>{project.title}</Title>
-            <Chip mode="flat" style={styles.statusChip} textStyle={styles.statusText}>
-              {project.status === 'open' ? 'Aberto' : project.status === 'closed' ? 'Fechado' : project.status}
-            </Chip>
+            <View style={styles.headerActions}>
+              <Chip mode="flat" style={styles.statusChip} textStyle={styles.statusText}>
+                {project.status === 'open' ? 'Aberto' : project.status === 'closed' ? 'Fechado' : project.status}
+              </Chip>
+              <Button mode="outlined" onPress={() => navigation.navigate('EditProject' as never, { project })}>
+                Editar Projeto
+              </Button>
+            </View>
           </View>
           {project.description ? (
-            <Paragraph style={styles.description}>{project.description}</Paragraph>
+            <PaperText variant="bodyMedium" style={styles.description}>{project.description}</PaperText>
           ) : null}
         </Card.Content>
       </Card>
@@ -96,10 +102,11 @@ export default function ProjectSummaryScreen(props: Props) {
                   </View>
                 ))}
               </View>
-              <Paragraph style={styles.liberadoresFeedback}>Liberadores: {liberadoresLabel}</Paragraph>
+              
+              <PaperText variant="bodyMedium" style={styles.liberadoresFeedback}>Liberadores: {liberadoresLabel}</PaperText>
             </>
           ) : (
-            <Paragraph style={styles.emptyText}>Até agora ninguém liberou este projeto.</Paragraph>
+            <PaperText variant="bodyMedium" style={styles.emptyText}>Até agora ninguém liberou este projeto.</PaperText>
           )}
         </Card.Content>
       </Card>
@@ -114,7 +121,8 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 36 },
   headerCard: { marginBottom: 16 },
   headerTop: { marginBottom: 12 },
-  projectTitle: { fontSize: 24, fontWeight: '700', marginBottom: 8, lineHeight: 32 },
+  headerActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  projectTitle: { fontSize: 24, fontWeight: '700', marginBottom: 8, lineHeight: 32, flex: 1 },
   statusChip: { alignSelf: 'flex-start', marginBottom: 8 },
   statusText: { fontSize: 12 },
   description: { fontSize: 15, lineHeight: 22, color: '#555' },

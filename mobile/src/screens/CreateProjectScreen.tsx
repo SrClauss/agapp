@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,15 +15,18 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import axios from 'axios';
-import { createProject, ProjectCreateData, ProjectLocation, GeocodedAddress } from '../api/projects';
+import { createProject, updateProject, ProjectCreateData, ProjectLocation, GeocodedAddress, Project } from '../api/projects';
 import useAuthStore from '../stores/authStore';
 import { colors } from '../theme/colors';
 import { MAX_PROJECT_TITLE_LENGTH } from '../constants';
-import { LocationGeocodedAddress } from 'expo-location';
+
+import MapPinPicker from '../components/MapPinPicker';
+import AddressSearch from '../components/AddressSearch';
 interface RouteParams {
   categoryName: string;
   subcategoryName: string;
   defaultRemoteExecution?: boolean;
+  project?: Project;
 }
 
 export default function CreateProjectScreen() {
@@ -39,16 +42,22 @@ export default function CreateProjectScreen() {
   const [remoteExecution, setRemoteExecution] = useState(params?.defaultRemoteExecution || false);
   
   // Location state
-  const [useCurrentLocation, setUseCurrentLocation] = useState(true);
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
-    address?: LocationGeocodedAddress;
   } | null>(null);
-  const [customAddress, setCustomAddress] = useState('');
-  const [customCity, setCustomCity] = useState('');
-  const [customState, setCustomState] = useState('');
-  const [customZipCode, setCustomZipCode] = useState('');
+  const [currentAddressData, setCurrentAddressData] = useState<{
+    street?: string;
+    number?: string;
+    district?: string;
+    complement?: string;
+    city?: string;
+    region?: string;
+    postalCode?: string;
+    country?: string;
+    reference?: string;
+  } | null>(null);
+  const [currentAddressFormatted, setCurrentAddressFormatted] = useState('');
   const [cepSearching, setCepSearching] = useState(false);
   const [tempGeocode, setTempGeocode] = useState<{
     address?: string;
@@ -60,14 +69,58 @@ export default function CreateProjectScreen() {
   const [confirmedLocation, setConfirmedLocation] = useState<GeocodedAddress | null>(null);
   const [confirmedCoordinates, setConfirmedCoordinates] = useState<{ type: 'Point'; coordinates: [number, number] } | null>(null);
   
+  // Edit address inline state
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [showAddressSearch, setShowAddressSearch] = useState(false);
+  
   // Loading states
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
 
-  // Fetch current location on mount
+    console.log("Current location:", currentLocation)
+    },[currentLocation])   // Fetch current location on mount
   useEffect(() => {
     getCurrentLocation();
   }, []);
+
+  // Preencher campos se for edição
+  useEffect(() => {
+    if (params.project) {
+      setTitle(params.project.title || '');
+      setDescription(params.project.description || '');
+      setBudgetMin(params.project.budget_min?.toString() || '');
+      setBudgetMax(params.project.budget_max?.toString() || '');
+      setRemoteExecution(params.project.remote_execution || false);
+      
+      // Preencher localização se houver
+      if (params.project.location) {
+        if (params.project.location.coordinates) {
+          const coords = params.project.location.coordinates;
+          const [lng, lat] = Array.isArray(coords) ? coords : coords.coordinates;
+          setCurrentLocation({ latitude: lat, longitude: lng });
+        }
+        if (params.project.location.address) {
+          const addr = params.project.location.address;
+          if (typeof addr === 'object' && 'formatted' in addr) {
+            setCurrentAddressFormatted(addr.formatted || '');
+            setCurrentAddressData({
+              street: addr.formatted || '',
+              number: (addr as any).number || '',
+              district: (addr as any).district || '',
+              complement: (addr as any).complement || '',
+              city: addr.city || '',
+              region: addr.region || '',
+              postalCode: addr.postalCode || '',
+              country: (addr as any).country || '',
+              reference: (addr as any).reference || '',
+            });
+          }
+        }
+      }
+    }
+  }, [params.project]);
 
   const getCurrentLocation = async () => {
     try {
@@ -80,7 +133,6 @@ export default function CreateProjectScreen() {
           'Permissão Negada',
           'Precisamos de acesso à sua localização para melhorar a busca por profissionais.'
         );
-        setUseCurrentLocation(false);
         return;
       }
 
@@ -95,15 +147,31 @@ export default function CreateProjectScreen() {
         longitude: location.coords.longitude,
       });
 
+      // Store geocoded data for editing
+      const addressData = geocoded ? {
+        street: geocoded.street || undefined,
+        number: geocoded.streetNumber || undefined,
+        district: geocoded.district || undefined,
+        city: geocoded.city || geocoded.subregion || undefined,
+        region: geocoded.region || undefined,
+        postalCode: geocoded.postalCode || undefined,
+        country: geocoded.country || undefined,
+      } : null;
+
+      // Create formatted address string
+      const formattedAddress = geocoded ? 
+        `${geocoded.street || ''}${geocoded.streetNumber ? ', ' + geocoded.streetNumber : ''}${geocoded.district ? ' - ' + geocoded.district : ''}, ${geocoded.city || geocoded.subregion || ''} - ${geocoded.region || ''}, ${geocoded.postalCode || ''}${geocoded.country ? ', ' + geocoded.country : ''}`.replace(/, ,/g, ',').replace(/^,|,$/g, '').trim()
+        : 'Endereço não disponível';
+
       setCurrentLocation({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        address: geocoded,
       });
+      setCurrentAddressData(addressData);
+      setCurrentAddressFormatted(formattedAddress);
     } catch (error) {
       console.warn('Erro ao obter localização:', error);
       Alert.alert('Erro', 'Não foi possível obter sua localização atual.');
-      setUseCurrentLocation(false);
     } finally {
       setLoadingLocation(false);
     }
@@ -112,52 +180,6 @@ export default function CreateProjectScreen() {
     // Helper: format a ProjectAddress (geocoded object or custom) into a single display string
     // Note: LocationGeocodedAddress includes a formatted address. Use
     // `location.formatted` or `location.name`/`location.display_name` directly.
-
-    async function handleCepLookup(cepRaw: string) {
-      const cep = (cepRaw || '').replace(/\D+/g, '');
-      if (cep.length !== 8) return;
-      setCepSearching(true);
-      try {
-        const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-        const data = await resp.json();
-        if (data.erro) {
-          Alert.alert('CEP não encontrado');
-          setCepSearching(false);
-          return;
-        }
-        const endereco = `${data.logradouro || ''}${data.bairro ? ' - ' + data.bairro : ''}`.trim();
-        setCustomAddress(endereco);
-        setCustomCity(data.localidade || '');
-        setCustomState(data.uf || '');
-        setCustomZipCode(cep);
-
-        // Try to geocode the composed address via backend
-        try {
-          const full = `${data.logradouro || ''} ${data.bairro || ''} ${data.localidade || ''} ${data.uf || ''}`.trim();
-          const projectsApi = await import('../api/projects');
-          const geocodeResult = await projectsApi.geocodeAddress(full);
-          if (geocodeResult && geocodeResult.coordinates) {
-            setTempGeocode({ address: geocodeResult.address, coordinates: geocodeResult.coordinates, provider: geocodeResult.provider, raw: geocodeResult.raw });
-          }
-        } catch (err) {
-          console.warn('Geocode failed after CEP lookup', err);
-        }
-      } catch (err) {
-        console.warn('CEP lookup error', err);
-        Alert.alert('Erro', 'Não foi possível buscar CEP agora.');
-      } finally {
-        setCepSearching(false);
-      }
-    }
-
-    function applySuggestedLocation() {
-      if (!tempGeocode || !tempGeocode.coordinates) return;
-      // Map geocode result into LocationGeocodedAddress-like object
-      const addrObj: GeocodedAddress = { name: tempGeocode.address, formatted: tempGeocode.address } as GeocodedAddress;
-      setConfirmedLocation(addrObj);
-      setConfirmedCoordinates({ type: 'Point', coordinates: tempGeocode.coordinates });
-      setCustomAddress(tempGeocode.address || customAddress);
-    }
 
   const validateForm = (): boolean => {
     if (!title.trim()) {
@@ -172,20 +194,20 @@ export default function CreateProjectScreen() {
       Alert.alert('Erro', 'Por favor, descreva o que você precisa.');
       return false;
     }
-    if (!useCurrentLocation && !customAddress.trim()) {
-      Alert.alert('Erro', 'Por favor, informe o endereço para o serviço.');
-      return false;
-    }
-    // If non-remote and using custom address, require confirmed precise location
-    if (!remoteExecution && !useCurrentLocation && !confirmedLocation) {
-      Alert.alert('Confirme a localização', 'Por favor confirme a localização no mapa ou use a sugestão de endereço para fornecer coordenadas precisas.');
-      return false;
-    }
-    if (useCurrentLocation && !currentLocation) {
-      Alert.alert('Erro', 'Aguarde a localização ser obtida ou informe um endereço manualmente.');
+    // If non-remote, require location
+    if (!remoteExecution && !currentLocation) {
+      Alert.alert('Erro', 'Localização atual é necessária para projetos presenciais.');
       return false;
     }
     return true;
+  };
+
+  const handleEditCurrentLocation = () => {
+    if (!currentLocation || !currentAddressFormatted) {
+      Alert.alert('Erro', 'Localização atual não disponível para edição.');
+      return;
+    }
+    setIsEditingAddress(!isEditingAddress);
   };
 
   const handleSubmit = async () => {
@@ -205,43 +227,24 @@ export default function CreateProjectScreen() {
       // Build location object with proper typing
       const location: ProjectLocation = {};
       
-      if (useCurrentLocation && currentLocation) {
+      if (currentLocation) {
         location.coordinates = [currentLocation.longitude, currentLocation.latitude];
-        const addr = currentLocation.address;
-        if (addr) {
-          location.address = addr;
-          if (typeof addr !== 'string') {
-            // geocoded object fields
-            if ((addr as any).city) location.city = (addr as any).city;
-            if ((addr as any).region) location.state = (addr as any).region;
-            if ((addr as any).postalCode) location.zip_code = (addr as any).postalCode || (addr as any).postal_code;
-          }
-        }
-      } else {
-        // Prefer confirmed location (from suggestion or map) if present
-        if (confirmedCoordinates && confirmedLocation) {
-          location.coordinates = confirmedCoordinates as any;
-          location.address = { formatted: (confirmedLocation as any).formatted || (confirmedLocation as any).name || (confirmedLocation as any).display_name } as any;
-          location.geocode_source = tempGeocode?.provider;
-        } else {
-          // Store custom address using the CustomAddress shape (formatted + optional fields)
-          location.address = {
-            formatted: customAddress.trim(),
-            city: customCity.trim() || undefined,
-            region: customState.trim() || undefined,
-            postalCode: customZipCode.trim() || undefined,
-          } as any;
-          if (customCity.trim()) location.city = customCity.trim();
-          if (customState.trim()) location.state = customState.trim();
-          if (customZipCode.trim()) location.zip_code = customZipCode.trim();
-        }
+        location.address = {
+          formatted: currentAddressFormatted,
+          ...(currentAddressData?.city && { city: currentAddressData.city }),
+          ...(currentAddressData?.region && { region: currentAddressData.region }),
+          ...(currentAddressData?.postalCode && { postalCode: currentAddressData.postalCode }),
+          ...(currentAddressData?.number && { number: currentAddressData.number }),
+          ...(currentAddressData?.complement && { complement: currentAddressData.complement }),
+          ...(currentAddressData?.district && { district: currentAddressData.district }),
+        } as any;
       }
 
       // Build project data
       const projectData: ProjectCreateData = {
         title: title.trim(),
         description: description.trim(),
-        category: {
+        category: params.project ? (typeof params.project.category === 'string' ? { main: params.project.category, sub: '' } : params.project.category) : {
           main: params.categoryName,
           sub: params.subcategoryName,
         },
@@ -259,16 +262,27 @@ export default function CreateProjectScreen() {
         projectData.budget_max = maxBudget;
       }
 
-      // Create the project
-      const project = await createProject(projectData);
+      // Create or update the project
+      const project = params.project 
+        ? await updateProject(params.project.id, projectData)
+        : await createProject(projectData);
 
       Alert.alert(
-        'Projeto Criado!',
-        'Seu projeto foi criado com sucesso. Profissionais da região poderão entrar em contato.',
+        params.project ? 'Projeto Atualizado!' : 'Projeto Criado!',
+        params.project 
+          ? 'Seu projeto foi atualizado com sucesso.'
+          : 'Seu projeto foi criado com sucesso. Profissionais da região poderão entrar em contato.',
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('WelcomeCustomer' as never),
+            onPress: () => {
+              if (params.project) {
+                // Go to project detail after update
+                navigation.navigate('ProjectDetail' as never, { projectId: project.id } as never);
+              } else {
+                navigation.navigate('WelcomeCustomer' as never);
+              }
+            },
           },
         ]
       );
@@ -314,7 +328,7 @@ export default function CreateProjectScreen() {
               <MaterialIcons name="arrow-back" size={24} color="#333" />
             </TouchableOpacity>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Criar Projeto</Text>
+              <Text style={styles.headerTitle}>{params?.project ? 'Editar Projeto' : 'Criar Projeto'}</Text>
               <Text style={styles.headerSubtitle}>
                 {params?.categoryName} › {params?.subcategoryName}
               </Text>
@@ -391,81 +405,92 @@ export default function CreateProjectScreen() {
             {/* Location Section */}
             <Text style={styles.sectionTitle}>Localização do Serviço</Text>
             
-            {/* Current Location Option */}
-            <TouchableOpacity
-              style={[
-                styles.locationOption,
-                useCurrentLocation && styles.locationOptionSelected,
-              ]}
-              onPress={() => {
-                setUseCurrentLocation(true);
-                if (!currentLocation) {
-                  getCurrentLocation();
-                }
-              }}
-            >
+            {/* Current Location */}
+            <View style={styles.locationOption}>
               <MaterialIcons
-                name={useCurrentLocation ? 'radio-button-checked' : 'radio-button-unchecked'}
+                name="location-on"
                 size={24}
-                color={useCurrentLocation ? colors.primary : '#666'}
+                color={colors.primary}
               />
               <View style={styles.locationOptionContent}>
-                <Text style={styles.locationOptionTitle}>Usar localização atual</Text>
+                <View style={styles.locationOptionHeader}>
+                  <Text style={styles.locationOptionTitle}>Localização atual</Text>
+                  {currentLocation && !loadingLocation && (
+                    <TouchableOpacity onPress={handleEditCurrentLocation} style={styles.editButton}>
+                      <MaterialIcons name={isEditingAddress ? "close" : "edit"} size={20} color={colors.primary} />
+                      <Text style={styles.editButtonText}>{isEditingAddress ? "Fechar" : "Editar"}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 {loadingLocation ? (
                   <View style={styles.loadingRow}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={styles.loadingText}>Obtendo localização...</Text>
                   </View>
-                ) : currentLocation?.address ? (
-                  <Text style={styles.locationAddress}>{currentLocation.address.city}</Text>
+                ) : currentLocation ? (
+                  <View style={styles.locationInfoContainer}>
+                    <Text style={styles.locationAddressFormatted}>{currentAddressFormatted}</Text>
+                    <View style={styles.coordinatesContainer}>
+                      <Text style={styles.locationCoordinates}>φ:{currentLocation.latitude.toFixed(4)}, λ:{currentLocation.longitude.toFixed(4)}</Text>
+                    </View>
+                  </View>
                 ) : (
                   <Text style={styles.locationHint}>Toque para obter sua localização</Text>
                 )}
               </View>
-            </TouchableOpacity>
+            </View>
 
-            {/* Custom Address Option */}
-            <TouchableOpacity
-              style={[
-                styles.locationOption,
-                !useCurrentLocation && styles.locationOptionSelected,
-              ]}
-              onPress={() => setUseCurrentLocation(false)}
-            >
-              <MaterialIcons
-                name={!useCurrentLocation ? 'radio-button-checked' : 'radio-button-unchecked'}
-                size={24}
-                color={!useCurrentLocation ? colors.primary : '#666'}
-              />
-              <View style={styles.locationOptionContent}>
-                <Text style={styles.locationOptionTitle}>Informar outro endereço</Text>
-                <Text style={styles.locationHint}>Digite o endereço onde o serviço será realizado</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Custom Address Fields */}
-            {!useCurrentLocation && (
-              <View style={styles.addressFields}>
+            {/* Edit Address Inline */}
+            {isEditingAddress && currentLocation && (
+              <View style={styles.editAddressContainer}>
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TextInput
+                    label="Endereço"
+                    value={currentAddressData?.street || ''}
+                    onChangeText={(text) => setCurrentAddressData(prev => ({ ...prev, street: text }))}
+                    mode="outlined"
+                    style={[styles.input, { flex: 1, marginRight: 8 }]}
+                    placeholder="Rua, logradouro"
+                  />
+             
+                </View>
+                <View style={styles.addressRow}>
+                  <TextInput
+                    label="Número (opcional)"
+                    value={currentAddressData?.number || ''}
+                    onChangeText={(text) => setCurrentAddressData(prev => ({ ...prev, number: text }))}
+                    mode="outlined"
+                    style={[styles.input, { flex: 1, marginRight: 8 }]}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    label="Complemento (opcional)"
+                    value={currentAddressData?.complement || ''}
+                    onChangeText={(text) => setCurrentAddressData(prev => ({ ...prev, complement: text }))}
+                    mode="outlined"
+                    style={[styles.input, { flex: 1 }]}
+                  />
+                </View>
                 <TextInput
-                  label="Endereço"
-                  value={customAddress}
-                  onChangeText={setCustomAddress}
+                  label="Bairro"
+                  value={currentAddressData?.district || ''}
+                  onChangeText={(text) => setCurrentAddressData(prev => ({ ...prev, district: text }))}
                   mode="outlined"
                   style={styles.input}
-                  placeholder="Rua, número, bairro"
                 />
                 <View style={styles.addressRow}>
                   <TextInput
                     label="Cidade"
-                    value={customCity}
-                    onChangeText={setCustomCity}
+                    value={currentAddressData?.city || ''}
+                    onChangeText={(text) => setCurrentAddressData(prev => ({ ...prev, city: text }))}
                     mode="outlined"
                     style={[styles.input, styles.cityInput]}
                   />
                   <TextInput
                     label="Estado"
-                    value={customState}
-                    onChangeText={setCustomState}
+                    value={currentAddressData?.region || ''}
+                    onChangeText={(text) => setCurrentAddressData(prev => ({ ...prev, region: text }))}
                     mode="outlined"
                     style={[styles.input, styles.stateInput]}
                     maxLength={2}
@@ -473,33 +498,44 @@ export default function CreateProjectScreen() {
                 </View>
                 <TextInput
                   label="CEP"
-                  value={customZipCode}
-                  onChangeText={setCustomZipCode}
-                  onEndEditing={() => handleCepLookup(customZipCode)}
+                  value={currentAddressData?.postalCode || ''}
+                  onChangeText={(text) => setCurrentAddressData(prev => ({ ...prev, postalCode: text }))}
                   mode="outlined"
                   style={styles.input}
                   keyboardType="numeric"
-                  maxLength={9}
-                  placeholder="00000-000"
                 />
-                {cepSearching ? (
-                  <Text style={styles.loadingText}>Buscando CEP...</Text>
-                ) : tempGeocode ? (
-                  <View style={{ marginTop: 8 }}>
-                    <Text style={{ color: colors.info }}>Sugestão: {tempGeocode.address}</Text>
-                    <View style={{ flexDirection: 'row', marginTop: 8 }}>
-                      <Button compact onPress={() => applySuggestedLocation()}>
-                        Usar sugestão
-                      </Button>
-                      <Button compact onPress={() => setTempGeocode(null)} style={{ marginLeft: 8 }}>
-                        Ignorar
-                      </Button>
-                    </View>
-                  </View>
-                ) : null}
-                {confirmedLocation ? (
-                      <Text style={{ marginTop: 8, color: colors.success }}>Local confirmado: {confirmedLocation?.formatted || confirmedLocation?.name || (confirmedLocation as any)?.display_name}</Text>
-                ) : null}
+                <TextInput
+                  label="Ponto de referência (opcional)"
+                  value={currentAddressData?.reference || ''}
+                  onChangeText={(text) => setCurrentAddressData(prev => ({ ...prev, reference: text }))}
+                  mode="outlined"
+                  style={styles.input}
+                />
+                <Button mode="contained" onPress={() => setShowAddressSearch(true)} icon="magnify" style={{ alignSelf: 'stretch' }}>
+                    Buscar
+                 </Button>
+
+                {/* Map Button */}
+                <Button
+                  mode="outlined"
+                  onPress={() => setShowMapModal(true)}
+                  icon={() => <MaterialIcons name="travel-explore" size={18} color={colors.primary} />}
+                  style={{ marginTop: 8 }}
+                >
+                  Abrir mapa
+                </Button>
+
+                {/* Action Buttons */}
+                <View style={styles.editActions}>
+                  <Button style={styles.buttonEdit} mode='outlined'  onPress={() => setIsEditingAddress(false)}>Cancelar</Button>
+                  <Button style={styles.buttonEdit}  mode="contained" onPress={() => {
+                    // Update formatted address
+                    const updatedData = currentAddressData;
+                    const newFormatted = `${updatedData?.street || ''}${updatedData?.number ? ', ' + updatedData.number : ''}${updatedData?.district ? ' - ' + updatedData.district : ''}, ${updatedData?.city || ''} - ${updatedData?.region || ''}, ${updatedData?.postalCode || ''}`.replace(/, ,/g, ',').replace(/^,|,$/g, '').trim();
+                    setCurrentAddressFormatted(newFormatted);
+                    setIsEditingAddress(false);
+                  }}>Salvar</Button>
+                </View>
               </View>
             )}
           </View>
@@ -515,10 +551,77 @@ export default function CreateProjectScreen() {
             style={styles.submitButton}
             labelStyle={styles.submitButtonLabel}
           >
-            Publicar Projeto
+            {params?.project ? 'Atualizar Projeto' : 'Publicar Projeto'}
           </Button>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Address search modal */}
+      <AddressSearch
+        visible={showAddressSearch}
+        initialCity={currentAddressData?.city}
+        initialUF={currentAddressData?.region}
+        onDismiss={() => setShowAddressSearch(false)}
+        onSelect={(addr) => {
+          // Update coordinates if available
+          if ((addr as any).latitude && (addr as any).longitude) {
+            setCurrentLocation({ latitude: (addr as any).latitude, longitude: (addr as any).longitude });
+          }
+
+          // Populate address fields from selected address
+          setCurrentAddressData(prev => ({
+            street: (addr as any).street || (addr as any).name || addr.formatted || prev?.street || '',
+            number: (addr as any).number || prev?.number || '',
+            district: (addr as any).district || prev?.district || '',
+            complement: (addr as any).complement || prev?.complement || '',
+            city: (addr as any).city || (addr as any).subregion || prev?.city || '',
+            region: (addr as any).region || prev?.region || '',
+            postalCode: (addr as any).postalCode || prev?.postalCode || '',
+            country: (addr as any).country || prev?.country || '',
+            reference: prev?.reference || ''
+          } as any));
+
+          setCurrentAddressFormatted((addr as any).formatted || (addr as any).display_name || (addr as any).name || '');
+          setShowAddressSearch(false);
+          setIsEditingAddress(true);
+        }}
+      />
+
+      {/* Map Modal */}
+      <MapPinPicker
+        visible={showMapModal}
+        initialCoords={currentLocation || undefined}
+        onDismiss={() => setShowMapModal(false)}
+        onConfirm={async (coords) => {
+          setCurrentLocation(coords);
+          setShowMapModal(false);
+          
+          // Reverse geocode to update address
+          try {
+            const addresses = await Location.reverseGeocodeAsync(coords);
+            if (addresses.length > 0) {
+              const addr = addresses[0];
+              const addressData = {
+                street: addr.street || addr.name || '',
+                number: addr.streetNumber || '',
+                district: addr.district || '',
+                complement: '',
+                city: addr.subregion || addr.city || '',
+                region: addr.region || '',
+                postalCode: addr.postalCode || '',
+                country: addr.country || '',
+                reference: '',
+              };
+              const formattedAddress = `${addressData.street}${addressData.number ? ', ' + addressData.number : ''}${addressData.district ? ' - ' + addressData.district : ''}, ${addressData.city} - ${addressData.region}, ${addressData.postalCode}`.replace(/, ,/g, ',').replace(/^,|,$/g, '').trim();
+              
+              setCurrentAddressData(addressData);
+              setCurrentAddressFormatted(formattedAddress);
+            }
+          } catch (error) {
+            console.warn('Reverse geocode failed:', error);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -548,6 +651,9 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginRight: 8,
+  },
+  buttonEdit:{
+    width: '47.5%'  
   },
   headerTextContainer: {
     flex: 1,
@@ -684,5 +790,61 @@ const styles = StyleSheet.create({
   submitButtonLabel: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  editAddressContainer: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+  },
+  editActions: {
+
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  locationOptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: `${colors.primary}10`,
+  },
+  editButtonText: {
+    fontSize: 14,
+    color: colors.primary,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  locationAddressFormatted: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'left',
+  },
+  locationCoordinates: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
+    fontFamily: 'monospace',
+  },
+  locationInfoContainer: {
+    marginTop: 8,
+  },
+  coordinatesContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
 });
