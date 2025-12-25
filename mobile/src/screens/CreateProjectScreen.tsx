@@ -267,9 +267,21 @@ export default function CreateProjectScreen({ overrideParams }: CreateProjectPro
       }
 
       // Create or update the project
-      const project = params.project 
-        ? await updateProject(params.project.id, projectData)
-        : await createProject(projectData);
+      let project: Project;
+      if (params.project) {
+        // Resolve project id (support both id and _id from different sources)
+        const resolvedId = (params.project as any).id || (params.project as any)._id;
+        if (__DEV__) {
+          console.log('[CreateProjectScreen] Editing project param:', params.project, 'resolvedId=', resolvedId);
+        }
+        if (!resolvedId) {
+          Alert.alert('Erro', 'ID do projeto ausente. Não é possível atualizar.');
+          throw new Error('missing project id');
+        }
+        project = await updateProject(resolvedId, projectData);
+      } else {
+        project = await createProject(projectData);
+      }
 
       Alert.alert(
         params.project ? 'Projeto Atualizado!' : 'Projeto Criado!',
@@ -292,6 +304,13 @@ export default function CreateProjectScreen({ overrideParams }: CreateProjectPro
       );
     } catch (error: unknown) {
       console.error('Erro ao criar projeto:', error);
+      // Additional debug logs for axios errors
+      if (axios.isAxiosError(error)) {
+        console.error('[createProject] axios error status:', error.response?.status);
+        console.error('[createProject] axios error data:', error.response?.data);
+        console.error('[createProject] axios error headers:', error.response?.headers);
+      }
+
       let message = 'Não foi possível criar o projeto. Tente novamente.';
       if (axios.isAxiosError(error) && error.response?.data) {
         const detail = error.response.data.detail;
