@@ -345,7 +345,9 @@ async def update_existing_project(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     project = await get_project(db, project_id)
+    # Additional logging to diagnose authorization failures
     if not project or str(project.client_id) != str(current_user.id):
+        logging.warning(f"Unauthorized update attempt: project_id={project_id} project_client_id={getattr(project, 'client_id', None)} current_user_id={getattr(current_user, 'id', None)}")
         raise HTTPException(status_code=403, detail="Not authorized")
     
     updated_project = await update_project(db, project_id, project_update)
