@@ -3,7 +3,8 @@ from typing import List
 from app.core.database import get_database
 from app.core.security import get_current_user, get_current_admin_user
 from app.crud.user import get_user, update_user, get_professionals_nearby, get_users, delete_user
-from app.schemas.user import User, UserUpdate, UserCreate, AddressGeocode, ProfessionalSettings, ProfessionalSettingsUpdate, FCMTokenRegister
+from pydantic import BaseModel
+from app.schemas.user import User, UserUpdate, UserCreate, AddressGeocode, AddressGeocodeResult, ProfessionalSettings, ProfessionalSettingsUpdate, FCMTokenRegister
 from app.services.geocoding import geocode_address
 from app.services.geocoding import reverse_geocode
 from motor.motor_asyncio import AsyncIOMotorDatabase
