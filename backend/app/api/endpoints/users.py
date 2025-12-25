@@ -24,8 +24,15 @@ async def update_user_me(
 ):
     # Proibir alteração do CPF se já estiver definido
     update_data = user_update.model_dump(exclude_unset=True)
-    if 'cpf' in update_data and current_user.cpf and update_data['cpf'] != current_user.cpf:
+    from app.utils.validators import is_valid_cpf, is_temporary_cpf
+
+    if 'cpf' in update_data and current_user.cpf and (not is_temporary_cpf(current_user.cpf)) and update_data['cpf'] != current_user.cpf:
         raise HTTPException(status_code=400, detail="CPF não pode ser alterado uma vez cadastrado")
+
+    # Se CPF está sendo definido agora (ou atualizando um CPF temporário), validar formato
+    if 'cpf' in update_data and (not current_user.cpf or is_temporary_cpf(current_user.cpf)):
+        if not is_valid_cpf(update_data.get('cpf')):
+            raise HTTPException(status_code=400, detail="CPF inválido")
 
     user = await update_user(db, str(current_user.id), user_update)
     if not user:

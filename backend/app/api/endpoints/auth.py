@@ -186,10 +186,18 @@ async def complete_profile(
     if 'cpf' in update_dict:
         logger.info("CPF update requested. current CPF: %s, incoming CPF (masked): %s", _mask(current_user.cpf), _mask(update_dict.get('cpf')))
 
-    # Proibir alteração de CPF se já existir
-    if 'cpf' in update_dict and current_user.cpf and update_dict['cpf'] != current_user.cpf:
+    # Proibir alteração de CPF se já existir e não for temporário
+    from app.utils.validators import is_valid_cpf, is_temporary_cpf
+
+    if 'cpf' in update_dict and current_user.cpf and (not is_temporary_cpf(current_user.cpf)) and update_dict['cpf'] != current_user.cpf:
         logger.warning("Attempt to change CPF for user %s blocked (current: %s, incoming masked: %s)", current_user.id, _mask(current_user.cpf), _mask(update_dict.get('cpf')))
         raise HTTPException(status_code=400, detail="CPF não pode ser alterado uma vez cadastrado")
+
+    # Se CPF está sendo definido agora (ou atualizando um CPF temporário), validar formato
+    if 'cpf' in update_dict and (not current_user.cpf or is_temporary_cpf(current_user.cpf)):
+        if not is_valid_cpf(update_dict.get('cpf')):
+            logger.warning("Invalid CPF provided for user %s: %s", current_user.id, _mask(update_dict.get('cpf')))
+            raise HTTPException(status_code=400, detail="CPF inválido")
 
     # Capturar senha limpa antes de fazer hash (se fornecida)
     raw_password = None
