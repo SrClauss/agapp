@@ -342,12 +342,21 @@ async def update_existing_project(
     project_id: str,
     project_update: ProjectUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    request: Request = None,
 ):
+    # Log authorization header presence (masked) and ids for debugging
+    auth_header = request.headers.get('authorization') if request is not None else None
+    masked = None
+    if auth_header and isinstance(auth_header, str) and auth_header.lower().startswith('bearer '):
+        token = auth_header.split(' ', 1)[1]
+        masked = f"{token[:6]}...{token[-6:]}"
+    logging.info(f"Update request: project_id={project_id} Authorization_present={bool(auth_header)} masked_token={masked} current_user_id={getattr(current_user, 'id', None)}")
+
     project = await get_project(db, project_id)
     # Additional logging to diagnose authorization failures
     if not project or str(project.client_id) != str(current_user.id):
-        logging.warning(f"Unauthorized update attempt: project_id={project_id} project_client_id={getattr(project, 'client_id', None)} current_user_id={getattr(current_user, 'id', None)}")
+        logging.warning(f"Unauthorized update attempt: project_id={project_id} project_client_id={getattr(project, 'client_id', None)} current_user_id={getattr(current_user, 'id', None)} masked_token={masked}")
         raise HTTPException(status_code=403, detail="Not authorized")
     
     updated_project = await update_project(db, project_id, project_update)
