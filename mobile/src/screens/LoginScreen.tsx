@@ -87,9 +87,39 @@ export default function LoginScreen() {
     try {
       // Fetch Turnstile site key from backend
       setTurnstileLoading(true);
-      const { data } = await client.get('/auth/turnstile-site-key');
-      setTurnstileSiteKey(data.site_key);
-      setTurnstileLoading(false);
+      try {
+        const { data } = await client.get('/auth/turnstile-site-key');
+        setTurnstileSiteKey(data.site_key);
+      } catch (err: any) {
+        // If the dedicated endpoint is missing (404), fall back to fetching the /turnstile HTML page and extract site_key
+        if (err?.response?.status === 404) {
+          try {
+            const { data: html } = await client.get('/turnstile');
+            // Try to extract data-sitekey or a JS variable named site_key
+            const m1 = html.match(/data-sitekey=\"([^\"]+)\"/i);
+            const m2 = html.match(/site_key\W*[:=]\W*['\"]([^'\"]+)['\"]/i);
+            const m = m1 || m2;
+            if (m && m[1]) {
+              setTurnstileSiteKey(m[1]);
+            } else {
+              throw new Error('Não foi possível extrair a site_key do HTML do Turnstile');
+            }
+          } catch (e: any) {
+            setTurnstileLoading(false);
+            setError('Erro ao obter chave do Turnstile');
+            setLoading(false);
+            return;
+          }
+        } else {
+          setTurnstileLoading(false);
+          setError('Erro ao iniciar verificação anti-bot');
+          setLoading(false);
+          return;
+        }
+      } finally {
+        setTurnstileLoading(false);
+      }
+
       setShowTurnstile(true);
     } catch (e: any) {
       setTurnstileLoading(false);
