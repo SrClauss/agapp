@@ -202,8 +202,8 @@ export default function LoginScreen() {
         throw new Error(msg);
       }
 
-      // 2) Call login normally (backend no longer needs the token here)
-      const data = await loginWithEmail(email, password);
+      // 2) Call login passing the turnstile token so backend can accept it
+      const data = await loginWithEmail(email, password, token);
       await setToken(data.token);
       const user = data.user || (await fetchCurrentUser(data.token));
       setUser(user);
