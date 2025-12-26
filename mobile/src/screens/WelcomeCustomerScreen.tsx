@@ -1,17 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { StyleSheet, View, FlatList, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivityIndicator } from 'react-native-paper';
 import type { ListRenderItemInfo } from 'react-native';
-import { Button, TextInput, Divider } from 'react-native-paper';
+import { Button, TextInput } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import useLocationStore from '../stores/locationStore';
 import LocationAvatar from '../components/LocationAvatar';
 import { getSubcategoriesWithParent, SubcategoryWithParent, getSearchSuggestions, SearchSuggestion } from '../api/categories';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
-import LocationAvatar from '../components/LocationAvatar';
 import { BannerAd } from '../components/BannerAd';
 import CategoryGrid from '../components/CategoryGrid';
 import MyProjectsCarousel from '../components/MyProjectsCarousel';
@@ -201,14 +197,14 @@ export default function WelcomeCustomerScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.containerWelcome}>
         {/* Header - rebrand component */}
-        <LocationAvatar value={searchQuery} onChangeText={handleSearchTextChange} onSubmit={handleSearch} loading={loadingSuggestions} />
+        <LocationAvatar backgroundUri={require('../../assets/background.jpg')} />
 
-        <View style={{ height: 16 }} />
+        <View style={{ height: 12 }} />
 
         {/* Categorias em carrossel (reutiliza CategoryGrid) */}
         {/* Banner: usar componente BannerAd (ads) - moved above categories */}
         <View style={styles.bannerContainer}>
-          <BannerAd adType="banner_client" minHeight={140} maxHeight={220} />
+          <BannerAd adType="banner_client" minHeight={90} maxHeight={140} />
         </View>
 
         <View style={{ height: 12 }} />
@@ -226,44 +222,59 @@ export default function WelcomeCustomerScreen() {
           <MyProjectsCarousel />
         </View>
 
-        {/* Lista suspensa de sugestões */}
-        {showSuggestions && suggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            <FlatList
-              data={suggestions}
-              keyExtractor={(item, index) => `${item.type}-${item.id}-${index}`}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.suggestionItem}
-                  onPress={() => handleSelectSuggestion(item)}
-                >
-                  <View style={styles.suggestionContent}>
-                    <Text style={styles.suggestionName}>{item.name}</Text>
-                    {item.parent_category && (
-                      <Text style={styles.suggestionParent}>
-                        {item.parent_category}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={styles.suggestionType}>
-                    {item.type === 'category' ? 'Categoria' : 'Subcategoria'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              scrollEnabled={false}
-              style={styles.suggestionsList}
-            />
-          </View>
-        )}
+        <View style={{ height: 16 }} />
 
-        <Button
-        onPress={handleSearch}
-        mode="contained"
-        style={{ marginTop: 20 }}
-        icon={'magnify'}
-        >
-          Buscar
-        </Button>
+        {/* Search area moved out of LocationAvatar */}
+        <View style={styles.searchArea}>
+          <TextInput
+            placeholder="O que você está procurando?"
+            value={searchQuery}
+            onChangeText={handleSearchTextChange}
+            onSubmitEditing={handleSearch}
+            mode="flat"
+            style={styles.searchInputLocal}
+            underlineColor="transparent"
+            activeUnderlineColor="transparent"
+            placeholderTextColor="#666"
+            right={loadingSuggestions ? <TextInput.Icon icon="loading" /> : undefined}
+          />
+
+          {/* Suggestions dropdown (now placed next to search) */}
+          {showSuggestions && suggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <FlatList
+                data={suggestions}
+                keyExtractor={(item, index) => `${item.type}-${item.id}-${index}`}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.suggestionItem}
+                    onPress={() => handleSelectSuggestion(item)}
+                  >
+                    <View style={styles.suggestionContent}>
+                      <Text style={styles.suggestionName}>{item.name}</Text>
+                      {item.parent_category && (
+                        <Text style={styles.suggestionParent}>
+                          {item.parent_category}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.suggestionType}>
+                      {item.type === 'category' ? 'Categoria' : 'Subcategoria'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                scrollEnabled={false}
+                style={styles.suggestionsList}
+              />
+            </View>
+          )}
+
+          <View style={styles.searchButtonsRow}>
+            <Button buttonColor={colors.primary}  mode='contained' >Buscar</Button>
+            
+            <Button buttonColor={colors.error} mode='contained'>Limpar Busca</Button>
+          </View>
+        </View>
 
         {Array.isArray(filteredSubcategories) && filteredSubcategories.length > 0 && (
           <>
@@ -282,22 +293,15 @@ export default function WelcomeCustomerScreen() {
               />
             </View>
 
-            <Button
-              mode="contained"
-              labelStyle={{ color: 'white' }}
-              onPress={handlerClearSearch}
-              disabled={searchQuery === ''}
-              style={styles.clearButton}
-            >
-              Limpar Busca
-            </Button>
+            <TouchableOpacity activeOpacity={0.85} onPress={handlerClearSearch} disabled={searchQuery === ''} style={{ marginTop: 12 }}>
+              <LinearGradient colors={[colors.primary, colors.primaryDark]} style={styles.gradientButton}>
+                <Text style={styles.gradientButtonText}>Limpar Busca</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </>
         )}
 
      
-        {/* User's Projects Carousel */}
-        <MyProjectsCarousel />
-
         <Button 
         mode="outlined" 
         onPress={handleLogout} 
@@ -457,5 +461,17 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginVertical: 16,
-  }
+  },
+  /* Search area (moved out of LocationAvatar) */
+  searchArea: {
+    marginTop: 6,
+  },
+  searchInputLocal: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  searchButtonsRow: { flexDirection: 'column', marginTop: 12, gap: 8 },
+  gradientButton: { paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  gradientButtonText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  clearGradient: { backgroundColor: '#fff' }
 });

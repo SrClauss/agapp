@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ImageBackground, ImageSourcePropType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TextInput, IconButton, Badge, ActivityIndicator } from 'react-native-paper';
+import { IconButton, Badge, ActivityIndicator } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import useLocationStore from '../stores/locationStore';
-import { colors } from '../theme/colors';
 import useAuthStore from '../stores/authStore';
 import useNotificationStore from '../stores/notificationStore';
 import { useProfilePhoto } from '../hooks/useProfilePhoto';
@@ -12,14 +11,10 @@ import { useNavigation } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
 
 interface Props {
-  showLocation?: boolean;
-  value?: string;
-  onChangeText?: (t: string) => void;
-  onSubmit?: () => void;
-  loading?: boolean;
+  backgroundUri?: string | ImageSourcePropType;
 }
 
-export default function LocationAvatar({ showLocation = true, value, onChangeText, onSubmit, loading }: Props) {
+export default function LocationAvatar({ backgroundUri }: Props) {
   const locationText = useLocationStore((s) => s.locationText);
   const neighborhood = useLocationStore((s) => s.neighborhood);
   const locationLoading = useLocationStore((s) => s.loading);
@@ -53,10 +48,10 @@ export default function LocationAvatar({ showLocation = true, value, onChangeTex
   }, [localUri, user?.avatar_local]);
 
   useEffect(() => {
-    if (showLocation && !locationText && !locationLoading) {
+    if (!locationText && !locationLoading) {
       fetchLocation().catch(() => {});
     }
-  }, [showLocation, locationText, locationLoading, fetchLocation]);
+  }, [locationText, locationLoading, fetchLocation]);
 
   const openNotifications = () => {
     try {
@@ -76,222 +71,151 @@ export default function LocationAvatar({ showLocation = true, value, onChangeTex
 
   const initials = user?.full_name ? user.full_name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'U';
 
-  return (
-    <LinearGradient
-      colors={[colors.primary, colors.primaryDark]}
-      start={[0, 0]}
-      end={[1, 1]}
-      style={styles.header}
-    >
-      <View style={styles.headerTop}>
-        <TouchableOpacity onPress={() => { if (!locationLoading) fetchLocation().catch(() => {}); }}>
-          <Text style={styles.locationLabel}>Localização</Text>
-          <View style={styles.locationRow}>
-            <MaterialCommunityIcons name="map-marker" size={14} color="rgba(255,255,255,0.95)" />
-            {locationLoading ? (
-              <ActivityIndicator animating={true} color="#fff" size="small" style={{ marginLeft: 6 }} />
-            ) : (
-              <View style={{ marginLeft: 6 }}>
-                <Text style={styles.locationText}>{locationText || '—'}</Text>
-                {neighborhood ? <Text style={styles.locationNeighborhood}>{neighborhood}</Text> : null}
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
+  // Try to load default background
+  let bgSource: ImageSourcePropType | undefined;
+  if (backgroundUri) {
+    if (typeof backgroundUri === 'string') {
+      bgSource = { uri: backgroundUri };
+    } else {
+      bgSource = backgroundUri;
+    }
+  } else {
+    try {
+      bgSource = require('../../assets/background.jpg');
+    } catch (err) {
+      bgSource = undefined;
+    }
+  }
 
-        <View style={styles.headerIconsRight}>
-          <View style={styles.notificationWrapper}>
-            <IconButton onPress={openNotifications} icon={({ size, color }) => (
-              <MaterialCommunityIcons name={notificationCount > 0 ? 'bell' : 'bell-outline'} size={20} color="#fff" />
-            )} size={22} iconColor="#fff" style={{ margin: 0 }} />
-            {notificationCount > 0 && (
-              <Badge style={styles.notificationBadge}>{notificationCount}</Badge>
-            )}
-          </View>
-
-          <TouchableOpacity style={styles.avatarWrapper} onPress={openProfile}>
-            {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
-              <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
-            ) : (
-              <View style={styles.fallback}>
-                <Text style={styles.fallbackText}>{initials}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+  const content = (
+    <View style={styles.container}>
+      <TouchableOpacity onPress={() => { if (!locationLoading) fetchLocation().catch(() => {}); }} style={styles.locationSection}>
+        <Text style={styles.locationLabel}>Localização</Text>
+        <View style={styles.locationRow}>
+          <MaterialCommunityIcons name="map-marker" size={14} color="#fff" />
+          {locationLoading ? (
+            <ActivityIndicator animating={true} color="#fff" size="small" style={{ marginLeft: 6 }} />
+          ) : (
+            <View style={{ marginLeft: 6 }}>
+              <Text style={styles.locationText}>{locationText || '—'}</Text>
+              {neighborhood ? <Text style={styles.neighborhoodText}>{neighborhood}</Text> : null}
+            </View>
+          )}
         </View>
-      </View>
+      </TouchableOpacity>
 
-      { typeof value !== 'undefined' ? (
-        <View style={styles.searchWrapper}>
-          <MaterialCommunityIcons name="magnify" size={20} color="rgba(255,255,255,0.8)" style={{ marginLeft: 12 }} />
-          <TextInput
-            placeholder="O que você está procurando?"
-            value={value}
-            onChangeText={onChangeText}
-            onSubmitEditing={onSubmit}
-            mode="flat"
-            style={styles.searchInput}
-            underlineColor="transparent"
-            activeUnderlineColor="transparent"
-            placeholderTextColor="rgba(255,255,255,0.8)"
-            right={loading ? <TextInput.Icon icon="loading" /> : undefined}
+      <View style={styles.rightSection}>
+        <View style={styles.notificationWrapper}>
+          <IconButton
+            icon={() => <MaterialCommunityIcons name={notificationCount > 0 ? 'bell' : 'bell-outline'} size={20} color="#fff" />}
+            size={20}
+            onPress={openNotifications}
+            style={{ margin: 0 }}
           />
+          {notificationCount > 0 && <Badge style={styles.badge}>{notificationCount}</Badge>}
         </View>
-      ) : null }
+
+        <TouchableOpacity onPress={openProfile} style={styles.avatarWrapper}>
+          {(() => {
+            const src = localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url;
+            if (!src) {
+              return (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarText}>{initials}</Text>
+                </View>
+              );
+            }
+            return <Image source={{ uri: src }} style={styles.avatar} />;
+          })()}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (bgSource) {
+    return (
+      <ImageBackground source={bgSource} style={styles.header} imageStyle={{ borderRadius: 12 }} resizeMode="cover">
+        {content}
+      </ImageBackground>
+    );
+  }
+
+  return (
+    <LinearGradient colors={['#6a00f4', '#00d1b2']} start={[0, 0]} end={[1, 1]} style={styles.header}>
+      {content}
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
+    borderRadius: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 18,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
   },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  locationLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '600' },
-  locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  locationText: { color: '#fff', fontWeight: '700' },
-  locationNeighborhood: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 2 },
-  headerIcons: { flexDirection: 'row' },
-  headerIconsRight: { flexDirection: 'row', alignItems: 'center' },
-  iconBtn: { marginLeft: 8, padding: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)' },
-  notificationWrapper: { position: 'relative', marginRight: 8 },
-  notificationBadge: { position: 'absolute', top: 2, right: 2, backgroundColor: '#ff3b30', color: '#fff' },
-  avatarWrapper: { borderRadius: 20, overflow: 'hidden' },
-  avatar: { width: 40, height: 40, borderRadius: 20 },
-  fallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
-  fallbackText: { color: '#fff', fontWeight: '800' },
-  searchWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, marginBottom: 8, marginRight: 8 },
-  searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 12, color: '#fff', backgroundColor: 'transparent' },
-});                    if (!user) {
-                        try { navigation.navigate('Login' as never); } catch (err) { console.warn('Login screen not configured'); }
-                        return;
-                    }
-                    try { navigation.navigate('CompleteProfile' as never, { completeProfile: true } as any); } catch (err) { console.warn('SignUp screen not configured'); }
-                }}>
-                    {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
-                        <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
-                    ) : (
-                        <View style={styles.fallback}>
-                            <Text style={styles.fallbackText}>{initials}</Text>
-                        </View>
-                    )}
-                </TouchableOpacity>
-
-                
-        </View>
-    );
-}
-
-const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.03)',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(0, 0, 0, 0.1)',
-        justifyContent: 'space-between',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        paddingBottom: 25,
-    },
-
-    coordsText: {
-        fontSize: 10,
-        color: '#999',
-        marginTop: 2,
-    },
-    locationContainer: {
-        flex: 1,
-        marginRight: 12,
-    },
-    locationLabel: {
-        fontSize: 11,
-        color: '#999',
-        marginBottom: 4,
-        fontWeight: '500',
-    },
-    locationRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    pinContainer: {
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 10,
-   },
-    locationTextContainer: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    locationIcon: {
-        fontSize: 14,
-        marginRight: 4,
-    },
-    locationText: {
-        fontSize: 14,
-        color: '#333',
-        fontWeight: '600',
-    },
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        borderWidth: 2,
-        borderColor: '#FFF',
-    },
-    fallback: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#DDD',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#FFF',
-    },
-    neigbhorhoodText: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 2,
-    },
-    fallbackText: {
-        color: '#666',
-        fontWeight: '700',
-        fontSize: 16,
-    },
-    avatarWrapper: {
-        position: 'relative',
-        marginLeft: 10,
-        marginRight: 6,
-    },
-        // logout overlay removed per design
-    /* notificationsContainer removed in favor of notificationsContainerLeft */
-    notificationIcon: {
-        margin: 0,
-        padding: 0,
-    },
-    /* notificationBadge removed - using notificationBadgeLeft */
-    notificationsContainerLeft: {
-        marginRight: 8,
-        position: 'relative',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    notificationBadgeLeft: {
-        position: 'absolute',
-        top: -2,
-        right: -6,
-        backgroundColor: '#E53935',
-        color: '#fff',
-    },
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  locationSection: {
+    flex: 1,
+  },
+  locationLabel: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  neighborhoodText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notificationWrapper: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#ff3b30',
+  },
+  avatarWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+  },
+  avatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });

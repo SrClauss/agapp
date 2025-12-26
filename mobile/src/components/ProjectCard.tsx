@@ -35,7 +35,8 @@ export default function ProjectCard({ project, index = 0, showStatus = false, ca
   };
 
   const handlePress = () => {
-    navigation.navigate('ProjectSummary' as never, { project } as never);
+    // Navigate to ProjectDetail by id to avoid duplicated summary screen
+    navigation.navigate('ProjectDetail' as never, { projectId: project.id || (project as any)._id } as never);
   };
 
   const titleToShow = project.title

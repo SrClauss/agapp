@@ -192,6 +192,21 @@ async def unregister_fcm_token(
     else:
         return {"message": "Token not found or already removed"}
 
+
+# Public user info (minimal) - used by clients to display simple profile info for other users
+@router.get("/public/{user_id}")
+async def read_user_public(user_id: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+    """Return minimal public info for a user (id, full_name, avatar_url). No auth required."""
+    user = await db.users.find_one({"_id": user_id}, {"full_name": 1, "avatar_url": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "id": str(user.get("_id")),
+        "full_name": user.get("full_name"),
+        "avatar_url": user.get("avatar_url"),
+        "phone": user.get("phone")
+    }
+
 @router.get("/me/fcm-tokens")
 async def list_fcm_tokens(
     current_user: User = Depends(get_current_user),

@@ -108,17 +108,27 @@ export async function createProject(data: ProjectCreateData): Promise<Project> {
     ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
+  // Defensive normalization: ensure coordinates are sent as GeoJSON Point when provided as legacy array
+  const payload: any = { ...data };
+  if (payload.location && Array.isArray((payload.location as any).coordinates)) {
+    payload.location = {
+      ...payload.location,
+      coordinates: { type: 'Point', coordinates: (payload.location as any).coordinates },
+    };
+  }
+
   // Debug logging: masked token and payload (non-sensitive)
   if (__DEV__) {
     const masked = token ? `${token.slice(0,6)}...${token.slice(-6)}` : null;
     console.log('[projects.createProject] POST /projects/ token=', masked, 'payload=', {
-      title: data.title,
-      category: data.category,
-      remote_execution: data.remote_execution,
+      title: payload.title,
+      category: payload.category,
+      remote_execution: payload.remote_execution,
+      location: payload.location ? (payload.location.coordinates ? '[geo-point]' : '[no-coords]') : '[no-location]',
     });
   }
 
-  const response = await client.post('/projects/', data, config);
+  const response = await client.post('/projects/', payload, config);
   return response.data;
 }
 
@@ -129,15 +139,25 @@ export async function updateProject(projectId: string, data: ProjectCreateData):
     ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
+  // Defensive normalization for update: convert legacy coordinate arrays to GeoJSON
+  const payload: any = { ...data };
+  if (payload.location && Array.isArray((payload.location as any).coordinates)) {
+    payload.location = {
+      ...payload.location,
+      coordinates: { type: 'Point', coordinates: (payload.location as any).coordinates },
+    };
+  }
+
   if (__DEV__) {
     const masked = token ? `${token.slice(0,6)}...${token.slice(-6)}` : null;
     console.log('[projects.updateProject] PUT /projects/' + projectId + ' token=', masked, 'payload=', {
-      title: data.title,
-      category: data.category,
+      title: payload.title,
+      category: payload.category,
+      location: payload.location ? (payload.location.coordinates ? '[geo-point]' : '[no-coords]') : '[no-location]',
     });
   }
 
-  const response = await client.put(`/projects/${projectId}`, data, config);
+  const response = await client.put(`/projects/${projectId}`, payload, config);
   return response.data;
 }
 

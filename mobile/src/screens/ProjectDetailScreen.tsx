@@ -9,17 +9,23 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivityIndicator, Chip, Card, Avatar, Divider, Button } from 'react-native-paper';
+import { ActivityIndicator, Chip, Card, Avatar, Divider, Button, Switch } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ImageBackground } from 'react-native';
+import client from '../api/axiosClient';
+import { updateProject } from '../api/projects';
 import { getProject, Project, GeocodedAddress } from '../api/projects';
 // formatted address is available on project.location.address as `.formatted` (if geocoded)
 import { createContactForProject } from '../api/contacts';
+import { getUserPublic } from '../api/users';
 import { useAuthStore } from '../stores/authStore';
 import { colors } from '../theme/colors';
 
 interface RouteParams {
-  projectId: string;
+  projectId?: string;
+  project?: Project;
 }
 
 export default function ProjectDetailScreen() {
@@ -32,13 +38,53 @@ export default function ProjectDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [contacting, setContacting] = useState(false);
+  const [showFullInfo, setShowFullInfo] = useState<boolean>(false); // true = show all details (owner), false = limited view (professional)
+  const [clientPhonePublic, setClientPhonePublic] = useState<string | null>(null);
 
   const loadProject = async () => {
     try {
-      const data = await getProject(params.projectId);
-      setProject(data);
-    } catch (error) {
+      console.log('[ProjectDetail] params:', { projectParam: params?.project ? !!params.project : false, projectIdParam: params?.projectId });
+      // Accept either full project passed in params (compatibility) or fetch by id
+      let proj: Project | null = null;
+      if (params?.project) {
+        proj = params.project;
+        // keep full client_name in project; masking handled by view mode
+        setProject(proj);
+      } else if (params?.projectId) {
+        const data = await getProject(params.projectId);
+        proj = data;
+        setProject(data);
+      } else {
+        Alert.alert('Erro', 'ID do projeto não recebido. Voltando.');
+        navigation.goBack();
+        return;
+      }
+
+      // If public client info available, fetch public user info (name, phone) to fill missing fields
+      if (proj && (proj.client_id || (proj as any).client)) {
+        try {
+          const clientId = proj.client_id || (proj as any).client || ''; // fallback keys
+          if (clientId) {
+            const userPublic = await getUserPublic(clientId);
+            if (userPublic) {
+              if (!proj.client_name && userPublic.full_name) {
+                setProject(prev => prev ? { ...prev, client_name: userPublic.full_name } : prev);
+              }
+              if (userPublic.phone) {
+                setClientPhonePublic(userPublic.phone);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch public user info for project client:', err);
+        }
+      }
+    } catch (error: any) {
       console.error('Erro ao carregar projeto:', error);
+      // If 404, inform user and go back
+      const msg = error?.response?.status === 404 ? 'Projeto não encontrado.' : 'Erro ao carregar projeto.';
+      Alert.alert('Erro', msg);
+      navigation.goBack();
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -47,7 +93,19 @@ export default function ProjectDetailScreen() {
 
   useEffect(() => {
     loadProject();
-  }, [params.projectId]);
+  }, [params.projectId, params.project]);
+
+  // Set view mode when project or user changes
+  useEffect(() => {
+    if (!project) return;
+    try {
+      const currentUser = useAuthStore.getState().user;
+      const isOwner = Boolean(currentUser && project && (String(currentUser.id) === String(project.client_id)));
+      setShowFullInfo(isOwner);
+    } catch (e) {
+      // ignore
+    }
+  }, [project, user]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -75,7 +133,12 @@ export default function ProjectDetailScreen() {
           onPress: async () => {
             try {
               setContacting(true);
-              const contact = await createContactForProject(params.projectId, {
+              const pid = project?.id || params.projectId;
+              if (!pid) {
+                Alert.alert('Erro', 'ID do projeto ausente.');
+                return;
+              }
+              const contact = await createContactForProject(pid, {
                 contact_type: 'proposal',
                 contact_details: {
                   message: 'Tenho interesse neste projeto!',
@@ -155,6 +218,28 @@ export default function ProjectDetailScreen() {
     return `${category.main} › ${category.sub}`;
   };
 
+  function maskPhone(phone?: string) {
+    if (!phone) return '—';
+    const digits = String(phone).replace(/\D/g, '');
+    if (digits.length <= 4) return digits;
+    const firstTwo = digits.slice(0,2);
+    const lastTwo = digits.slice(-2);
+    return `${firstTwo}...${lastTwo}`;
+  }
+
+  function shortLocation(proj?: Project | null) {
+    const addr = proj?.location?.address as any;
+    if (!addr) return '—';
+    const city = addr.city || addr.town || addr.village || addr.subregion || '';
+    const region = addr.region || addr.state || '';
+    const postal = addr.postalCode || addr.postal_code || '';
+    const parts = [] as string[];
+    if (city) parts.push(city);
+    if (region) parts.push(region);
+    const main = parts.join(' - ');
+    return `${main}${postal ? `, CEP: ${postal}` : ''}` || '—';
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -182,22 +267,84 @@ export default function ProjectDetailScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {project.title}
-          </Text>
-          <Chip
-            style={[styles.statusChip, { backgroundColor: getStatusColor(project.status) }]}
-            textStyle={styles.statusChipText}
-          >
-            {getStatusLabel(project.status)}
-          </Chip>
+          <ImageBackground source={require('../../assets/background.jpg')} style={styles.headerGradient} imageStyle={{ borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
+        {/* Top bar: back and actions */}
+        <View style={styles.headerInner}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+            <MaterialIcons name="arrow-back" size={20} color={colors.primary} />
+          </TouchableOpacity>
+
+          <View style={styles.headerActionsRight}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => {
+                // Edit: navigate to edit screen with project
+                if (project) navigation.navigate('EditProject' as never, { project } as any);
+              }}
+            >
+              <MaterialIcons name="edit" size={18} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconButton, { marginLeft: 8 }]}
+              onPress={() => {
+                if (!project) return Alert.alert('Erro', 'Projeto não carregado');
+                Alert.alert('Confirmar exclusão', 'Deseja excluir (fechar) este projeto?', [
+                  { text: 'Cancelar', style: 'cancel' },
+                  {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        setLoading(true);
+                        const pid = project.id || (project as any)._id;
+                        const token = useAuthStore.getState().token;
+                        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+                        // Use update via client to set status closed (soft-delete)
+                        await client.put(`/projects/${pid}`, { status: 'closed' }, config);
+                        Alert.alert('Sucesso', 'Projeto fechado/excluído.');
+                        navigation.goBack();
+                      } catch (err: any) {
+                        console.error('Erro ao excluir projeto:', err);
+                        Alert.alert('Erro', err?.response?.data?.detail || 'Falha ao excluir');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
+                  }
+                ]);
+              }}
+            >
+              <MaterialIcons name="delete" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+
+        {/* Centered status / date / title */}
+        <View style={styles.headerContent}>
+          <View style={{ alignItems: 'center', marginBottom: 8 }}>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusPill, { backgroundColor: getStatusColor(project.status) }]}> 
+                <Text style={styles.statusPillText}>{getStatusLabel(project.status)}</Text>
+              </View>
+              <View style={[styles.datePill, { marginLeft: 8 }] }>
+                <MaterialIcons name="schedule" size={12} color="rgba(255,255,255,0.95)" />
+                <Text style={[styles.dateText, { color: 'rgba(255,255,255,0.95)' }]}>  Publicado em {formatDate(project.created_at)}</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.headerTitleLarge, { textAlign: 'center' }]} numberOfLines={2}>{project.title}</Text>
+            {project.client_name ? <Text style={[styles.headerSubtitle, { textAlign: 'center' }]}>{project.client_name}</Text> : null}
+
+            {/* View mode toggle (only visible to owner) */}
+            {user && project && String(user.id) === String(project.client_id) ? (
+              <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.9)', marginRight: 6 }}>{showFullInfo ? 'Mostrar tudo' : 'Mostrar menos'}</Text>
+                <Switch value={showFullInfo} onValueChange={v => setShowFullInfo(v)} color="#fff" />
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </ImageBackground>
 
       <ScrollView
         style={styles.scrollView}
@@ -206,73 +353,78 @@ export default function ProjectDetailScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Project Info Card */}
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text style={styles.sectionTitle}>Detalhes do Projeto</Text>
-            
-            <View style={styles.infoRow}>
-              <MaterialIcons name="category" size={20} color={colors.textSecondary} />
-              <Text style={styles.infoText}>{getCategoryDisplay(project.category)}</Text>
+        {/* Budget Card (top) */}
+        <View style={styles.budgetCard}>
+          <View style={styles.budgetLeft}>
+            <View style={styles.budgetIcon}><MaterialIcons name="attach-money" size={22} color={colors.primary} /></View>
+            <View>
+              <Text style={styles.budgetLabel}>Orçamento Estimado</Text>
+              <Text style={styles.budgetValue}>
+                {project.budget_min && project.budget_max
+                  ? `${formatCurrency(project.budget_min)} - ${formatCurrency(project.budget_max)}`
+                  : project.budget_min
+                  ? `A partir de ${formatCurrency(project.budget_min)}`
+                  : project.budget_max
+                  ? `Até ${formatCurrency(project.budget_max)}`
+                  : '—'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Details Card */}
+        <View style={styles.cardRounded}>
+          <View style={styles.cardContentPadded}>
+            <Text style={styles.sectionTitle}>Detalhes técnicos</Text>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailIcon}><MaterialIcons name="construction" size={20} color={colors.primary} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.detailLabel}>Serviço</Text>
+                <Text style={styles.detailTitle}>{getCategoryDisplay(project.category)}</Text>
+                {typeof project.category !== 'string' && project.category.sub ? (
+                  <Text style={styles.detailSub}>{project.category.sub}</Text>
+                ) : null}
+              </View>
             </View>
 
-            <View style={styles.infoRow}>
-              <MaterialIcons name="event" size={20} color={colors.textSecondary} />
-              <Text style={styles.infoText}>Criado em {formatDate(project.created_at)}</Text>
-
-              
+            <View style={styles.detailRow}>
+              <View style={styles.detailIcon}><MaterialIcons name="person" size={20} color={colors.primary} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.detailLabel}>Cliente Responsável</Text>
+                <Text style={styles.detailTitle}>{showFullInfo ? (project.client_name || '—') : (project.client_name ? String(project.client_name).split(' ')[0] : '—')}</Text>
+                {(!showFullInfo && (clientPhonePublic || (project as any).client_phone)) ? (
+                  <Text style={styles.detailSub}>{maskPhone(clientPhonePublic || (project as any).client_phone || '')}</Text>
+                ) : null}
+              </View>
             </View>
 
-            {project.location?.address && (
-              <View style={styles.infoRow}>
-                <MaterialIcons name="location-on" size={20} color={colors.textSecondary} />
-                <Text style={styles.infoText}>{(project.location.address as GeocodedAddress)?.formatted || (project.location.address as GeocodedAddress)?.name || (project.location.address as GeocodedAddress)?.display_name || String(project.location.address || '')}</Text>
+            <View style={styles.detailRow}>
+              <View style={styles.detailIcon}><MaterialIcons name="location-on" size={20} color={colors.primary} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.detailLabel}>Local da Obra</Text>
+              {showFullInfo ? (
+                <>
+                  <Text style={styles.detailTitle}>{(project.location?.address as GeocodedAddress)?.formatted || ''}</Text>
+                  {(project.location?.address as any)?.postalCode ? <Text style={styles.detailSub}>CEP: {(project.location?.address as any).postalCode}</Text> : null}
+                </>
+              ) : (
+                <>
+                  <Text style={styles.detailTitle}>{shortLocation(project)}</Text>
+                </>
+              )}
               </View>
-            )}
+            </View>
+          </View>
+        </View>
 
-            {project.remote_execution && (
-              <View style={styles.infoRow}>
-                <MaterialIcons name="wifi" size={20} color={colors.info} />
-                <Text style={[styles.infoText, { color: colors.info }]}>
-                  Aceita execução remota
-                </Text>
-              </View>
-            )}
-
-            <Divider style={styles.divider} />
-
-            <Text style={styles.descriptionTitle}>Descrição</Text>
+        {/* Description */}
+        <View style={styles.cardRounded}>
+          <View style={styles.cardContentPadded}>
+            <Text style={styles.sectionTitle}>Sobre o pedido</Text>
             <Text style={styles.description}>{project.description}</Text>
-
-            {(project.budget_min || project.budget_max) && (
-              <>
-                <Divider style={styles.divider} />
-                <View style={styles.budgetContainer}>
-                  <Text style={styles.budgetTitle}>Orçamento</Text>
-                  <Text style={styles.budgetText}>
-                    {project.budget_min && project.budget_max
-                      ? `${formatCurrency(project.budget_min)} - ${formatCurrency(project.budget_max)}`
-                      : project.budget_min
-                      ? `A partir de ${formatCurrency(project.budget_min)}`
-                      : `Até ${formatCurrency(project.budget_max)}`}
-                  </Text>
-                </View>
-              </>
-            )}
-
-            {project.final_budget && (
-              <>
-                <Divider style={styles.divider} />
-                <View style={styles.budgetContainer}>
-                  <Text style={styles.budgetTitle}>Valor Final</Text>
-                  <Text style={[styles.budgetText, { color: colors.success }]}>
-                    {formatCurrency(project.final_budget)}
-                  </Text>
-                </View>
-              </>
-            )}
-          </Card.Content>
-        </Card>
+          </View>
+        </View>
 
         {/* Professionals who contacted */}
         <Card style={styles.card}>
@@ -379,6 +531,13 @@ export default function ProjectDetailScreen() {
           </Card>
         )}
 
+        {/* Footer Status Banner */}
+        <View style={styles.footerBanner}>
+          <View style={styles.footerBadge}><MaterialIcons name="check-circle" size={24} color="rgba(59,130,246,0.15)" /></View>
+          <Text style={styles.footerTitle}>{getStatusLabel(project.status)}</Text>
+          <Text style={styles.footerSubtitle}>As informações acima representam o estado atual deste pedido de serviço.</Text>
+        </View>
+
         {/* Accept & Contact Button for Professionals */}
         {user && user.roles.includes('professional') && project.status === 'open' && (
           <View style={styles.actionButtonContainer}>
@@ -423,39 +582,34 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginVertical: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  headerGradient: {
+    height: 180,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
+    marginLeft: 20,
+    marginRight: 20,
+    overflow: 'hidden',
   },
-  backButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  headerTextContainer: {
-    flex: 1,
+  headerInner: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    flex: 1,
-    marginRight: 12,
+  iconButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
   },
-  statusChip: {
-    height: 28,
-  },
-  statusChipText: {
-    color: '#fff',
-    fontSize: 12,
-  },
+  headerActionsRight: { flexDirection: 'row', alignItems: 'center' },
+  headerContent: { paddingHorizontal: 16, paddingTop: 14, alignItems: 'center' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, justifyContent: 'center' },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, marginRight: 8 },
+  statusPillText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  datePill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
+  dateText: { color: 'rgba(255,255,255,0.9)', fontSize: 12 },
+  headerTitleLarge: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 6 },
+  headerSubtitle: { color: 'rgba(255,255,255,0.9)', marginTop: 4 },
   scrollView: {
     flex: 1,
   },
@@ -468,11 +622,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+  /* New card style with rounded 3xl look */
+  cardRounded: {
     marginBottom: 16,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 30,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cardContentPadded: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   infoRow: {
     flexDirection: 'row',
@@ -485,38 +655,51 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
+  /* Budget card */
+  budgetCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    elevation: 2,
+  },
+  budgetLeft: { flexDirection: 'row', alignItems: 'center' },
+  budgetIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#FAFAFF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  budgetLabel: { fontSize: 11, color: colors.textSecondary, textTransform: 'uppercase', fontWeight: '800' },
+  budgetValue: { fontSize: 18, fontWeight: '900', color: colors.text },
+
   divider: {
     marginVertical: 16,
   },
   descriptionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   description: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
     lineHeight: 22,
   },
-  budgetContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  budgetTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  budgetText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primary,
-  },
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  detailIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FAFAFF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  detailLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '700', textTransform: 'uppercase' },
+  detailTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  detailSub: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
+
   professionalsContainer: {
     gap: 12,
   },
+  footerBanner: { backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 24, padding: 20, alignItems: 'center', marginBottom: 16 },
+  footerBadge: { padding: 12, backgroundColor: '#fff', borderRadius: 16, marginBottom: 8 },
+  footerTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  footerSubtitle: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
   professionalItem: {
     flexDirection: 'row',
     alignItems: 'center',

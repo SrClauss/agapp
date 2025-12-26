@@ -40,3 +40,8 @@ export async function updateProfessionalSettings(
   return data;
 }
 
+export async function getUserPublic(userId: string): Promise<{ id: string; full_name?: string; avatar_url?: string; phone?: string }> {
+  const { data } = await client.get(`/users/public/${userId}`);
+  return data;
+}
+

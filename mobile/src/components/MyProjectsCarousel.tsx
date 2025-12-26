@@ -45,8 +45,8 @@ export default function MyProjectsCarousel() {
   );
 
   const handleProjectPress = (project: Project) => {
-    // Navega para a nova tela de resumo passando o objeto do projeto
-    navigation.navigate('ProjectSummary' as never, { project } as never);
+    // Navega para a tela de detalhe pelo id (substitui resumo histórico)
+    navigation.navigate('ProjectDetail' as never, { projectId: project.id || (project as any)._id } as never);
   };
 
   const formatDate = (dateString: string) => {

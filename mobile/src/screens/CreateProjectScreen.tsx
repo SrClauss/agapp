@@ -232,7 +232,8 @@ export default function CreateProjectScreen({ overrideParams }: CreateProjectPro
       const location: ProjectLocation = {};
       
       if (currentLocation) {
-        location.coordinates = [currentLocation.longitude, currentLocation.latitude];
+        // Send coordinates as GeoJSON Point to satisfy backend validation (Pydantic expects object {type:'Point', coordinates:[lng,lat]})
+        location.coordinates = { type: 'Point', coordinates: [currentLocation.longitude, currentLocation.latitude] } as any;
         location.address = {
           formatted: currentAddressFormatted,
           ...(currentAddressData?.city && { city: currentAddressData.city }),
@@ -297,12 +298,12 @@ export default function CreateProjectScreen({ overrideParams }: CreateProjectPro
             text: 'OK',
             onPress: () => {
               if (params.project) {
-                // After editing, reset the navigation stack so ProjectSummary sits on top of WelcomeCustomer
+                // After editing, reset the navigation stack so ProjectDetail sits on top of WelcomeCustomer
                 navigation.reset({
                   index: 1,
                   routes: [
                     { name: 'WelcomeCustomer' as never },
-                    { name: 'ProjectSummary' as never, params: { project } as any },
+                    { name: 'ProjectDetail' as never, params: { projectId: (project as any).id || (project as any)._id || resolvedId } as any },
                   ],
                 });
               } else {

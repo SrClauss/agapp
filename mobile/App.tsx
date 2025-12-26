@@ -11,7 +11,6 @@ import SearchResultsScreen from './src/screens/SearchResultsScreen';
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
 import ProjectDetailScreen from './src/screens/ProjectDetailScreen';
 import AllProjectsScreen from './src/screens/AllProjectsScreen';
-import ProjectSummaryScreen from './src/screens/ProjectSummaryScreen';
 import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
 import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
 import AdScreen from './src/screens/AdScreen';
@@ -115,7 +114,6 @@ export default function App() {
           <Stack.Screen name="CreateProject" component={CreateProjectScreen} options={{ headerShown: false }} />
           <Stack.Screen name="EditProject" component={require('./src/screens/EditProjectScreen').default} options={{ headerShown: false }} />
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="ProjectSummary" component={ProjectSummaryScreen} options={{ title: 'Resumo do Projeto' }} />
           <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />
           <Stack.Screen name="WelcomeProfessional" component={WelcomeProfessionalScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ProjectsList" component={ProjectsListScreen} options={{ title: 'Projetos' }} />

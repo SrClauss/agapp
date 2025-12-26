@@ -29,6 +29,7 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
   const [index, setIndex] = useState(0);
   const [bannerHeight, setBannerHeight] = useState<number>(minHeight);
   const [firstImageLoaded, setFirstImageLoaded] = useState(false);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
 
   // Container width: 90% of screen width
   const containerWidth = screenWidth * 0.9;
@@ -106,17 +107,20 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
                   style={[
                     styles.image,
                     {
-                      width: containerWidth,
-                      height: bannerHeight
+                      height: bannerHeight,
+                      width: imageAspectRatio ? Math.min(containerWidth, Math.round(bannerHeight * imageAspectRatio)) : containerWidth,
+                      alignSelf: 'center'
                     }
                   ]}
-                  resizeMode="cover"
+                  resizeMode="contain"
                   onLoad={(e) => {
-                    // Apenas a primeira imagem define a altura do banner
+                    // Apenas a primeira imagem define a altura do banner e a proporção
                     if (itemIndex === 0 && !firstImageLoaded) {
                       const { width: imgW, height: imgH } = e.nativeEvent.source;
+                      const aspect = imgW && imgH ? imgW / imgH : null;
                       const newHeight = calculateHeight(imgW, imgH);
                       setBannerHeight(newHeight);
+                      if (aspect) setImageAspectRatio(aspect);
                       setFirstImageLoaded(true);
                     }
                   }}
@@ -176,6 +180,7 @@ const styles = StyleSheet.create({
   itemContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden'
   },
   dotsContainer: {
     position: 'absolute',
