@@ -53,8 +53,9 @@ export default function CompleteProfileScreen() {
       return;
     }
 
-    // CPF validation
-    if (!isValidCPF(cpf)) {
+    // CPF validation - only validate if user entered a real CPF (not temporary)
+    const isTemporaryCpf = !cpf || cpf === '000.000.000-00' || cpf.replace(/\D/g, '') === '00000000000';
+    if (!isTemporaryCpf && !isValidCPF(cpf)) {
       setError('CPF inválido');
       return;
     }
@@ -65,10 +66,15 @@ export default function CompleteProfileScreen() {
       // Preparar payload e enviar somente senha se fornecida
       const payload: any = {
         phone,
-        cpf,
         full_name: user.full_name, // Usar o nome do Google
         roles,
       };
+      
+      // Only send CPF if it's not temporary (user actually entered a real CPF)
+      if (!isTemporaryCpf) {
+        payload.cpf = cpf;
+      }
+      
       if (password) payload.password = password;
 
       const updatedUser = await completeProfile(token, payload);
@@ -113,9 +119,13 @@ export default function CompleteProfileScreen() {
           onChangeText={setCpf}
           keyboardType="numeric"
           style={commonStyles.input}
-          //editable={!user?.cpf}
+          editable={!user?.cpf || user.cpf === '000.000.000-00'}
         />
-        {user?.cpf ? <HelperText type="info">CPF já cadastrado e não pode ser alterado</HelperText> : null}
+        {user?.cpf && user.cpf !== '000.000.000-00' ? (
+          <HelperText type="info">CPF já cadastrado e não pode ser alterado</HelperText>
+        ) : (
+          <HelperText type="info">Digite seu CPF completo (apenas números)</HelperText>
+        )}
 
         <TextInput
           label="Telefone"
