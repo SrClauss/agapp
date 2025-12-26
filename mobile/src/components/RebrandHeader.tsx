@@ -12,23 +12,29 @@ import { useNavigation } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
 
 interface Props {
-  showLocation?: boolean;
-  value?: string;
-  onChangeText?: (t: string) => void;
-  onSubmit?: () => void;
+  value: string;
+  onChangeText: (t: string) => void;
+  onSubmit: () => void;
   loading?: boolean;
 }
 
-export default function LocationAvatar({ showLocation = true, value, onChangeText, onSubmit, loading }: Props) {
+export default function RebrandHeader({ value, onChangeText, onSubmit, loading }: Props) {
   const locationText = useLocationStore((s) => s.locationText);
   const neighborhood = useLocationStore((s) => s.neighborhood);
   const locationLoading = useLocationStore((s) => s.loading);
   const fetchLocation = useLocationStore((s) => s.fetchLocation);
 
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((s) => s.user);
   const notificationCount = useNotificationStore((s) => s.count);
   const { localUri } = useProfilePhoto(user?.id || null, user?.avatar_url || null);
   const navigation = useNavigation();
+
+  useEffect(() => {
+    // If we don't have a location yet, try fetching it
+    if (!locationText && !locationLoading) {
+      fetchLocation().catch(() => {});
+    }
+  }, [locationText, locationLoading, fetchLocation]);
 
   const [cachedPhotoUri, setCachedPhotoUri] = useState<string | null>(null);
 
@@ -51,12 +57,6 @@ export default function LocationAvatar({ showLocation = true, value, onChangeTex
     }
     if (!localUri && !user?.avatar_local) findCachedPhoto();
   }, [localUri, user?.avatar_local]);
-
-  useEffect(() => {
-    if (showLocation && !locationText && !locationLoading) {
-      fetchLocation().catch(() => {});
-    }
-  }, [showLocation, locationText, locationLoading, fetchLocation]);
 
   const openNotifications = () => {
     try {
@@ -111,7 +111,9 @@ export default function LocationAvatar({ showLocation = true, value, onChangeTex
 
           <TouchableOpacity style={styles.avatarWrapper} onPress={openProfile}>
             {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
-              <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
+              <React.Fragment>
+                <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
+              </React.Fragment>
             ) : (
               <View style={styles.fallback}>
                 <Text style={styles.fallbackText}>{initials}</Text>
@@ -121,23 +123,21 @@ export default function LocationAvatar({ showLocation = true, value, onChangeTex
         </View>
       </View>
 
-      { typeof value !== 'undefined' ? (
-        <View style={styles.searchWrapper}>
-          <MaterialCommunityIcons name="magnify" size={20} color="rgba(255,255,255,0.8)" style={{ marginLeft: 12 }} />
-          <TextInput
-            placeholder="O que você está procurando?"
-            value={value}
-            onChangeText={onChangeText}
-            onSubmitEditing={onSubmit}
-            mode="flat"
-            style={styles.searchInput}
-            underlineColor="transparent"
-            activeUnderlineColor="transparent"
-            placeholderTextColor="rgba(255,255,255,0.8)"
-            right={loading ? <TextInput.Icon icon="loading" /> : undefined}
-          />
-        </View>
-      ) : null }
+      <View style={styles.searchWrapper}>
+        <MaterialCommunityIcons name="magnify" size={20} color="rgba(255,255,255,0.8)" style={{ marginLeft: 12 }} />
+        <TextInput
+          placeholder="O que você está procurando?"
+          value={value}
+          onChangeText={onChangeText}
+          onSubmitEditing={onSubmit}
+          mode="flat"
+          style={styles.searchInput}
+          underlineColor="transparent"
+          activeUnderlineColor="transparent"
+          placeholderTextColor="rgba(255,255,255,0.8)"
+          right={loading ? <TextInput.Icon icon="loading" /> : undefined}
+        />
+      </View>
     </LinearGradient>
   );
 }
@@ -164,134 +164,7 @@ const styles = StyleSheet.create({
   avatar: { width: 40, height: 40, borderRadius: 20 },
   fallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   fallbackText: { color: '#fff', fontWeight: '800' },
+  greeting: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 12, marginBottom: 12 },
   searchWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, marginBottom: 8, marginRight: 8 },
   searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 12, color: '#fff', backgroundColor: 'transparent' },
-});                    if (!user) {
-                        try { navigation.navigate('Login' as never); } catch (err) { console.warn('Login screen not configured'); }
-                        return;
-                    }
-                    try { navigation.navigate('CompleteProfile' as never, { completeProfile: true } as any); } catch (err) { console.warn('SignUp screen not configured'); }
-                }}>
-                    {(localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url) ? (
-                        <Image source={{ uri: localUri || cachedPhotoUri || user?.avatar_local || user?.avatar_url }} style={styles.avatar} />
-                    ) : (
-                        <View style={styles.fallback}>
-                            <Text style={styles.fallbackText}>{initials}</Text>
-                        </View>
-                    )}
-                </TouchableOpacity>
-
-                
-        </View>
-    );
-}
-
-const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.03)',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(0, 0, 0, 0.1)',
-        justifyContent: 'space-between',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        paddingBottom: 25,
-    },
-
-    coordsText: {
-        fontSize: 10,
-        color: '#999',
-        marginTop: 2,
-    },
-    locationContainer: {
-        flex: 1,
-        marginRight: 12,
-    },
-    locationLabel: {
-        fontSize: 11,
-        color: '#999',
-        marginBottom: 4,
-        fontWeight: '500',
-    },
-    locationRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    pinContainer: {
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 10,
-   },
-    locationTextContainer: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    locationIcon: {
-        fontSize: 14,
-        marginRight: 4,
-    },
-    locationText: {
-        fontSize: 14,
-        color: '#333',
-        fontWeight: '600',
-    },
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        borderWidth: 2,
-        borderColor: '#FFF',
-    },
-    fallback: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#DDD',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#FFF',
-    },
-    neigbhorhoodText: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 2,
-    },
-    fallbackText: {
-        color: '#666',
-        fontWeight: '700',
-        fontSize: 16,
-    },
-    avatarWrapper: {
-        position: 'relative',
-        marginLeft: 10,
-        marginRight: 6,
-    },
-        // logout overlay removed per design
-    /* notificationsContainer removed in favor of notificationsContainerLeft */
-    notificationIcon: {
-        margin: 0,
-        padding: 0,
-    },
-    /* notificationBadge removed - using notificationBadgeLeft */
-    notificationsContainerLeft: {
-        marginRight: 8,
-        position: 'relative',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    notificationBadgeLeft: {
-        position: 'absolute',
-        top: -2,
-        right: -6,
-        backgroundColor: '#E53935',
-        color: '#fff',
-    },
 });

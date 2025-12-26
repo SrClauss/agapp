@@ -4,6 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator } from 'react-native-paper';
 import type { ListRenderItemInfo } from 'react-native';
 import { Button, TextInput, Divider } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import useLocationStore from '../stores/locationStore';
+import LocationAvatar from '../components/LocationAvatar';
 import { getSubcategoriesWithParent, SubcategoryWithParent, getSearchSuggestions, SearchSuggestion } from '../api/categories';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
@@ -196,28 +200,31 @@ export default function WelcomeCustomerScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.containerWelcome}>
-        <LocationAvatar />
-        <Text>{user?.cpf}</Text>
+        {/* Header - rebrand component */}
+        <LocationAvatar value={searchQuery} onChangeText={handleSearchTextChange} onSubmit={handleSearch} loading={loadingSuggestions} />
 
-        <Divider style={styles.divider} />
+        <View style={{ height: 16 }} />
 
-        <BannerAd adType="banner_client" minHeight={90} maxHeight={200} />
+        {/* Categorias em carrossel (reutiliza CategoryGrid) */}
+        {/* Banner: usar componente BannerAd (ads) - moved above categories */}
+        <View style={styles.bannerContainer}>
+          <BannerAd adType="banner_client" minHeight={140} maxHeight={220} />
+        </View>
 
-        {/* Botão de limpar cache removido (debug retirado). */}
+        <View style={{ height: 12 }} />
 
-        <TextInput
-          style={styles.textInput}
-          label="O que você está procurando hoje?"
-          mode='outlined'
-          value={searchQuery}
-          onChangeText={handleSearchTextChange}
-          onSubmitEditing={handleSearch}
-          left={<TextInput.Icon icon="magnify" />}
-          right={loadingSuggestions ? <TextInput.Icon icon="loading" /> : undefined}
-        />
-
-        {/* Grid de categorias */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeading}>Categorias</Text>
+        </View>
         <CategoryGrid />
+
+        <View style={styles.sectionSpacer} />
+
+        {/* Meus Projetos (usar componente existente) */}
+        <Text style={styles.sectionHeading}>Meus Projetos</Text>
+        <View style={styles.projectsCardWrapper}>
+          <MyProjectsCarousel />
+        </View>
 
         {/* Lista suspensa de sugestões */}
         {showSuggestions && suggestions.length > 0 && (
@@ -311,6 +318,34 @@ const styles = StyleSheet.create({
     marginTop: 12,
     backgroundColor: colors.error,
   },
+  /* Header styles for new branding */
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  locationLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '600' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  locationText: { color: '#fff', fontWeight: '700', marginLeft: 6 },
+  headerIcons: { flexDirection: 'row', gap: 8 },
+  iconBtn: { marginLeft: 8, padding: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)' },
+  greeting: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 12, marginBottom: 12 },
+  searchWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, marginBottom: 8, marginRight: 8 },
+  searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 12, color: '#fff' },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 0, marginTop: 6 },
+  sectionHeading: { fontSize: 16, fontWeight: '700', color: colors.text, marginLeft: 8 },
+  seeAllText: { color: colors.primaryDark, fontWeight: '700', marginRight: 8 },
+  sectionSpacer: { height: 8 },
+  bannerContainer: { paddingHorizontal: 16 },
+  bannerInner: { backgroundColor: colors.primaryDark, borderRadius: 24, padding: 18, overflow: 'hidden' },
+  bannerTag: { color: 'rgba(255,255,255,0.9)', backgroundColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start', fontSize: 11, fontWeight: '800' },
+  bannerTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginTop: 8 },
+  bannerCta: { marginTop: 12, backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, alignSelf: 'flex-start' },
+  bannerCtaText: { color: colors.primaryDark, fontWeight: '800' },
+  projectsCardWrapper: { marginTop: 8 },
   safeArea: {
     flex: 1,
   },
