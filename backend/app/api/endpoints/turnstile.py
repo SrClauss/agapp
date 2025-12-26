@@ -15,7 +15,14 @@ async def verify_turnstile(request: TurnstileVerifyRequest):
     Este endpoint recebe o token gerado pelo widget Turnstile no frontend
     e valida sua autenticidade com a Cloudflare usando a SECRET_KEY.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    if not request.token:
+        raise HTTPException(status_code=400, detail="Token é obrigatório")
+
     try:
+        logger.info("verify-turnstile called; token len=%s", len(request.token))
         async with httpx.AsyncClient() as client:
             # Enviar requisição para a API do Turnstile
             response = await client.post(
@@ -23,10 +30,12 @@ async def verify_turnstile(request: TurnstileVerifyRequest):
                 data={
                     "secret": settings.turnstile_secret_key,
                     "response": request.token,
-                }
+                },
+                timeout=10.0
             )
 
             result = response.json()
+            logger.info("turnstile verify response: %s", {k: result.get(k) for k in ['success','error-codes','hostname','challenge_ts']})
 
             # Verificar se a validação foi bem-sucedida
             if result.get("success"):
@@ -41,6 +50,7 @@ async def verify_turnstile(request: TurnstileVerifyRequest):
             else:
                 # Se falhou, retornar os códigos de erro
                 error_codes = result.get("error-codes", [])
+                logger.warning("turnstile verification failed: %s", error_codes)
                 return TurnstileVerifyResponse(
                     success=False,
                     message=f"Verificação falhou: {', '.join(error_codes)}",
@@ -48,11 +58,13 @@ async def verify_turnstile(request: TurnstileVerifyRequest):
                 )
 
     except httpx.RequestError as e:
+        logger.error("turnstile httpx request error: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Erro ao comunicar com o serviço Turnstile: {str(e)}"
         )
     except Exception as e:
+        logger.exception("turnstile verify unexpected error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro interno ao verificar Turnstile: {str(e)}"

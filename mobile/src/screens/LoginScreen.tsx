@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Text, KeyboardAvoidingView, Platform, ImageBackground, Image, View, StyleSheet } from 'react-native';
 import { Button, TextInput, HelperText } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -7,12 +7,11 @@ import { loginWithEmail, loginWithGoogle, fetchCurrentUser } from '../api/auth';
 import { useGoogleAuth } from '../services/googleAuth';
 import SocialButton from '../components/SocialButton';
 import NotificationsService from '../services/notifications';
-import { transparent } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import client from '../api/axiosClient';
 import axios from 'axios';
 import { WebView } from 'react-native-webview';
-import { Modal, ActivityIndicator } from 'react-native';
+import { Modal, ActivityIndicator, Linking } from 'react-native';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -26,7 +25,21 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showTurnstile, setShowTurnstile] = useState(false);
   const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null);
+  const [turnstileUri, setTurnstileUri] = useState<string | null>(null);
   const [turnstileLoading, setTurnstileLoading] = useState(false);
+  const [webviewError, setWebviewError] = useState<string | null>(null);
+
+  // Ref para controlar timeout do WebView (evita usar `window` diretamente)
+  const turnstileTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (turnstileTimeoutRef.current) {
+        clearTimeout(turnstileTimeoutRef.current);
+        turnstileTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const { signIn } = useGoogleAuth();
 
@@ -85,55 +98,56 @@ export default function LoginScreen() {
     console.log('[Login] onEmailLogin start', { email });
     setLoading(true);
     setError(null);
+    setTurnstileLoading(true);
     try {
-      // Fetch Turnstile site key from backend
-      setTurnstileLoading(true);
-      try {
-        const { data } = await client.get('/auth/turnstile-site-key');
-        console.log('[Login] got /auth/turnstile-site-key', data.site_key);
+      // First, ask backend for site_key and hosted URL (if available)
+      const { data } = await client.get('/auth/turnstile-site-key');
+      console.log('[Login] got turnstile info', data);
+      if (data.turnstile_url) {
+        setTurnstileUri(data.turnstile_url);
+        console.log('[Login] using hosted turnstile_url', data.turnstile_url);
+      } else if (data.site_key) {
         setTurnstileSiteKey(data.site_key);
-      } catch (err: any) {
-        // If the dedicated endpoint is missing (404), fall back to fetching the /turnstile HTML page and extract site_key
-        console.warn('[Login] /auth/turnstile-site-key returned 404, attempting /turnstile fallback');
-        if (err?.response?.status === 404) {
-          try {
-            const { data: html } = await client.get('/turnstile');
-            // Try to extract data-sitekey or a JS variable named site_key
-            const m1 = html.match(/data-sitekey=\"([^\"]+)\"/i);
-            const m2 = html.match(/site_key\W*[:=]\W*['\"]([^'\"]+)['\"]/i);
-            const m = m1 || m2;
-            if (m && m[1]) {
-              console.log('[Login] extracted site_key from /turnstile', m[1]);
-              setTurnstileSiteKey(m[1]);
-            } else {
-              throw new Error('Não foi possível extrair a site_key do HTML do Turnstile');
-            }
-          } catch (e: any) {
-            setTurnstileLoading(false);
-            setError('Erro ao obter chave do Turnstile');
-            setLoading(false);
-            return;
-          }
-        } else {
-          setTurnstileLoading(false);
-          setError('Erro ao iniciar verificação anti-bot');
-          setLoading(false);
-          return;
-        }
-      } finally {
-        setTurnstileLoading(false);
+      } else {
+        throw new Error('Turnstile info incomplete');
       }
-
-      setShowTurnstile(true);
-    } catch (e: any) {
+    } catch (err: any) {
+      console.error('[Login] error determining Turnstile source', err);
+      // If both endpoints 404 (server not deployed), try a known absolute domain fallback
+      if (err?.response?.status === 404) {
+        const fallback = 'https://agilizapro.cloud/turnstile';
+        console.warn('[Login] falling back to absolute turnstile URL', fallback);
+        setTurnstileUri(fallback);
+      } else {
+        setTurnstileLoading(false);
+        setError('Erro ao iniciar verificação anti-bot');
+        setLoading(false);
+        return;
+      }
+    } finally {
       setTurnstileLoading(false);
-      setError('Erro ao iniciar verificação anti-bot');
-      setLoading(false);
     }
+
+    setShowTurnstile(true);
+    
+    // Timeout: se após 10s não receber mensagem, mostrar erro
+    const timeoutId = setTimeout(() => {
+      console.warn('[Login] WebView timeout - no message received after 10s');
+      setWebviewError('Timeout ao carregar verificação. Tente novamente ou abra no navegador.');
+    }, 10000);
+    
+    // Guardar timeout em ref para podermos limpar depois
+    turnstileTimeoutRef.current = timeoutId;
   };
 
   // Handle message from WebView (turnstile token)
   const onTurnstileMessage = async (event: any) => {
+    // Limpar timeout (se existente)
+    if (turnstileTimeoutRef.current) {
+      clearTimeout(turnstileTimeoutRef.current);
+      turnstileTimeoutRef.current = null;
+    }
+    
     let payload = event.nativeEvent.data;
     // Console messages from WebView might be JSON; try parse
     let parsed: any = null;
@@ -145,18 +159,30 @@ export default function LoginScreen() {
     }
     if (parsed && parsed.type === 'debug') {
       console.log('[Login][WebViewDebug]', parsed.msg);
-      return;
+      // Detect common failure modes and show friendly message
+      const msgLower = String(parsed.msg || '').toLowerCase();
+      if (msgLower.includes('widget-not-present') || msgLower.includes('turnstile script error') || msgLower.includes('no widget container') || msgLower.includes('widget-timeout')) {
+        setWebviewError('Verificação indisponível para este domínio. Entre em contato com o administrador se o problema persistir.');
+      }
     }
     if (parsed && parsed.type === 'token') {
       payload = parsed.token;
     }
 
-    const token = payload;
+    let token = payload;
 
-    console.log('[Login] onTurnstileMessage received token/evt (first30):', token && token.slice ? token.slice(0,30) : token);
+    console.log('[Login] onTurnstileMessage received token/evt (first30):', token && token.slice ? token.slice(0,30) : token, 'parsedType=', parsed?.type);
     setShowTurnstile(false);
     setLoading(true);
     try {
+      // If message is from hosted page types
+      if (parsed && parsed.type === 'turnstile_success') {
+        token = parsed.token;
+      } else if (parsed && parsed.type === 'turnstile_error') {
+        setWebviewError(parsed.error || 'Erro na verificação anti-bot');
+        throw new Error(parsed.error || 'Erro na verificação anti-bot');
+      }
+
       // 1) Verify token with backend
       const verifyResp = await client.post('/auth/verify-turnstile', { token });
       console.log('[Login] verify-turnstile response', verifyResp.data);
@@ -305,14 +331,30 @@ export default function LoginScreen() {
             Entrar
           </Button>
 
-          {/* Turnstile modal */}
-          <Modal visible={showTurnstile} animationType="slide" transparent={false} onRequestClose={() => setShowTurnstile(false)}>
-            {turnstileLoading || !turnstileSiteKey ? (
-              <ActivityIndicator size="large" />
-            ) : (
-              <WebView
-                originWhitelist={["*"]}
-                source={{ html: `<!DOCTYPE html>
+          {/* Turnstile small overlay */}
+          <Modal visible={showTurnstile} animationType="fade" transparent={true} onRequestClose={() => { setShowTurnstile(false); setWebviewError(null); }}>
+            <View style={styles.overlay}>
+              <View style={styles.turnstileBox}>
+                <View style={styles.turnstileHeader}>
+                  <Text style={styles.turnstileTitle}>Verificação anti-bot</Text>
+                  <Button compact onPress={() => { setShowTurnstile(false); setWebviewError(null); }}>Fechar</Button>
+                </View>
+
+                {turnstileLoading || (!turnstileSiteKey && !turnstileUri) ? (
+                  <View style={styles.turnstileLoader}><ActivityIndicator size="large" /></View>
+                ) : webviewError ? (
+                  <View style={styles.turnstileErrorContainer}>
+                    <Text style={styles.turnstileErrorText}>{webviewError}</Text>
+                    <Button mode="contained" onPress={() => { setWebviewError(null); setShowTurnstile(false); }} style={{marginTop:12}}>OK</Button>
+                    {turnstileUri ? (
+                      <Button onPress={() => Linking.openURL(turnstileUri)} style={{marginTop:12}}>Abrir verificação no navegador</Button>
+                    ) : null}
+                  </View>
+                ) : (
+                  <View style={styles.turnstileWebviewContainer}>
+                    <WebView
+                      originWhitelist={["*"]}
+                      source={ turnstileUri ? { uri: turnstileUri } : { html: `<!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -368,26 +410,30 @@ export default function LoginScreen() {
       setTimeout(function(){ postDebug('widget-timeout-check'); }, 8000);
     </script>
   </body>
-</html>` }}
-                onMessage={onTurnstileMessage}
-                onError={(e) => {
-                  console.error('[Login] WebView onError', e);
-                  setShowTurnstile(false);
-                  setError('Erro ao carregar widget de verificação');
-                }}
-                onHttpError={(e) => {
-                  console.error('[Login] WebView onHttpError', e);
-                  setShowTurnstile(false);
-                  setError('Erro ao carregar widget de verificação (HTTP)');
-                }}
-                onLoadStart={() => console.log('[Login] WebView load start')}
-                onLoadEnd={() => console.log('[Login] WebView load end')}
-                mixedContentMode="always"
-                javaScriptEnabled
-                domStorageEnabled
-                startInLoadingState
-              />
-            )}
+</html>` } }
+                      onMessage={onTurnstileMessage}
+                      onError={(e) => {
+                        console.error('[Login] WebView onError', e);
+                        setWebviewError('Erro ao carregar widget de verificação.');
+                      }}
+                      onHttpError={(e) => {
+                        console.error('[Login] WebView onHttpError', e);
+                        setWebviewError('Erro ao carregar widget de verificação (HTTP)');
+                      }}
+                      onLoadStart={() => console.log('[Login] WebView load start')}
+                      onLoadEnd={() => console.log('[Login] WebView load end')}
+                      onNavigationStateChange={(navState) => {
+                        console.log('[Login] WebView navigation:', navState.url, 'loading:', navState.loading);
+                      }}
+                      mixedContentMode="always"
+                      javaScriptEnabled
+                      domStorageEnabled
+                      startInLoadingState
+                      style={{flex:1}}/>
+                  </View>
+                )}
+              </View>
+            </View>
           </Modal>
 
           <SocialButton
@@ -496,5 +542,49 @@ const styles = StyleSheet.create({
     width: '100%',
     borderColor: '#2e2e2eff',
     borderWidth: 1,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 16,
+  },
+  turnstileBox: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    overflow: 'hidden',
+    padding: 12,
+  },
+  turnstileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  turnstileTitle: {
+    fontWeight: 'bold',
+  },
+  turnstileLoader: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  turnstileWebviewContainer: {
+    height: 320,
+    width: '100%',
+  },
+  turnstileErrorContainer: {
+    padding: 12,
+    alignItems: 'center',
+  },
+  turnstileErrorText: {
+    color: '#b00020',
+    textAlign: 'center',
   },
 });

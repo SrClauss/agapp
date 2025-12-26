@@ -183,69 +183,6 @@ async def get_turnstile_site_key(request: Request):
         turnstile_url = f"{base}/turnstile"
     return {"site_key": settings.turnstile_site_key, "turnstile_url": turnstile_url}
 
-@router.post("/google")
-async def google_login(
-    token_request: GoogleAuthToken,
-    db: Session = Depends(get_db)
-):
-    """Login usando Google OAuth"""
-    try:
-        idinfo = id_token.verify_oauth2_token(
-            token_request.token,
-            requests.Request(),
-            audience=settings.google_client_id
-        )
-
-        google_sub = idinfo.get('sub')
-        google_email = idinfo.get('email')
-        google_name = idinfo.get('name', '')
-
-        if not google_email:
-            raise HTTPException(status_code=400, detail="Email não encontrado no token do Google")
-
-        # Verificar se o usuário já existe
-        user = await get_user_in_db_by_email(db, google_email)
-
-        if not user:
-            # Criar novo usuário com dados do Google
-            # Para CPF, usar um valor temporário (deve ser completado depois)
-            new_user = UserCreate(
-                email=google_email,
-                full_name=google_name,
-                password=google_sub,  # Usar o Google Sub como senha (nunca será usado para login direto)
-                cpf="000.000.000-00",  # CPF temporário - usuário deve atualizar depois
-                phone=None,
-                roles=["client"],
-                is_profile_complete=False,  # Novo campo
-                avatar_url=google_picture  # Novo campo
-            )
-            await create_user(db, new_user)
-            # Recarregar usuário do banco para garantir todos os campos preenchidos (is_active, timestamps, etc.)
-            user = await get_user_in_db_by_email(db, google_email)
-
-        # Criar tokens de acesso
-        access_token = create_access_token(subject=str(user.id))
-        refresh_token = create_refresh_token(subject=str(user.id))
-
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
-            "user": user
-        }
-
-    except ValueError as e:
-        # Token inválido
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token do Google inválido: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao processar login com Google: {str(e)}"
-        )
-
 @router.put("/complete-profile", response_model=User)
 async def complete_profile(
     profile_data: UserUpdate,
