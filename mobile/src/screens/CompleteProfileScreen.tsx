@@ -85,7 +85,8 @@ export default function CompleteProfileScreen() {
         try {
           // Import login function lazily to avoid circular deps
           const { loginWithEmail } = await import('../api/auth');
-          const loginResult = await loginWithEmail(user.email, password);
+          // Use current token in Authorization header to bypass Turnstile for auto-login
+          const loginResult = await loginWithEmail(user.email, password, undefined, token);
           // Save token and user
           await setToken(loginResult.token);
           setUser(loginResult.user || { ...updatedUser, avatar_url: user?.avatar_url });

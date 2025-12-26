@@ -10,15 +10,24 @@ export interface SignUpData {
   roles?: string[];
 }
 
-export async function loginWithEmail(email: string, password: string) {
+export async function loginWithEmail(email: string, password: string, turnstileToken?: string, authToken?: string) {
   try {
     const params = new URLSearchParams({
       username: email,
       password: password,
     });
 
+    if (turnstileToken) {
+      params.append('turnstile_token', turnstileToken);
+    }
+
+    const headers: any = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
     const { data } = await client.post('/auth/login', params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers,
     });
 
     // Buscar dados do usuário se não vieram no token

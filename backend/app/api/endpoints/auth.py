@@ -1,8 +1,8 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.database import get_database
-from app.core.security import create_access_token, create_refresh_token, verify_password, get_current_user
+from app.core.security import create_access_token, create_refresh_token, verify_password, get_current_user, get_current_user_from_token
 from app.crud.user import get_user_by_email, create_user, get_user_in_db_by_email, update_user
 from app.schemas.user import UserCreate, Token, User, LoginRequest, GoogleLoginRequest, UserUpdate
 from app.utils.validators import validate_email_unique, validate_roles
@@ -35,7 +35,40 @@ async def register(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_data
     return db_user
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncIOMotorDatabase = Depends(get_database)):
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncIOMotorDatabase = Depends(get_database)):
+    """Login com proteção Turnstile.
+
+    - Tenta obter `turnstile_token` do form (campo `turnstile_token`) ou do header `X-Turnstile-Token`.
+    - Se o request já vier autenticado (Authorization: Bearer <token> válido), permite bypass do Turnstile (útil para auto-login após update de perfil).
+    """
+    # Check for Authorization header to allow an authenticated bypass (e.g., auto-login)
+    bypass_turnstile = False
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.lower().startswith("bearer "):
+        token = auth_header.split(" ", 1)[1]
+        try:
+            # Valida token e obtém usuário atual para autorizar bypass
+            await get_current_user_from_token(token, db)
+            bypass_turnstile = True
+        except Exception:
+            bypass_turnstile = False
+
+    # Extract turnstile token from form or header
+    turnstile_token = None
+    try:
+        form = await request.form()
+        turnstile_token = form.get("turnstile_token")
+    except Exception:
+        turnstile_token = None
+
+    if not bypass_turnstile:
+        # Allow token via header as fallback
+        if not turnstile_token:
+            turnstile_token = request.headers.get("X-Turnstile-Token")
+        if not turnstile_token:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Turnstile token is required for login")
+        await verify_turnstile_token(turnstile_token)
+
     user = await get_user_by_email(db, form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
