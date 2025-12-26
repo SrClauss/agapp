@@ -181,6 +181,8 @@ async def get_turnstile_site_key(request: Request):
         # Fallback: construir a partir do host
         base = str(request.base_url).rstrip('/')
         turnstile_url = f"{base}/turnstile"
+    # Garantir que retornamos uma string (Request.url_for pode retornar um objeto URL em alguns ambientes)
+    turnstile_url = str(turnstile_url)
     return {"site_key": settings.turnstile_site_key, "turnstile_url": turnstile_url}
 
 @router.put("/complete-profile", response_model=User)

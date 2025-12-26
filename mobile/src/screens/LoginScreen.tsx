@@ -104,8 +104,10 @@ export default function LoginScreen() {
       const { data } = await client.get('/auth/turnstile-site-key');
       console.log('[Login] got turnstile info', data);
       if (data.turnstile_url) {
-        setTurnstileUri(data.turnstile_url);
-        console.log('[Login] using hosted turnstile_url', data.turnstile_url);
+        // Defensive: às vezes a URL vem como objeto { _url: 'http://...' } quando serializada
+        const turnstileUrl = typeof data.turnstile_url === 'string' ? data.turnstile_url : (data.turnstile_url && (data.turnstile_url._url || String(data.turnstile_url)));
+        setTurnstileUri(turnstileUrl);
+        console.log('[Login] using hosted turnstile_url', turnstileUrl, 'raw:', data.turnstile_url);
       } else if (data.site_key) {
         setTurnstileSiteKey(data.site_key);
       } else {
