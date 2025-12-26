@@ -134,8 +134,26 @@ export default function LoginScreen() {
 
   // Handle message from WebView (turnstile token)
   const onTurnstileMessage = async (event: any) => {
-    const token = event.nativeEvent.data;
-    console.log('[Login] onTurnstileMessage received token', token && token.slice ? token.slice(0,30) : token);
+    let payload = event.nativeEvent.data;
+    // Console messages from WebView might be JSON; try parse
+    let parsed: any = null;
+    try { parsed = JSON.parse(payload); } catch(e) { parsed = null; }
+
+    if (parsed && parsed.type === 'console') {
+      console.log('[Login][WebViewConsole]', parsed.level, ...parsed.args);
+      return;
+    }
+    if (parsed && parsed.type === 'debug') {
+      console.log('[Login][WebViewDebug]', parsed.msg);
+      return;
+    }
+    if (parsed && parsed.type === 'token') {
+      payload = parsed.token;
+    }
+
+    const token = payload;
+
+    console.log('[Login] onTurnstileMessage received token/evt (first30):', token && token.slice ? token.slice(0,30) : token);
     setShowTurnstile(false);
     setLoading(true);
     try {
@@ -298,24 +316,56 @@ export default function LoginScreen() {
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script>
+      // Debug wrapper: forward console.* to ReactNativeWebView
+      (function(){
+        const methods = ['log','error','warn','info','debug'];
+        methods.forEach(m => {
+          const original = console[m];
+          console[m] = function(...args){
+            try{ window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'console', level: m, args })); } catch(e){}
+            original && original.apply(console, args);
+          }
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="widget"></div>
     <script>
+      function postDebug(msg){ try{ window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'debug', msg })); } catch(e){} }
+      postDebug('onLoad script start');
+
       function onSuccess(token) {
-        window.ReactNativeWebView.postMessage(token);
+        postDebug('onSuccess token received');
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'token', token }));
       }
-      function onLoad() {
-        const container = document.getElementById('widget');
-        if (container) {
-          container.innerHTML = '<div class="cf-turnstile" data-sitekey="${turnstileSiteKey}" data-callback="onSuccess"></div>';
-          var script = document.createElement('script');
-          script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-          document.body.appendChild(script);
-        }
+
+      function loadTurnstile(){
+        var container = document.getElementById('widget');
+        if (!container){ postDebug('no widget container'); return; }
+        container.innerHTML = '<div class="cf-turnstile" data-sitekey="${turnstileSiteKey}" data-callback="onSuccess"></div>';
+        var script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+        script.async = true;
+        script.defer = true;
+        script.onload = function(){ postDebug('turnstile script loaded');
+          // wait a bit then check if widget rendered
+          setTimeout(function(){
+            if (container.querySelector('.cf-turnstile') || container.querySelector('iframe')){
+              postDebug('widget-present');
+            } else {
+              postDebug('widget-not-present-after-load');
+            }
+          }, 1000);
+        };
+        script.onerror = function(e){ postDebug('turnstile script error'); };
+        document.body.appendChild(script);
       }
-      window.onload = onLoad;
+
+      window.addEventListener('load', function(){ postDebug('window.load'); loadTurnstile(); });
+      // Safety timeout
+      setTimeout(function(){ postDebug('widget-timeout-check'); }, 8000);
     </script>
   </body>
 </html>` }}
@@ -330,6 +380,9 @@ export default function LoginScreen() {
                   setShowTurnstile(false);
                   setError('Erro ao carregar widget de verificação (HTTP)');
                 }}
+                onLoadStart={() => console.log('[Login] WebView load start')}
+                onLoadEnd={() => console.log('[Login] WebView load end')}
+                mixedContentMode="always"
                 javaScriptEnabled
                 domStorageEnabled
                 startInLoadingState
