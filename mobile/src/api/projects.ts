@@ -162,6 +162,24 @@ export async function updateProject(projectId: string, data: ProjectCreateData):
 }
 
 /**
+ * Delete a project by ID
+ */
+export async function deleteProject(projectId: string): Promise<void> {
+  // Ensure Authorization header present in case axios interceptor didn't run or token not set
+  const token = useAuthStore.getState().token;
+  const config = token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : undefined;
+
+  if (__DEV__) {
+    const masked = token ? `${token.slice(0,6)}...${token.slice(-6)}` : null;
+    console.log('[projects.deleteProject] DELETE /projects/' + projectId + ' token=', masked);
+  }
+
+  await client.delete(`/projects/${projectId}`, config);
+}
+
+/**
  * Get projects with optional filters
  */
 export async function getProjects(params?: {

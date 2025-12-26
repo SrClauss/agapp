@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { ImageBackground } from 'react-native';
 export default function ProfileSelectionScreen() {
   const navigation = useNavigation();
   const setActiveRole = useAuthStore((s: AuthState) => s.setActiveRole);
@@ -36,11 +37,10 @@ export default function ProfileSelectionScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={[colors.primary, colors.primaryDark]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.gradientBackground}
+   <ImageBackground
+      source={require('../../assets/background.jpg')}
+      style={styles.root}
+      resizeMode="cover"
     >
       <KeyboardAvoidingView
         style={styles.centeredContainer}
@@ -93,11 +93,18 @@ export default function ProfileSelectionScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+
+  root: {
+
+    flex: 1,
+
+    
+  },
   gradientBackground: {
     flex: 1,
     width: '100%',

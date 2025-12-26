@@ -421,6 +421,23 @@ async def update_project_admin(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
+@router.delete("/{project_id}")
+# Delete project by client
+async def delete_project_client(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    project = await get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if str(project.client_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to delete this project")
+    
+    success = await delete_project(db, project_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"message": "Project deleted successfully"}
 
 @router.delete("/admin/{project_id}")
 async def delete_project_admin(
