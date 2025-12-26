@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, Image } from 'react-native';
 import { Card } from 'react-native-paper';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
+import useAuthStore from '../stores/authStore';
 import { Project } from '../api/projects';
 import { MAX_PROJECT_TITLE_LENGTH } from '../constants';
 import { colors } from '../theme/colors';
@@ -34,9 +35,13 @@ export default function ProjectCard({ project, index = 0, showStatus = false, ca
     return category.sub || category.main;
   };
 
+  const user = useAuthStore((s) => s.user);
+
   const handlePress = () => {
-    // Navigate to ProjectDetail by id to avoid duplicated summary screen
-    navigation.navigate('ProjectDetail' as never, { projectId: project.id || (project as any)._id } as never);
+    // Owner clients should see full info
+    const isOwner = Boolean(user && (String(user.id) === String(project.client_id)));
+    // Navigate to ProjectDetail by id and pass showFullInfo when owner
+    navigation.navigate('ProjectDetail' as never, { projectId: project.id || (project as any)._id, showFullInfo: isOwner } as never);
   };
 
   const titleToShow = project.title
