@@ -82,6 +82,7 @@ export default function LoginScreen() {
   };
 
   const onEmailLogin = async () => {
+    console.log('[Login] onEmailLogin start', { email });
     setLoading(true);
     setError(null);
     try {
@@ -89,9 +90,11 @@ export default function LoginScreen() {
       setTurnstileLoading(true);
       try {
         const { data } = await client.get('/auth/turnstile-site-key');
+        console.log('[Login] got /auth/turnstile-site-key', data.site_key);
         setTurnstileSiteKey(data.site_key);
       } catch (err: any) {
         // If the dedicated endpoint is missing (404), fall back to fetching the /turnstile HTML page and extract site_key
+        console.warn('[Login] /auth/turnstile-site-key returned 404, attempting /turnstile fallback');
         if (err?.response?.status === 404) {
           try {
             const { data: html } = await client.get('/turnstile');
@@ -100,6 +103,7 @@ export default function LoginScreen() {
             const m2 = html.match(/site_key\W*[:=]\W*['\"]([^'\"]+)['\"]/i);
             const m = m1 || m2;
             if (m && m[1]) {
+              console.log('[Login] extracted site_key from /turnstile', m[1]);
               setTurnstileSiteKey(m[1]);
             } else {
               throw new Error('Não foi possível extrair a site_key do HTML do Turnstile');
@@ -131,11 +135,13 @@ export default function LoginScreen() {
   // Handle message from WebView (turnstile token)
   const onTurnstileMessage = async (event: any) => {
     const token = event.nativeEvent.data;
+    console.log('[Login] onTurnstileMessage received token', token && token.slice ? token.slice(0,30) : token);
     setShowTurnstile(false);
     setLoading(true);
     try {
       // 1) Verify token with backend
       const verifyResp = await client.post('/auth/verify-turnstile', { token });
+      console.log('[Login] verify-turnstile response', verifyResp.data);
       if (!verifyResp.data || !verifyResp.data.success) {
         const msg = verifyResp.data?.message || 'Falha na verificação anti-bot';
         throw new Error(msg);
@@ -157,8 +163,20 @@ export default function LoginScreen() {
         console.warn('Failed to register push token', err);
       }
 
-      await checkAdAndNavigate(user);
+      try {
+        await checkAdAndNavigate(user);
+      } catch (navErr: any) {
+        console.error('[Login] navigation failed', navErr);
+        // Fallback: navigate to a safe default
+        try {
+          const dest = user.roles && user.roles.includes('client') ? 'WelcomeCustomer' : 'WelcomeProfessional';
+          navigation.navigate(dest as never);
+        } catch (fallbackErr) {
+          console.error('[Login] fallback navigation also failed', fallbackErr);
+        }
+      }
     } catch (e: any) {
+      console.error('[Login] onTurnstileMessage error', e);
       setError(e.message || 'Erro no login');
     } finally {
       setLoading(false);
@@ -301,6 +319,21 @@ export default function LoginScreen() {
     </script>
   </body>
 </html>` }}
+                onMessage={onTurnstileMessage}
+                onError={(e) => {
+                  console.error('[Login] WebView onError', e);
+                  setShowTurnstile(false);
+                  setError('Erro ao carregar widget de verificação');
+                }}
+                onHttpError={(e) => {
+                  console.error('[Login] WebView onHttpError', e);
+                  setShowTurnstile(false);
+                  setError('Erro ao carregar widget de verificação (HTTP)');
+                }}
+                javaScriptEnabled
+                domStorageEnabled
+                startInLoadingState
+              />
                 onMessage={onTurnstileMessage}
                 javaScriptEnabled
                 domStorageEnabled
