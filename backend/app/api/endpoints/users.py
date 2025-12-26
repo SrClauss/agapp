@@ -196,9 +196,26 @@ async def unregister_fcm_token(
 # Public user info (minimal) - used by clients to display simple profile info for other users
 @router.get("/public/{user_id}")
 async def read_user_public(user_id: str, db: AsyncIOMotorDatabase = Depends(get_database)):
-    """Return minimal public info for a user (id, full_name, avatar_url). No auth required."""
-    user = await db.users.find_one({"_id": user_id}, {"full_name": 1, "avatar_url": 1})
+    """Return minimal public info for a user (id, full_name, avatar_url, phone). No auth required.
+
+    Fallback logic: try by string _id first; if not found and user_id looks like a 24-char hex, try ObjectId(user_id).
+    """
+    logging.info(f"Public user lookup requested: user_id={user_id}")
+    user = await db.users.find_one({"_id": user_id}, {"full_name": 1, "avatar_url": 1, "phone": 1})
     if not user:
+        # Try fallback: maybe legacy ObjectId
+        try:
+            from bson import ObjectId
+            if ObjectId.is_valid(user_id):
+                user = await db.users.find_one({"_id": ObjectId(user_id)}, {"full_name": 1, "avatar_url": 1, "phone": 1})
+                if user:
+                    logging.info(f"Public user lookup: found by ObjectId for user_id={user_id}")
+        except Exception:
+            # ignore and continue to final 404
+            pass
+
+    if not user:
+        logging.info(f"Public user lookup: user_id={user_id} not found")
         raise HTTPException(status_code=404, detail="User not found")
     return {
         "id": str(user.get("_id")),

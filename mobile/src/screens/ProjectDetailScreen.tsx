@@ -65,6 +65,7 @@ export default function ProjectDetailScreen() {
         try {
           const clientId = proj.client_id || (proj as any).client || ''; // fallback keys
           if (clientId) {
+            console.log('[ProjectDetail] fetching public user for clientId=', clientId);
             const userPublic = await getUserPublic(clientId);
             if (userPublic) {
               if (!proj.client_name && userPublic.full_name) {
@@ -75,8 +76,15 @@ export default function ProjectDetailScreen() {
               }
             }
           }
-        } catch (err) {
-          console.warn('Failed to fetch public user info for project client:', err);
+        } catch (err: any) {
+          // If the public user endpoint returned 404, mark client as unavailable
+          if (err?.response?.status === 404) {
+            console.warn(`[ProjectDetail] public user ${clientId} not found (404)`);
+            setProject(prev => prev ? { ...prev, client_name: 'Cliente indisponível' } : prev);
+            setClientPhonePublic(null);
+          } else {
+            console.warn('Failed to fetch public user info for project client:', err);
+          }
         }
       }
     } catch (error: any) {
