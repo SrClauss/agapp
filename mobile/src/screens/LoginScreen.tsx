@@ -166,7 +166,16 @@ export default function LoginScreen() {
       if (msgLower.includes('widget-not-present') || msgLower.includes('turnstile script error') || msgLower.includes('no widget container') || msgLower.includes('widget-timeout')) {
         setWebviewError('Verificação indisponível para este domínio. Entre em contato com o administrador se o problema persistir.');
       }
+      return;
     }
+
+    // Ignore non-token control messages from the hosted page (e.g., turnstile_ready)
+    const allowedTypes = new Set(['token', 'turnstile_success', 'turnstile_error']);
+    if (parsed && parsed.type && !allowedTypes.has(parsed.type)) {
+      console.log('[Login] Ignoring non-token WebView message type:', parsed.type);
+      return;
+    }
+
     if (parsed && parsed.type === 'token') {
       payload = parsed.token;
     }
