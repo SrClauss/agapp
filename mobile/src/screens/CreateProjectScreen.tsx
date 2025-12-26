@@ -303,7 +303,7 @@ export default function CreateProjectScreen({ overrideParams }: CreateProjectPro
                   index: 1,
                   routes: [
                     { name: 'WelcomeCustomer' as never },
-                    { name: 'ProjectDetail' as never, params: { projectId: (project as any).id || (project as any)._id || resolvedId } as any },
+                    { name: 'ProjectDetail' as never, params: { projectId: (project as any).id || (project as any)._id || resolvedId, showFullInfo: true } as any },
                   ],
                 });
               } else {

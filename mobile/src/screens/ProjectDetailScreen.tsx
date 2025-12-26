@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivityIndicator, Chip, Card, Avatar, Divider, Button, Switch } from 'react-native-paper';
+import { ActivityIndicator, Chip, Card, Avatar, Divider, Button, Switch, Portal, Dialog, Paragraph } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,6 +26,7 @@ import { colors } from '../theme/colors';
 interface RouteParams {
   projectId?: string;
   project?: Project;
+  showFullInfo?: boolean;
 }
 
 export default function ProjectDetailScreen() {
@@ -38,8 +39,9 @@ export default function ProjectDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [contacting, setContacting] = useState(false);
-  const [showFullInfo, setShowFullInfo] = useState<boolean>(false); // true = show all details (owner), false = limited view (professional)
+  const [showFullInfo, setShowFullInfo] = useState<boolean>(Boolean(params?.showFullInfo)); // true = show all details (owner), false = limited view (professional)
   const [clientPhonePublic, setClientPhonePublic] = useState<string | null>(null);
+  const [acceptDialogVisible, setAcceptDialogVisible] = useState(false);
 
   const loadProject = async () => {
     try {
@@ -103,17 +105,21 @@ export default function ProjectDetailScreen() {
     loadProject();
   }, [params.projectId, params.project]);
 
-  // Set view mode when project or user changes
+  // Set view mode when project or user changes. If param showFullInfo is provided, it takes precedence.
   useEffect(() => {
     if (!project) return;
     try {
+      if (typeof params?.showFullInfo !== 'undefined') {
+        setShowFullInfo(Boolean(params.showFullInfo));
+        return;
+      }
       const currentUser = useAuthStore.getState().user;
       const isOwner = Boolean(currentUser && project && (String(currentUser.id) === String(project.client_id)));
       setShowFullInfo(isOwner);
     } catch (e) {
       // ignore
     }
-  }, [project, user]);
+  }, [project, user, params?.showFullInfo]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -547,11 +553,11 @@ export default function ProjectDetailScreen() {
         </View>
 
         {/* Accept & Contact Button for Professionals */}
-        {user && user.roles.includes('professional') && project.status === 'open' && (
+        {user && user.roles.includes('professional') && project.status === 'open' && !showFullInfo && (
           <View style={styles.actionButtonContainer}>
             <Button
               mode="contained"
-              onPress={handleAcceptAndContact}
+              onPress={() => setAcceptDialogVisible(true)}
               loading={contacting}
               disabled={contacting}
               style={styles.acceptButton}
@@ -564,6 +570,26 @@ export default function ProjectDetailScreen() {
             </Text>
           </View>
         )}
+
+        {/* Accept confirmation dialog (modal) */}
+        <Portal>
+          <Dialog visible={acceptDialogVisible} onDismiss={() => setAcceptDialogVisible(false)}>
+            <Dialog.Title>Confirmar Aceitação</Dialog.Title>
+            <Dialog.Content>
+              <Paragraph>Você confirma que deseja aceitar este projeto e iniciar contato com o cliente?</Paragraph>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setAcceptDialogVisible(false)}>Não</Button>
+              <Button onPress={() => {
+                setAcceptDialogVisible(false);
+                // TODO: Implementar lógica de aceitação (cobrar crédito, criar contato, etc.)
+                // Por enquanto simulamos aceitação alterando o modo de exibição para full
+                setShowFullInfo(true);
+                Alert.alert('Aceitação confirmada', 'A lógica de aceite será implementada em breve.');
+              }}>Sim</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
       </ScrollView>
     </SafeAreaView>
   );
