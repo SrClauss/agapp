@@ -18,6 +18,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    cpf: Optional[str] = None
     address: Optional[Dict[str, Any]] = None
     professional_info: Optional[Dict[str, Any]] = None
     roles: Optional[List[str]] = None

@@ -171,7 +171,7 @@ async def complete_profile(
     # Validar roles se fornecidas
     if profile_data.roles and not validate_roles(profile_data.roles):
         raise HTTPException(status_code=400, detail="Invalid roles")
-
+    print(profile_data)
     # Preparar dados de atualização (somente campos setados)
     update_dict = profile_data.model_dump(exclude_unset=True)
 
