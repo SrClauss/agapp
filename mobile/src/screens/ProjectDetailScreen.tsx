@@ -62,8 +62,8 @@ export default function ProjectDetailScreen() {
 
       // If public client info available, fetch public user info (name, phone) to fill missing fields
       if (proj && (proj.client_id || (proj as any).client)) {
+        let clientId = proj.client_id || (proj as any).client || '';
         try {
-          const clientId = proj.client_id || (proj as any).client || ''; // fallback keys
           if (clientId) {
             console.log('[ProjectDetail] fetching public user for clientId=', clientId);
             const userPublic = await getUserPublic(clientId);
