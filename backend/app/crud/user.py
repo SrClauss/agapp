@@ -70,14 +70,25 @@ async def create_user(db: AsyncIOMotorDatabase, user: UserCreate) -> User:
     return User(**user_dict)
 
 async def update_user(db: AsyncIOMotorDatabase, user_id: str, user_update: UserUpdate | dict) -> Optional[User]:
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if isinstance(user_update, dict):
         update_data = {k: v for k, v in user_update.items() if v is not None}
     else:
         update_data = {k: v for k, v in user_update.dict().items() if v is not None}
+    
+    logger.info("CRUD update_user called for user_id=%s with update_data=%s", user_id, update_data)
+    
     if update_data:
         update_data["updated_at"] = datetime.utcnow()
-        await db.users.update_one({"_id": user_id}, {"$set": update_data})
+        result = await db.users.update_one({"_id": user_id}, {"$set": update_data})
+        logger.info("MongoDB update_one result: matched=%s, modified=%s", result.matched_count, result.modified_count)
+    else:
+        logger.warning("No update_data provided for user_id=%s", user_id)
+    
     user = await get_user(db, user_id)
+    logger.info("User after update: cpf=%s", getattr(user, 'cpf', 'NOT_FOUND'))
     return user
 
 async def get_professionals_nearby(db: AsyncIOMotorDatabase, longitude: float, latitude: float, radius_km: float = 10) -> List[User]:

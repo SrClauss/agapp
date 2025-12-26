@@ -171,7 +171,7 @@ async def complete_profile(
     # Validar roles se fornecidas
     if profile_data.roles and not validate_roles(profile_data.roles):
         raise HTTPException(status_code=400, detail="Invalid roles")
-    print(profile_data)
+   
     # Preparar dados de atualização (somente campos setados)
     update_dict = profile_data.model_dump(exclude_unset=True)
 
@@ -222,6 +222,9 @@ async def complete_profile(
 
     # Atualizar usuário
     try:
+        logger.info("About to call update_user with update_dict keys: %s", list(update_dict.keys()))
+        if 'cpf' in update_dict:
+            logger.info("CPF in update_dict before calling update_user: %s", _mask(update_dict['cpf']))
         updated_user = await update_user(db, current_user.id, update_dict)
     except Exception as e:
         logger.error("Error updating user %s: %s", current_user.id, str(e))
