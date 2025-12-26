@@ -6,6 +6,7 @@ import useAuthStore, { AuthState } from '../stores/authStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { ImageBackground } from 'react-native';
+import { Button } from 'react-native-paper';
 export default function ProfileSelectionScreen() {
   const navigation = useNavigation();
   const setActiveRole = useAuthStore((s: AuthState) => s.setActiveRole);
@@ -90,6 +91,7 @@ export default function ProfileSelectionScreen() {
                 <MaterialCommunityIcons name="arrow-right" size={20} color="#4A90E2" />
               </View>
             </TouchableOpacity>
+        
           </View>
         </View>
       </KeyboardAvoidingView>

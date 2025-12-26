@@ -398,10 +398,19 @@
 <script>
 // Helper function to get auth token from cookie
 function getAuthToken() {
-    const token = document.cookie.split('; ').find(row => row.startsWith('access_token='));
+    // Try localStorage first (for admin tokens)
+    let token = localStorage.getItem('access_token');
     if (token) {
-        return token.split('=')[1].replace(/['"]/g, '').replace('Bearer ', '');
+        return token.replace(/['"]/g, '').replace('Bearer ', '');
     }
+
+    // Fallback to cookie
+    const cookieToken = document.cookie.split('; ').find(row => row.startsWith('access_token='));
+    if (cookieToken) {
+        token = cookieToken.split('=')[1];
+        return token.replace(/['"]/g, '').replace('Bearer ', '');
+    }
+
     return null;
 }
 
@@ -412,8 +421,9 @@ async function apiCall(url, method = 'GET', data = null) {
         method,
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        }
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
     };
 
     if (data && method !== 'GET') {

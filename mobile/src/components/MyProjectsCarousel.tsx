@@ -44,30 +44,11 @@ export default function MyProjectsCarousel() {
     }, [])
   );
 
-  const handleProjectPress = (project: Project) => {
-    // Navega para a tela de detalhe pelo id (substitui resumo histórico)
-    navigation.navigate('ProjectDetail' as never, { projectId: project.id || (project as any)._id } as never);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-    });
-  };
-
-  const getCategoryDisplay = (category: Project['category']) => {
-    if (typeof category === 'string') {
-      return category;
-    }
-    return category.sub || category.main;
-  };
-
+  
   const cardWidth = Math.max(windowWidth - 32, 260); // 16px side padding on parent ScrollView
 
   const getProjectKey = (project: Project, index: number) => {
-    return project.id ?? `${project.client_id ?? 'no-client'}-${index}-${project.created_at}`;
+    return project._id ?? `${project.client_id ?? 'no-client'}-${index}-${project.created_at}`;
   };
 
   // Replaced old renderProjectCard implementation with the reusable ProjectCard component

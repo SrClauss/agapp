@@ -160,12 +160,14 @@ const ProjectClientDetailScreen: React.FC = () => {
   };
 
   const handleDelete = async () => {
+
     if (!project) return;
     try {
-      await deleteProject(project.id);
+      await deleteProject(project._id);
       Alert.alert('Sucesso', 'Projeto excluído com sucesso.');
       navigation.goBack();
     } catch (e) {
+      
       Alert.alert('Erro', 'Falha ao excluir projeto.');
     }
   };
@@ -199,15 +201,18 @@ const ProjectClientDetailScreen: React.FC = () => {
             <View style={styles.budgetIcon}><Text>R$</Text></View>
             <View>
               <Text style={styles.budgetLabel}>Orçamento Estimado</Text>
-              <Text style={styles.budgetValue}>
-                {project.budget_min && project.budget_max
-                  ? `${formatCurrency(project.budget_min)} - ${formatCurrency(project.budget_max)}`
-                  : project.budget_min
-                    ? `A partir de ${formatCurrency(project.budget_min)}`
-                    : project.budget_max
-                      ? `Até ${formatCurrency(project.budget_max)}`
-                      : '—'}
-              </Text>
+              {project.budget_min && project.budget_max ? (
+                <>
+                  <Text style={styles.budgetValue}>A partir de {formatCurrency(project.budget_min)}</Text>
+                  <Text style={styles.budgetValue}>Até {formatCurrency(project.budget_max)}</Text>
+                </>
+              ) : project.budget_min ? (
+                <Text style={styles.budgetValue}>A partir de {formatCurrency(project.budget_min)}</Text>
+              ) : project.budget_max ? (
+                <Text style={styles.budgetValue}>Até {formatCurrency(project.budget_max)}</Text>
+              ) : (
+                <Text style={styles.budgetValue}>—</Text>
+              )}
             </View>
           </View>
         </View>
@@ -347,33 +352,14 @@ const ProjectClientDetailScreen: React.FC = () => {
             }
 
             style={{ marginBottom: 8 }}
-          /*
           
-           <IconButton
-                            icon="pencil"
-                            iconColor={colors.surface}
-                            size={20}
-                            onPress={() => navigation.navigate('EditProject', { project })}
-                            style={styles.iconButton}
-                          />
-                          <IconButton
-                            icon="delete"
-                            size={20}
-                            iconColor={colors.error}
-                            onPress={() => Alert.alert(
-                              'Excluir Projeto',
-                              'Tem certeza que deseja excluir este projeto?',
-                              [
-                                { text: 'Cancelar', style: 'cancel' },
-                                { text: 'Excluir', style: 'destructive', onPress: handleDelete },
-                              ]
-                            )}
-                            style={styles.iconButton}
-                          />
-          */
+         
 
           >Excluir</Button>
-          <Button>Editar</Button>
+          <Button
+            mode="contained"
+            onPress={() => navigation.navigate('EditProject' as never, { project } as never)}
+          >Editar</Button>
         </View>
       </ScrollView>
     </View>
