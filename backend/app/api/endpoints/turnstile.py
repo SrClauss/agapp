@@ -29,6 +29,11 @@ async def verify_turnstile(request: TurnstileVerifyRequest):
         except Exception:
             token_preview = '<unreadable token>'
         logger.info("verify-turnstile received token preview: %s", token_preview)
+        # Debug print of full token (temporary) — will be removed after diagnosis
+        try:
+            print(f"[turnstile-debug] full token: {request.token}")
+        except Exception:
+            print("[turnstile-debug] full token: <unreadable>")
         async with httpx.AsyncClient() as client:
             # Enviar requisição para a API do Turnstile
             response = await client.post(
