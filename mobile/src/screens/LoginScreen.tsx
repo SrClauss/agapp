@@ -11,6 +11,8 @@ import { transparent } from 'react-native-paper/lib/typescript/styles/themes/v2/
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import client from '../api/axiosClient';
 import axios from 'axios';
+import { WebView } from 'react-native-webview';
+import { Modal, ActivityIndicator } from 'react-native';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -22,6 +24,9 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showTurnstile, setShowTurnstile] = useState(false);
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null);
+  const [turnstileLoading, setTurnstileLoading] = useState(false);
 
   const { signIn } = useGoogleAuth();
 
@@ -80,10 +85,38 @@ export default function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
+      // Fetch Turnstile site key from backend
+      setTurnstileLoading(true);
+      const { data } = await client.get('/auth/turnstile-site-key');
+      setTurnstileSiteKey(data.site_key);
+      setTurnstileLoading(false);
+      setShowTurnstile(true);
+    } catch (e: any) {
+      setTurnstileLoading(false);
+      setError('Erro ao iniciar verificação anti-bot');
+      setLoading(false);
+    }
+  };
+
+  // Handle message from WebView (turnstile token)
+  const onTurnstileMessage = async (event: any) => {
+    const token = event.nativeEvent.data;
+    setShowTurnstile(false);
+    setLoading(true);
+    try {
+      // 1) Verify token with backend
+      const verifyResp = await client.post('/auth/verify-turnstile', { token });
+      if (!verifyResp.data || !verifyResp.data.success) {
+        const msg = verifyResp.data?.message || 'Falha na verificação anti-bot';
+        throw new Error(msg);
+      }
+
+      // 2) Call login normally (backend no longer needs the token here)
       const data = await loginWithEmail(email, password);
       await setToken(data.token);
       const user = data.user || (await fetchCurrentUser(data.token));
       setUser(user);
+
       // Register push token on successful login
       try {
         const pushToken = await NotificationsService.registerForPushNotificationsAsync();
@@ -205,6 +238,46 @@ export default function LoginScreen() {
           <Button mode="contained" onPress={onEmailLogin} loading={loading} style={styles.button} buttonColor="#6200ee">
             Entrar
           </Button>
+
+          {/* Turnstile modal */}
+          <Modal visible={showTurnstile} animationType="slide" transparent={false} onRequestClose={() => setShowTurnstile(false)}>
+            {turnstileLoading || !turnstileSiteKey ? (
+              <ActivityIndicator size="large" />
+            ) : (
+              <WebView
+                originWhitelist={["*"]}
+                source={{ html: `<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  </head>
+  <body>
+    <div id="widget"></div>
+    <script>
+      function onSuccess(token) {
+        window.ReactNativeWebView.postMessage(token);
+      }
+      function onLoad() {
+        const container = document.getElementById('widget');
+        if (container) {
+          container.innerHTML = '<div class="cf-turnstile" data-sitekey="${turnstileSiteKey}" data-callback="onSuccess"></div>';
+          var script = document.createElement('script');
+          script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+          document.body.appendChild(script);
+        }
+      }
+      window.onload = onLoad;
+    </script>
+  </body>
+</html>` }}
+                onMessage={onTurnstileMessage}
+                javaScriptEnabled
+                domStorageEnabled
+                startInLoadingState
+              />
+            )}
+          </Modal>
 
           <SocialButton
             label="Continuar com Google"
