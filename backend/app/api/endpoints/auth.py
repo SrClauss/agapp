@@ -141,6 +141,66 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
         google_sub = idinfo.get('sub')  # ID único do Google
 
         if not google_email:
+            raise HTTPException(status_code=400, detail="Google token inválido")
+
+        # Continua o fluxo original...
+        existing = await get_user_by_email(db, google_email)
+        if existing:
+            user = existing
+        else:
+            # Criar usuário com CPF temporário
+            user_create = UserCreate(
+                email=google_email,
+                full_name=google_name,
+                cpf="000.000.000-00",
+                password=str(uuid.uuid4()),
+                turnstile_token=None,
+            )
+            user = await create_user(db, user_create)
+
+        access_token = create_access_token(subject=str(user.id))
+        refresh_token = create_refresh_token(subject=str(user.id))
+
+        return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+from fastapi import Request
+
+@router.get("/turnstile-site-key")
+async def get_turnstile_site_key(request: Request):
+    """Retorna a chave pública do Turnstile e a URL hospedada (/turnstile) para uso no cliente"""
+    from app.core.config import settings
+    # Construir URL absoluta para a página hospedada /turnstile
+    try:
+        turnstile_url = request.url_for("turnstile_page")
+    except Exception:
+        # Fallback: construir a partir do host
+        base = str(request.base_url).rstrip('/')
+        turnstile_url = f"{base}/turnstile"
+    return {"site_key": settings.turnstile_site_key, "turnstile_url": turnstile_url}
+
+@router.post("/google")
+async def google_login(
+    token_request: GoogleAuthToken,
+    db: Session = Depends(get_db)
+):
+    """Login usando Google OAuth"""
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            token_request.token,
+            requests.Request(),
+            audience=settings.google_client_id
+        )
+
+        google_sub = idinfo.get('sub')
+        google_email = idinfo.get('email')
+        google_name = idinfo.get('name', '')
+
+        if not google_email:
             raise HTTPException(status_code=400, detail="Email não encontrado no token do Google")
 
         # Verificar se o usuário já existe
