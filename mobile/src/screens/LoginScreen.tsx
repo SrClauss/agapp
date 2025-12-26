@@ -387,11 +387,6 @@ export default function LoginScreen() {
                 domStorageEnabled
                 startInLoadingState
               />
-                onMessage={onTurnstileMessage}
-                javaScriptEnabled
-                domStorageEnabled
-                startInLoadingState
-              />
             )}
           </Modal>
 
