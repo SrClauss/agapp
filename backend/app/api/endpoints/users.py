@@ -198,25 +198,32 @@ async def unregister_fcm_token(
 async def read_user_public(user_id: str, db: AsyncIOMotorDatabase = Depends(get_database)):
     """Return minimal public info for a user (id, full_name, avatar_url, phone). No auth required.
 
-    Fallback logic: try by string _id first; if not found and user_id looks like a 24-char hex, try ObjectId(user_id).
+    Fallback logic: try by string _id first; if not found and looks like 24-char hex ObjectId (not UUID), try ObjectId(user_id).
     """
-    logging.info(f"Public user lookup requested: user_id={user_id}")
+    logging.info(f"[PUBLIC USER] Lookup requested: user_id={user_id} (len={len(user_id)})")
+
     user = await db.users.find_one({"_id": user_id}, {"full_name": 1, "avatar_url": 1, "phone": 1})
-    if not user:
-        # Try fallback: maybe legacy ObjectId
-        try:
-            from bson import ObjectId
-            if ObjectId.is_valid(user_id):
+    if user:
+        logging.info(f"[PUBLIC USER] Found by string _id: {user_id}")
+    else:
+        # Try fallback ONLY for 24-char hex strings (ObjectId format), NOT UUIDs
+        # UUIDs have hyphens and are 36 chars, ObjectIds are 24 hex chars
+        from bson import ObjectId
+        if len(user_id) == 24 and all(c in '0123456789abcdef' for c in user_id.lower()):
+            try:
                 user = await db.users.find_one({"_id": ObjectId(user_id)}, {"full_name": 1, "avatar_url": 1, "phone": 1})
                 if user:
-                    logging.info(f"Public user lookup: found by ObjectId for user_id={user_id}")
-        except Exception:
-            # ignore and continue to final 404
-            pass
+                    logging.info(f"[PUBLIC USER] Found by ObjectId fallback: {user_id}")
+            except Exception as e:
+                logging.warning(f"[PUBLIC USER] ObjectId conversion failed for {user_id}: {e}")
+        else:
+            logging.info(f"[PUBLIC USER] Not attempting ObjectId conversion (wrong format): {user_id}")
 
     if not user:
-        logging.info(f"Public user lookup: user_id={user_id} not found")
+        logging.warning(f"[PUBLIC USER] NOT FOUND: user_id={user_id}")
         raise HTTPException(status_code=404, detail="User not found")
+    
+    logging.info(f"[PUBLIC USER] Returning: id={user.get('_id')} name={user.get('full_name')}")
     return {
         "id": str(user.get("_id")),
         "full_name": user.get("full_name"),

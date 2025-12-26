@@ -335,6 +335,30 @@ async def read_project(
     project = await get_project(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Ensure client_name present for frontend convenience; fall back to user lookup
+    try:
+        if not getattr(project, 'client_name', None) and getattr(project, 'client_id', None):
+            client_id = project.client_id
+            logging.info(f"read_project: client_name missing for project={project_id}, attempting lookup for client_id={client_id}")
+            user = await db.users.find_one({"_id": client_id})
+            if not user:
+                # Try ObjectId fallback
+                try:
+                    from bson import ObjectId
+                    if ObjectId.is_valid(client_id):
+                        user = await db.users.find_one({"_id": ObjectId(client_id)})
+                        if user:
+                            logging.info(f"read_project: found client by ObjectId for client_id={client_id}")
+                except Exception:
+                    pass
+
+            if user and user.get('full_name'):
+                project.client_name = user.get('full_name')
+                logging.info(f"read_project: populated client_name for project={project_id} => {project.client_name}")
+    except Exception:
+        logging.exception(f"read_project: error while populating client_name for project={project_id}")
+
     return project
 
 @router.put("/{project_id}", response_model=Project)

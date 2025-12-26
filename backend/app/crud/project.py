@@ -103,7 +103,7 @@ async def create_project(db: AsyncIOMotorDatabase, project: ProjectCreate, clien
     
     # Fetch client name and add to document
     client = await db.users.find_one({"_id": client_id})
-    project_dict["client_name"] = client.get("name") if client else None
+    project_dict["client_name"] = client.get("full_name") if client else None
     
     # Set default remote_execution based on category if not explicitly set
     if "remote_execution" not in project_dict or project_dict["remote_execution"] is None:

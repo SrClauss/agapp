@@ -296,8 +296,12 @@ export default function ProjectDetailScreen() {
                 if (project) navigation.navigate('EditProject' as never, { project } as any);
               }}
             >
+              
               <MaterialIcons name="edit" size={18} color={colors.primary} />
             </TouchableOpacity>
+
+
+            
             <TouchableOpacity
               style={[styles.iconButton, { marginLeft: 8 }]}
               onPress={() => {
@@ -368,6 +372,7 @@ export default function ProjectDetailScreen() {
         }
       >
         {/* Budget Card (top) */}
+       
         <View style={styles.budgetCard}>
           <View style={styles.budgetLeft}>
             <View style={styles.budgetIcon}><MaterialIcons name="attach-money" size={22} color={colors.primary} /></View>
