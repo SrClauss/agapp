@@ -13,6 +13,7 @@ export default function CompleteProfileScreen() {
   const token = useAuthStore((s: AuthState) => s.token);
   const user = useAuthStore((s: AuthState) => s.user);
   const setUser = useAuthStore((s: AuthState) => s.setUser);
+  const setToken = useAuthStore((s: AuthState) => s.setToken);
 
   const [phone, setPhone] = useState('');
   const [cpf, setCpf] = useState('');
@@ -79,13 +80,33 @@ export default function CompleteProfileScreen() {
 
       const updatedUser = await completeProfile(token, payload);
 
-      // Atualizar user com avatar_url se disponível
-      const userWithPhoto = { ...updatedUser, avatar_url: user?.avatar_url };
-      setUser(userWithPhoto);
+      // If password was provided, log in with email/password to get fresh tokens
+      if (password) {
+        try {
+          // Import login function lazily to avoid circular deps
+          const { loginWithEmail } = await import('../api/auth');
+          const loginResult = await loginWithEmail(user.email, password);
+          // Save token and user
+          await setToken(loginResult.token);
+          setUser(loginResult.user || { ...updatedUser, avatar_url: user?.avatar_url });
+          setSnackbarMsg('Perfil atualizado e logado com sucesso');
+          setSnackbarVisible(true);
+        } catch (loginErr: any) {
+          // Profile updated but login failed - keep updated user in store
+          const userWithPhoto = { ...updatedUser, avatar_url: user?.avatar_url };
+          setUser(userWithPhoto);
+          setSnackbarMsg(loginErr.message || 'Perfil atualizado, mas falha no login automático');
+          setSnackbarVisible(true);
+        }
+      } else {
+        // Atualizar user com avatar_url se disponível
+        const userWithPhoto = { ...updatedUser, avatar_url: user?.avatar_url };
+        setUser(userWithPhoto);
 
-      // Feedback ao usuário
-      setSnackbarMsg('Perfil atualizado com sucesso');
-      setSnackbarVisible(true);
+        // Feedback ao usuário
+        setSnackbarMsg('Perfil atualizado com sucesso');
+        setSnackbarVisible(true);
+      }
 
       // Navigate based on user roles using helper util (professionals temporarily routed to ProfileSelection)
       const destination = getRouteForRoles(updatedUser.roles, undefined);
