@@ -194,15 +194,7 @@ export default function LoginScreen() {
         throw new Error(parsed.error || 'Erro na verificação anti-bot');
       }
 
-      // 1) Verify token with backend
-      const verifyResp = await client.post('/auth/verify-turnstile', { token });
-      console.log('[Login] verify-turnstile response', verifyResp.data);
-      if (!verifyResp.data || !verifyResp.data.success) {
-        const msg = verifyResp.data?.message || 'Falha na verificação anti-bot';
-        throw new Error(msg);
-      }
-
-      // 2) Call login passing the turnstile token so backend can accept it
+      // Directly use the token in the login request and let the backend verify it once
       const data = await loginWithEmail(email, password, token);
       await setToken(data.token);
       const user = data.user || (await fetchCurrentUser(data.token));
