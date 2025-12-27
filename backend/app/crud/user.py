@@ -167,6 +167,7 @@ async def get_user_stats(db: AsyncIOMotorDatabase, user_id: str) -> dict:
         "total_contacts_received": 0,
         "contacts_by_status": {},
         "active_subscription": None,
+        "total_credits": 0,
         "total_spent": 0
     }
     
@@ -200,10 +201,11 @@ async def get_user_stats(db: AsyncIOMotorDatabase, user_id: str) -> dict:
     subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
     if subscription:
         stats["active_subscription"] = subscription
-    
-    return stats
-
-async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> bool:
+        # Ensure total_credits set for display
+        try:
+            stats["total_credits"] = int(subscription.get('credits', 0))
+        except Exception:
+            stats["total_credits"] = 0
     # Antes de deletar, garantir que não vamos apagar o último admin
     # Suportar _id como string e ObjectId
     user = await db.users.find_one({"_id": user_id})

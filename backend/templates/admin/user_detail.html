@@ -68,6 +68,10 @@
                         <th>Atualizado em:</th>
                         <td>{{ user.updated_at or '-' }}</td>
                     </tr>
+                    <tr>
+                        <th>Créditos Disponíveis:</th>
+                        <td>{{ stats.total_credits or 0 }}</td>
+                    </tr>
                 </table>
             </div>
         </div>
