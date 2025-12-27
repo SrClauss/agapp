@@ -19,6 +19,11 @@ async def create_subscription(db: AsyncIOMotorDatabase, subscription: Subscripti
     subscription_dict["_id"] = str(new_ulid())
     subscription_dict["user_id"] = user_id
     subscription_dict["expires_at"] = datetime.utcnow() + timedelta(days=30)  # Exemplo: 30 dias
+    # Garantir status padrão como active para que consultas por status funcionem
+    subscription_dict.setdefault("status", "active")
+    subscription_dict.setdefault("created_at", datetime.utcnow())
+    subscription_dict.setdefault("updated_at", datetime.utcnow())
+
     await db.subscriptions.insert_one(subscription_dict)
     return Subscription(**subscription_dict)
 
