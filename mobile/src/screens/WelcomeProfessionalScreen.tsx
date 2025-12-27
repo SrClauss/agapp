@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import LocationAvatar from '../components/LocationAvatar';
 import NearbySummary from '../components/NearbySummary';
 import { BannerAd } from '../components/BannerAd';
+import ProfessionalStatsCard from '../components/ProfessionalStatsCard';
 import { useLocationStore } from '../stores/locationStore';
 import useProjectsNearbyStore from '../stores/projectsNearbyStore';
 import useAuthStore, { AuthState } from '../stores/authStore';
@@ -70,6 +71,11 @@ export default function WelcomeProfessionalScreen() {
           </View>
           <View style={styles.sectionContainer}>
             <NearbySummary />
+          </View>
+
+          <View style={styles.sectionContainer}>
+            {/* Professional stats card */}
+            <ProfessionalStatsCard />
           </View>
 
           <View style={styles.actionButtons}>
