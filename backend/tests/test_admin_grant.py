@@ -67,6 +67,13 @@ async def test_grant_package_to_user_adds_credits_or_creates_subscription(monkey
     monkeypatch.setattr(admin_api, "add_credits_to_user", fake_add_credits_to_user)
     monkeypatch.setattr(admin_api, "create_subscription", fake_create_subscription)
 
+    called = {"tx": False}
+    async def fake_create_tx(db, tx):
+        called["tx"] = True
+        return True
+
+    monkeypatch.setattr(admin_api, "create_credit_transaction", fake_create_tx)
+
     payload = {"package_id": "pkg-1"}
     current_user = SimpleNamespace(roles=["admin"])
 
@@ -74,3 +81,4 @@ async def test_grant_package_to_user_adds_credits_or_creates_subscription(monkey
 
     assert res["user_id"] == "user-456"
     assert res["credits"] == 6  # 5 + 1 bonus
+    assert called["tx"] is True

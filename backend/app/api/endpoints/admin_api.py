@@ -8,6 +8,7 @@ from app.crud.contact import get_contacts
 from app.crud.subscription import get_subscriptions, create_subscription, add_credits_to_user
 from app.crud import config as config_crud
 from app.schemas.subscription import SubscriptionCreate, Subscription
+from app.crud.transactions import create_credit_transaction
 from app.models.user import User
 from app.models.project import Project
 from app.models.contact import Contact
@@ -343,6 +344,19 @@ async def grant_plan_to_user(
 
     sub_create = SubscriptionCreate(plan_name=plan.name, credits=plan.weekly_credits, price=0.0)
     subscription = await create_subscription(db, sub_create, user_id)
+
+    # record admin grant transaction
+    from app.schemas.transaction import CreditTransactionCreate
+    tx = CreditTransactionCreate(
+        user_id=user_id,
+        type="admin_grant",
+        credits=plan.weekly_credits,
+        price=0.0,
+        package_name=plan.name,
+        metadata={"granted_by": str(current_user.id) if hasattr(current_user, 'id') else None}
+    )
+    await create_credit_transaction(db, tx)
+
     return subscription
 
 
@@ -370,11 +384,35 @@ async def grant_package_to_user(
     # Try to add credits to existing subscription
     subscription = await add_credits_to_user(db, user_id, total_credits)
     if subscription:
+        # record transaction
+        from app.schemas.transaction import CreditTransactionCreate
+        tx = CreditTransactionCreate(
+            user_id=user_id,
+            type="admin_grant",
+            credits=total_credits,
+            price=0.0,
+            package_name=pkg.name,
+            metadata={"granted_by": str(current_user.id) if hasattr(current_user, 'id') else None}
+        )
+        await create_credit_transaction(db, tx)
         return subscription
 
     # If no active subscription, create one with these credits
     sub_create = SubscriptionCreate(plan_name=pkg.name, credits=total_credits, price=0.0)
     subscription = await create_subscription(db, sub_create, user_id)
+
+    # record transaction for creation
+    from app.schemas.transaction import CreditTransactionCreate
+    tx = CreditTransactionCreate(
+        user_id=user_id,
+        type="admin_grant",
+        credits=total_credits,
+        price=0.0,
+        package_name=pkg.name,
+        metadata={"granted_by": str(current_user.id) if hasattr(current_user, 'id') else None}
+    )
+    await create_credit_transaction(db, tx)
+
     return subscription
 
 

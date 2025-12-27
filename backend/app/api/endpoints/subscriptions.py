@@ -59,6 +59,19 @@ async def add_credits(
     subscription = await add_credits_to_user(db, str(current_user.id), add_credits.credits)
     if not subscription:
         raise HTTPException(status_code=404, detail="No active subscription found")
+
+    # Record credit purchase transaction
+    from app.schemas.transaction import CreditTransactionCreate
+    from app.crud.transactions import create_credit_transaction
+    tx = CreditTransactionCreate(
+        user_id=str(current_user.id),
+        type="purchase",
+        credits=add_credits.credits,
+        price=0.0,
+        metadata={"via": "user_add_credits"}
+    )
+    await create_credit_transaction(db, tx)
+
     return subscription
 
 # Admin endpoints

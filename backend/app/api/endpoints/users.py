@@ -75,6 +75,38 @@ async def reverse_user_address(req: ReverseGeocodeRequest):
         raise HTTPException(status_code=400, detail='Could not reverse geocode coordinates')
     return {"address": address}
 
+
+@router.get('/professional/stats')
+async def professional_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Retorna estatísticas relevantes para o profissional autenticado"""
+    if 'professional' not in current_user.roles:
+        raise HTTPException(status_code=403, detail='User is not a professional')
+
+    user_id = str(current_user.id)
+
+    # Active subscriptions count
+    active_subs = await db.subscriptions.count_documents({"user_id": user_id, "status": "active"})
+
+    # Credits available: try active subscription then fallback to user.credits
+    subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
+    credits_available = int(subscription.get('credits', 0)) if subscription else getattr(current_user, 'credits', 0)
+
+    # Contacts received (as professional)
+    contacts_received = await db.contacts.count_documents({"professional_id": user_id})
+
+    # Projects completed by professional
+    projects_completed = await db.projects.count_documents({"professional_id": user_id, "status": "completed"})
+
+    return {
+        "active_subscriptions": active_subs,
+        "credits_available": credits_available,
+        "contacts_received": contacts_received,
+        "projects_completed": projects_completed
+    }
+
 @router.get("/me/professional-settings", response_model=ProfessionalSettings)
 async def get_professional_settings(
     current_user: User = Depends(get_current_user),
