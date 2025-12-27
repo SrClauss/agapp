@@ -14,6 +14,9 @@
                 <a href="/system-admin/users/{{ user.id }}/edit" class="btn btn-primary">
                     <i class="fas fa-edit"></i> Editar
                 </a>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#grantFreeModal">
+                    <i class="fas fa-gift"></i> Conceder Plano/Pacote (Grátis)
+                </button>
                 <a href="/system-admin/users" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Voltar
                 </a>
@@ -265,4 +268,160 @@
         </div>
     </div>
 </div>
+
+<!-- Grant Free Plan/Package Modal -->
+<div class="modal fade" id="grantFreeModal" tabindex="-1" aria-labelledby="grantFreeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="grantFreeModalLabel">Conceder Plano ou Pacote Gratuito</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p>Selecione um plano ou pacote com preço R$0 para conceder ao usuário <strong>{{ user.full_name }}</strong>.</p>
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Planos Gratuitos</h6>
+            <div id="freePlansList">Carregando...</div>
+          </div>
+          <div class="col-md-6">
+            <h6>Pacotes Gratuitos</h6>
+            <div id="freePackagesList">Carregando...</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Helpers copied from admin config page (token + apiCall)
+function getAuthToken() {
+    // Try localStorage first (for admin tokens)
+    let token = localStorage.getItem('access_token');
+    if (token) {
+        return token.replace(/['\"]/g, '').replace('Bearer ', '');
+    }
+
+    // Fallback to cookie
+    const cookieToken = document.cookie.split('; ').find(row => row.startsWith('access_token='));
+    if (cookieToken) {
+        token = cookieToken.split('=')[1];
+        return token.replace(/['\"]/g, '').replace('Bearer ', '');
+    }
+
+    return null;
+}
+
+async function apiCall(url, method = 'GET', data = null) {
+    const token = getAuthToken();
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+    };
+
+    if (data && method !== 'GET') {
+        options.body = JSON.stringify(data);
+    }
+
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        const text = await response.text();
+        let err = text;
+        try { err = JSON.parse(text); } catch(e){}
+        throw new Error(err.detail || err.message || err || 'Erro na requisição');
+    }
+    return response.json();
+}
+
+async function loadFreeOptions() {
+    const plansList = document.getElementById('freePlansList');
+    const packagesList = document.getElementById('freePackagesList');
+    plansList.innerHTML = 'Carregando...';
+    packagesList.innerHTML = 'Carregando...';
+    try {
+        const plans = await apiCall('/api/admin/config/plans?active_only=true', 'GET');
+        const packages = await apiCall('/api/admin/config/credit-packages?active_only=true', 'GET');
+
+        const freePlans = plans.filter(p => Number(p.monthly_price) === 0);
+        const freePackages = packages.filter(p => Number(p.price) === 0);
+
+        if (freePlans.length === 0) plansList.innerHTML = '<small class="text-muted">Nenhum plano gratuito disponível</small>';
+        else {
+            plansList.innerHTML = '';
+            freePlans.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'd-flex justify-content-between align-items-center mb-2';
+                div.innerHTML = `<div><strong>${p.name}</strong><br/><small class="text-muted">${p.weekly_credits} créditos/semana</small></div>`;
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-sm btn-outline-success';
+                btn.textContent = 'Conceder';
+                btn.onclick = () => grantPlan('{{ user.id }}', p.id);
+                div.appendChild(btn);
+                plansList.appendChild(div);
+            });
+        }
+
+        if (freePackages.length === 0) packagesList.innerHTML = '<small class="text-muted">Nenhum pacote gratuito disponível</small>';
+        else {
+            packagesList.innerHTML = '';
+            freePackages.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'd-flex justify-content-between align-items-center mb-2';
+                div.innerHTML = `<div><strong>${p.name}</strong><br/><small class="text-muted">${p.credits} créditos + ${p.bonus_credits} bônus</small></div>`;
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-sm btn-outline-success';
+                btn.textContent = 'Conceder';
+                btn.onclick = () => grantPackage('{{ user.id }}', p.id);
+                div.appendChild(btn);
+                packagesList.appendChild(div);
+            });
+        }
+    } catch (err) {
+        plansList.innerHTML = '<small class="text-danger">Erro ao carregar</small>';
+        packagesList.innerHTML = '<small class="text-danger">Erro ao carregar</small>';
+        console.error(err);
+    }
+}
+
+async function grantPlan(userId, planId) {
+    if (!confirm('Confirma conceder este plano gratuito ao usuário?')) return;
+    try {
+        await apiCall(`/api/admin/users/${userId}/grant-plan`, 'POST', { plan_id: planId });
+        alert('Plano concedido com sucesso!');
+        window.location.reload();
+    } catch (err) {
+        alert('Erro: ' + err.message);
+        console.error(err);
+    }
+}
+
+async function grantPackage(userId, packageId) {
+    if (!confirm('Confirma conceder este pacote gratuito ao usuário?')) return;
+    try {
+        await apiCall(`/api/admin/users/${userId}/grant-package`, 'POST', { package_id: packageId });
+        alert('Pacote concedido com sucesso!');
+        window.location.reload();
+    } catch (err) {
+        alert('Erro: ' + err.message);
+        console.error(err);
+    }
+}
+
+// Load options when modal is shown
+var grantModalEl = document.getElementById('grantFreeModal');
+if (grantModalEl) {
+    grantModalEl.addEventListener('show.bs.modal', loadFreeOptions);
+}
+</script>
 {% endblock %}
+

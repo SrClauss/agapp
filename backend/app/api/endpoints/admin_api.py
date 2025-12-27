@@ -5,8 +5,9 @@ from app.core.security import get_current_admin_user
 from app.crud.user import get_users
 from app.crud.project import get_projects
 from app.crud.contact import get_contacts
-from app.crud.subscription import get_subscriptions
+from app.crud.subscription import get_subscriptions, create_subscription, add_credits_to_user
 from app.crud import config as config_crud
+from app.schemas.subscription import SubscriptionCreate, Subscription
 from app.models.user import User
 from app.models.project import Project
 from app.models.contact import Contact
@@ -318,6 +319,63 @@ async def delete_credit_package(
     success = await config_crud.delete_credit_package(db, package_id)
     if not success:
         raise HTTPException(status_code=404, detail="Pacote não encontrado")
+
+
+# ==================== ADMIN USER GRANT ENDPOINTS ====================
+@router.post("/users/{user_id}/grant-plan", response_model=Subscription, status_code=201)
+async def grant_plan_to_user(
+    user_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Conceder plano gratuito a um usuário (somente planos com preço 0)"""
+    plan_id = payload.get('plan_id') if isinstance(payload, dict) else None
+    if not plan_id:
+        raise HTTPException(status_code=400, detail="plan_id é obrigatório")
+
+    plan = await config_crud.get_plan_config(db, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plano não encontrado")
+
+    if float(plan.monthly_price) != 0.0:
+        raise HTTPException(status_code=400, detail="Apenas planos gratuitos podem ser concedidos via admin")
+
+    sub_create = SubscriptionCreate(plan_name=plan.name, credits=plan.weekly_credits, price=0.0)
+    subscription = await create_subscription(db, sub_create, user_id)
+    return subscription
+
+
+@router.post("/users/{user_id}/grant-package", response_model=Subscription, status_code=201)
+async def grant_package_to_user(
+    user_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Conceder pacote de créditos gratuito a um usuário (aplica créditos ou cria assinatura com créditos)"""
+    package_id = payload.get('package_id') if isinstance(payload, dict) else None
+    if not package_id:
+        raise HTTPException(status_code=400, detail="package_id é obrigatório")
+
+    pkg = await config_crud.get_credit_package(db, package_id)
+    if not pkg:
+        raise HTTPException(status_code=404, detail="Pacote não encontrado")
+
+    if float(pkg.price) != 0.0:
+        raise HTTPException(status_code=400, detail="Apenas pacotes gratuitos podem ser concedidos via admin")
+
+    total_credits = int(pkg.credits) + int(pkg.bonus_credits or 0)
+
+    # Try to add credits to existing subscription
+    subscription = await add_credits_to_user(db, user_id, total_credits)
+    if subscription:
+        return subscription
+
+    # If no active subscription, create one with these credits
+    sub_create = SubscriptionCreate(plan_name=pkg.name, credits=total_credits, price=0.0)
+    subscription = await create_subscription(db, sub_create, user_id)
+    return subscription
 
 
 # ==================== FEATURED PRICING ENDPOINTS ====================
