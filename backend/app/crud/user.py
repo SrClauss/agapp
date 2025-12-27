@@ -197,8 +197,20 @@ async def get_user_stats(db: AsyncIOMotorDatabase, user_id: str) -> dict:
     async for doc in db.contacts.aggregate(pipeline):
         stats["contacts_by_status"][doc["_id"]] = doc["count"]
     
-    # Assinatura ativa
+    # Assinatura ativa - tentar com string primeiro, depois ObjectId
     subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
+    
+    # Se não encontrou e user_id é ObjectId válido, tentar com string do ObjectId
+    if not subscription and ObjectId.is_valid(user_id):
+        subscription = await db.subscriptions.find_one({"user_id": str(ObjectId(user_id)), "status": "active"})
+    
+    # Se ainda não encontrou, tentar buscar por ObjectId no user_id da subscription
+    if not subscription:
+        try:
+            subscription = await db.subscriptions.find_one({"user_id": ObjectId(user_id), "status": "active"})
+        except:
+            pass
+    
     if subscription:
         stats["active_subscription"] = subscription
         # Ensure total_credits set for display
@@ -206,6 +218,8 @@ async def get_user_stats(db: AsyncIOMotorDatabase, user_id: str) -> dict:
             stats["total_credits"] = int(subscription.get('credits', 0))
         except Exception:
             stats["total_credits"] = 0
+    
+    return stats
 async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> bool:
     # Antes de deletar, garantir que não vamos apagar o último admin
     # Suportar _id como string e ObjectId

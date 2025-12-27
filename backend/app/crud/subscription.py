@@ -13,9 +13,18 @@ async def get_subscription(db: AsyncIOMotorDatabase, subscription_id: str) -> Op
 async def get_user_subscription(db: AsyncIOMotorDatabase, user_id: str) -> Optional[Subscription]:
     # Try with string first
     subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
+    
     # If not found and user_id looks like ObjectId, try as ObjectId string representation
     if not subscription and ObjectId.is_valid(user_id):
         subscription = await db.subscriptions.find_one({"user_id": str(ObjectId(user_id)), "status": "active"})
+    
+    # Try with ObjectId directly as fallback
+    if not subscription:
+        try:
+            subscription = await db.subscriptions.find_one({"user_id": ObjectId(user_id), "status": "active"})
+        except:
+            pass
+    
     return Subscription(**subscription) if subscription else None
 
 async def create_subscription(db: AsyncIOMotorDatabase, subscription: SubscriptionCreate, user_id: str) -> Subscription:
