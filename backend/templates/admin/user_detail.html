@@ -365,7 +365,8 @@ async function loadFreeOptions() {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-outline-success';
                 btn.textContent = 'Conceder';
-                btn.onclick = () => grantPlan('{{ user.id }}', p.id);
+                // some responses use "id" and others use "_id"
+                btn.onclick = () => grantPlan('{{ user.id }}', p.id || p._id);
                 div.appendChild(btn);
                 plansList.appendChild(div);
             });
@@ -381,7 +382,8 @@ async function loadFreeOptions() {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-outline-success';
                 btn.textContent = 'Conceder';
-                btn.onclick = () => grantPackage('{{ user.id }}', p.id);
+                // accept both id or _id
+                btn.onclick = () => grantPackage('{{ user.id }}', p.id || p._id);
                 div.appendChild(btn);
                 packagesList.appendChild(div);
             });
