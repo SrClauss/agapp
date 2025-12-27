@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
 from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search
+from app.api.endpoints import professional_api
 from app.api.admin import router as admin_router
 from app.api.professional import router as professional_router
 from app.api.websockets.routes import router as websocket_router
@@ -182,6 +183,8 @@ app.include_router(webhooks.router, tags=["webhooks"])
 app.include_router(turnstile.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin_router, prefix="/system-admin", tags=["admin"])
 app.include_router(professional_router, prefix="/professional", tags=["professional"])
+# API endpoint for professional stats (mobile expects /api/professional/stats)
+app.include_router(professional_api.router)
 app.include_router(admin_api.router, tags=["admin-api"])
 app.include_router(websocket_router, tags=["websockets"])
 app.include_router(support.router, prefix="/support", tags=["support"])
