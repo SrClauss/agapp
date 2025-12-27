@@ -141,6 +141,7 @@
                                 <div class="h6 mb-0 font-weight-bold text-gray-800">
                                     {% if stats.active_subscription %}
                                         {{ stats.active_subscription.plan_name }}
+                                        <div class="small text-muted">Créditos: {{ stats.active_subscription.credits }}</div>
                                     {% else %}
                                         Nenhuma
                                     {% endif %}
