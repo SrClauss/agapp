@@ -206,6 +206,7 @@ async def get_user_stats(db: AsyncIOMotorDatabase, user_id: str) -> dict:
             stats["total_credits"] = int(subscription.get('credits', 0))
         except Exception:
             stats["total_credits"] = 0
+async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> bool:
     # Antes de deletar, garantir que não vamos apagar o último admin
     # Suportar _id como string e ObjectId
     user = await db.users.find_one({"_id": user_id})
