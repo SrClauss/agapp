@@ -76,6 +76,9 @@ export default function WelcomeProfessionalScreen() {
           <View style={styles.sectionContainer}>
             {/* Professional stats card */}
             <ProfessionalStatsCard />
+            <View style={{ marginTop: 10 }}>
+              <Button mode="outlined" onPress={() => (navigation as any).navigate('ContactedProjects')}>Projetos que contatei</Button>
+            </View>
           </View>
 
           <View style={styles.actionButtons}>
