@@ -37,8 +37,10 @@ services:
       - ASAAS_API_KEY=${ASAAS_API_KEY}
       - ASAAS_ENVIRONMENT=${ASAAS_ENVIRONMENT:-sandbox}
       - ASAAS_WEBHOOK_TOKEN=${ASAAS_WEBHOOK_TOKEN}
+      - CHECKOUT_URL=${CHECKOUT_URL}
       - CORS_ORIGINS=${CORS_ORIGINS}
       # Firebase (opcional - se não configurado, push notifications não funcionam)
+      - FIREBASE_API_KEY=${FIREBASE_API_KEY:-}
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
       - FIREBASE_PRIVATE_KEY_ID=${FIREBASE_PRIVATE_KEY_ID:-}
       - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY:-}

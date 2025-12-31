@@ -13,11 +13,13 @@ class Settings(BaseSettings):
     asaas_api_key: str
     asaas_environment: str = "sandbox"
     asaas_webhook_token: str = ""
+    checkout_url: str = "https://agilizapro.cloud/checkout"
     turnstile_secret_key: str
     turnstile_site_key: str
     cors_origins: List[str] = ["http://localhost:3000"]
 
     # Firebase Cloud Messaging (Backend)
+    firebase_api_key: Optional[str] = None
     firebase_project_id: Optional[str] = None
     firebase_private_key_id: Optional[str] = None
     firebase_private_key: Optional[str] = None
