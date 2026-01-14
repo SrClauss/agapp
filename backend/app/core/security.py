@@ -3,7 +3,7 @@ from typing import Any, Union
 import bcrypt
 import logging
 from jose import jwt
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from app.core.config import settings
 from app.core.database import get_database
@@ -66,9 +66,14 @@ async def get_current_user_from_token(token: str, db: AsyncIOMotorDatabase):
         raise credentials_exception
     return user
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncIOMotorDatabase = Depends(get_database)):
-    """Get current user from Authorization header"""
-    return await get_current_user_from_token(token, db)
+async def get_current_user(token: str = Depends(oauth2_scheme), response: Response = None, db: AsyncIOMotorDatabase = Depends(get_database)):
+    """Get current user from Authorization header and renew token"""
+    user = await get_current_user_from_token(token, db)
+    # Renew token
+    new_token = create_access_token(subject=str(user.id))
+    if response:
+        response.headers["Authorization"] = f"Bearer {new_token}"
+    return user
 
 async def get_current_user_from_request(request: Request, db: AsyncIOMotorDatabase = Depends(get_database)):
     """Obtém o usuário atual a partir do Authorization header ou cookie.

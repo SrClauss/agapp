@@ -10,6 +10,7 @@ import WelcomeCustomerScreen from './src/screens/WelcomeCustomerScreen';
 import SearchResultsScreen from './src/screens/SearchResultsScreen';
 import CreateProjectScreen from './src/screens/CreateProjectScreen';
 import ProjectClientDetailScreen from './src/screens/ProjectClientDetailScreen';
+import ProjectProfessionalsDetailScreen from './src/screens/ProjectProfessionalsDetailScreen';
 import AllProjectsScreen from './src/screens/AllProjectsScreen';
 import CompleteProfileScreen from './src/screens/CompleteProfileScreen';
 import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
@@ -114,6 +115,7 @@ export default function App() {
           <Stack.Screen name="CreateProject" component={CreateProjectScreen} options={{ headerShown: false }} />
           <Stack.Screen name="EditProject" component={require('./src/screens/EditProjectScreen').default} options={{ headerShown: false }} />
           <Stack.Screen name="ProjectDetail" component={ProjectClientDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ProjectProfessionalsDetail" component={ProjectProfessionalsDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />
           <Stack.Screen name="WelcomeProfessional" component={WelcomeProfessionalScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ContactedProjects" component={require('./src/screens/ContactedProjectsScreen').default} options={{ title: 'Projetos Contatados' }} />

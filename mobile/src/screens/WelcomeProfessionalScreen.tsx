@@ -63,7 +63,7 @@ export default function WelcomeProfessionalScreen() {
     <SafeAreaView style={styles.safeArea}  >
       <ScrollView >
 
-        <View >
+        <View style={styles.containerView}>
           <LocationAvatar />
 
           <View style={styles.sectionContainer}>
@@ -103,7 +103,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 15,
 
+
   },
+  containerView: {
+    flex: 1,
+    marginBottom: 50,
+  },
+  
   actionButtons: {
     flexDirection: 'column',
     marginTop: 10,

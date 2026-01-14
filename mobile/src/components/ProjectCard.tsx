@@ -14,9 +14,11 @@ interface ProjectCardProps {
   showStatus?: boolean;
   cardWidth?: number;
   compact?: boolean;
+  /** Optional custom route name for detail view (e.g. 'ProjectProfessionalsDetail') */
+  detailRoute?: string;
 }
 
-export default function ProjectCard({ project, index = 0, showStatus = false, cardWidth, compact = false }: ProjectCardProps) {
+export default function ProjectCard({ project, index = 0, showStatus = false, cardWidth, compact = false, detailRoute }: ProjectCardProps) {
   const navigation = useNavigation();
 
   const formatDate = (dateString: string) => {
@@ -40,8 +42,13 @@ export default function ProjectCard({ project, index = 0, showStatus = false, ca
   const handlePress = () => {
     // Owner clients should see full info
     const isOwner = Boolean(user && (String(user.id) === String(project.client_id)));
-    // Navigate to ProjectDetail by id and pass showFullInfo when owner
-    navigation.navigate('ProjectDetail' as never, { projectId: project.id || (project as any)._id, showFullInfo: isOwner } as never);
+    const payload = { projectId: project._id || (project as any)._id, showFullInfo: isOwner } as never;
+    // If a custom detail route is provided, navigate there; otherwise fallback to ProjectDetail
+    if (detailRoute) {
+      navigation.navigate(detailRoute as never, payload);
+      return;
+    }
+    navigation.navigate('ProjectDetail' as never, payload);
   };
 
   const titleToShow = project.title

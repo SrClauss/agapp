@@ -92,6 +92,12 @@ client.interceptors.request.use(
 // Response interceptor - handle errors
 client.interceptors.response.use(
   (response) => {
+    // Check for renewed token in response headers
+    const newToken = response.headers?.authorization?.replace('Bearer ', '');
+    if (newToken) {
+      console.log('[axios] Token renewed, updating store');
+      useAuthStore.getState().setToken(newToken);
+    }
     // Return successful response
     return response;
   },

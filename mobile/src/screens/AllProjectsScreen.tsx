@@ -3,6 +3,7 @@ import { View, FlatList, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Searchbar, Divider, ActivityIndicator, Text } from 'react-native-paper';
 import ProjectCard from '../components/ProjectCard';
+import useAuthStore from '../stores/authStore';
 import { getProjects, Project } from '../api/projects';
 import { useRoute } from '@react-navigation/native';
 
@@ -39,8 +40,11 @@ export default function AllProjectsScreen() {
     return projects.filter(p => (p.description ?? '').toLowerCase().includes(q) || (p.title ?? '').toLowerCase().includes(q));
   }, [projects, query]);
 
+  const user = useAuthStore((s) => s.user);
+  const isProfessional = Boolean(user && user.roles && user.roles.includes('professional'));
+
   const renderItem = ({ item }: { item: Project }) => (
-    <ProjectCard project={item} showStatus />
+    <ProjectCard project={item} showStatus detailRoute={isProfessional ? 'ProjectProfessionalsDetail' : undefined} />
   );
 
   if (loading) return (

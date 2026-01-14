@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from ulid import ULID
+from .transaction import CreditTransaction
 
 class User(BaseModel):
     id: str = Field(alias="_id")
@@ -27,6 +28,9 @@ class User(BaseModel):
 
     # Assinatura
     subscription: Optional[Dict[str, Any]] = None  # {plan, credits, expires_at}
+
+    # Transações de crédito
+    credit_transactions: List[CreditTransaction] = []
 
     model_config = {
         "populate_by_name": True,
