@@ -275,4 +275,5 @@ async def complete_profile(
 @router.get("/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Retorna informações do usuário autenticado"""
+    print("DEBUG: current_user dict:", current_user.dict())
     return current_user
