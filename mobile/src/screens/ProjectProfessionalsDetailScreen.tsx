@@ -300,8 +300,8 @@ export default function ProjectProfessionalsDetailScreen() {
             <Dialog visible={ confirmVisible} onDismiss={() => setConfirmVisible(false)}>
               <Dialog.Title>Liberar projeto</Dialog.Title>
               <Dialog.Content>
-
                 <Text>{JSON.stringify(user, null, 2)}</Text>
+
                 <Text style={{ marginBottom: 8 }}>Você possui <Text style={{ fontWeight: '700' }}>{user?.credits ?? 0}</Text> créditos.</Text>
                 <Text>Ao liberar o projeto, será deduzido o custo correspondente dos seus créditos.</Text>
               </Dialog.Content>

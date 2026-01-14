@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from app.models.transaction import CreditTransaction
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -37,6 +38,7 @@ class UserInDBBase(UserBase):
     subscription: Optional[Dict[str, Any]] = None
     evaluations: List[Dict[str, Any]] = []  # List of evaluations received (for professionals)
     average_rating: Optional[float] = None  # Calculated truncated mean
+    credit_transactions: List[CreditTransaction] = []  # Embedded credit transactions
 
     class Config:
         from_attributes = True

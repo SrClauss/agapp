@@ -21,7 +21,6 @@ import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
 import { getRouteForRoles } from './src/utils/roles';
 import { fetchCurrentUser } from './src/api/auth';
-import { getCreditPackages } from './src/api/payments';
 
 const Stack = createNativeStackNavigator();
 
@@ -42,14 +41,6 @@ export default function App() {
           const currentUser = await fetchCurrentUser(token);
           console.log(`[App] Token válido, usuário obtido:`, currentUser.email);
           setUser(currentUser);
-
-          // Buscar pacotes de crédito
-          try {
-            const packages = await getCreditPackages();
-            useAuthStore.getState().setCreditPackages(packages);
-          } catch (error) {
-            console.log('[App] Erro ao buscar pacotes de crédito:', error);
-          }
 
           // Determinar rota inicial baseada no estado do usuário
           if (!currentUser.is_profile_complete) {
