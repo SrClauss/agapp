@@ -2,6 +2,17 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import * as SecureStore from 'expo-secure-store';
 
+export type CreditPackage = {
+  id: string;
+  name: string;
+  description: string;
+  credits_amount: number;
+  price: number;
+  currency: string;
+  is_active: boolean;
+  created_at: string;
+};
+
 export type User = {
   id: string;
   email: string;
@@ -39,15 +50,30 @@ export type User = {
     [key: string]: any;
   }>;
   average_rating?: number;
+  credit_transactions?: Array<{
+    id: string;
+    user_id: string;
+    type: string;
+    credits: number;
+    price: number;
+    currency: string;
+    package_name?: string;
+    payment_id?: string;
+    metadata?: any;
+    status: string;
+    created_at: string;
+  }>;
 };
 
 export type AuthState = {
   token: string | null;
   user: User | null;
   activeRole: string | null;
+  creditPackages: CreditPackage[] | null;
   isHydrated: boolean;
   setToken: (token: string | null) => Promise<void>;
   setUser: (user: User | null) => void;
+  setCreditPackages: (packages: CreditPackage[]) => void;
   setActiveRole: (role: string) => void;
   setHydrated: () => void;
   logout: () => Promise<void>;
@@ -64,18 +90,20 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       activeRole: null,
+      creditPackages: null,
       isHydrated: false,
       setToken: async (token: string | null) => {
         set({ token });
         // O middleware persist vai salvar automaticamente no SecureStore
         },
       setUser: (user: User | null) => set({ user }),
+      setCreditPackages: (packages: CreditPackage[]) => set({ creditPackages: packages }),
       // projectsNearby moved to dedicated store `useProjectsNearbyStore`
       setActiveRole: (role: string) => set({ activeRole: role }),
       setHydrated: () => set({ isHydrated: true }),
       getToken: () => get().token,
       logout: async () => {
-        set({ token: null, user: null, activeRole: null });
+        set({ token: null, user: null, activeRole: null, creditPackages: null });
       },
       // DEV helper: inspect what's stored in SecureStore under the persist key
       // This is a safe, masked debug helper only intended for development.
