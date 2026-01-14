@@ -9,6 +9,8 @@ services:
       MONGO_INITDB_DATABASE: ${DATABASE_NAME:-agiliza}
     volumes:
       - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
     networks:
       - agiliza_network
     restart: unless-stopped
