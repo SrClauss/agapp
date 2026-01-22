@@ -17,9 +17,15 @@ from datetime import datetime, timezone
 import os
 
 # Configurar variáveis de ambiente para testes
-os.environ["MONGODB_URL"] = os.getenv("TEST_MONGODB_URL", "mongodb://localhost:27017")
-os.environ["MONGODB_DB_NAME"] = os.getenv("TEST_MONGODB_DB_NAME", "agapp_test")
-os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"
+# Prioridade: MONGODB_URL > TEST_MONGODB_URL > localhost
+if "MONGODB_URL" not in os.environ:
+    os.environ["MONGODB_URL"] = os.getenv("TEST_MONGODB_URL", "mongodb://localhost:27017")
+
+# Prioridade: DATABASE_NAME > MONGODB_DB_NAME > TEST_MONGODB_DB_NAME > agapp_test  
+if "MONGODB_DB_NAME" not in os.environ:
+    os.environ["MONGODB_DB_NAME"] = os.getenv("DATABASE_NAME", os.getenv("TEST_MONGODB_DB_NAME", "agapp_test"))
+
+os.environ["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "test-secret-key-for-testing-only")
 os.environ["PAYMENT_TEST_MODE"] = "true"
 
 
