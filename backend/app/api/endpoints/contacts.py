@@ -215,6 +215,17 @@ async def send_contact_message(
         {"$push": {"chat": msg}, "$set": {"updated_at": datetime.now(timezone.utc)}}
     )
     
+    # Mark contact as "in_conversation" if it's the first user message
+    contact_dict = await db.contacts.find_one({"_id": contact_id})
+    if contact_dict:
+        contact_messages = contact_dict.get("chat", [])
+        user_messages = [m for m in contact_messages if not m.get("system", False)]
+        if len(user_messages) == 1:  # This is the first non-system message (we just added it)
+            await db.contacts.update_one(
+                {"_id": contact_id},
+                {"$set": {"status": "in_conversation"}}
+            )
+    
     # Send push notification to the other party
     try:
         from app.core.firebase import send_multicast_notification
