@@ -75,7 +75,7 @@ class ProjectInDBBase(ProjectBase):
         populate_by_name = True
 
 class Project(ProjectInDBBase):
-    pass
+    badges: List[str] = []  # Dynamic badges: "new", "featured", "expiring_soon"
 
 # Include liberated professionals profiles in responses
 ProjectInDBBase.liberado_por_profiles = []

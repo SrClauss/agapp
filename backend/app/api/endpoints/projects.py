@@ -11,8 +11,41 @@ from app.crud.project import get_projects, create_project, update_project, delet
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectFilter, ProjectClose, EvaluationCreate
 from app.schemas.user import User
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.utils.timezone import ensure_utc
 
 router = APIRouter()
+
+
+def add_project_badges(projects: List[Project]) -> None:
+    """
+    Add badges to projects based on their state.
+    Badges: "new" (< 24h old), "featured" (currently featured), "expiring_soon" (featured expires in < 24h)
+    """
+    now = datetime.now(timezone.utc)
+    for project in projects:
+        badges = []
+        
+        # Check if project is new (less than 24 hours old)
+        if project.created_at:
+            created_at_utc = ensure_utc(project.created_at)
+            hours_old = (now - created_at_utc).total_seconds() / 3600
+            if hours_old < 24:
+                badges.append("new")
+        
+        # Check if project is featured
+        if project.is_featured and project.featured_until:
+            featured_until_utc = ensure_utc(project.featured_until)
+            if featured_until_utc > now:
+                badges.append("featured")
+                
+                # Check if featured status is expiring soon (less than 24 hours left)
+                hours_left = (featured_until_utc - now).total_seconds() / 3600
+                if hours_left < 24:
+                    badges.append("expiring_soon")
+        
+        # Store badges in project
+        project.badges = badges
+
 
 @router.post("/", response_model=Project, status_code=201)
 async def create_new_project(
@@ -78,6 +111,8 @@ async def read_projects(
     latitude: float = None,
     longitude: float = None,
     radius_km: float = None,
+    sort_by: str = Query("created_at", description="Sort field: created_at, featured, urgency"),
+    sort_order: str = Query("desc", description="Sort order: asc or desc"),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     filters = ProjectFilter(
@@ -92,6 +127,24 @@ async def read_projects(
         radius_km=radius_km
     )
     projects = await get_projects(db, skip=skip, limit=limit, filters=filters)
+    
+    # Apply sorting
+    if sort_by == "featured":
+        # Featured projects first, then by creation date
+        projects.sort(key=lambda p: (not p.is_featured, p.created_at), reverse=(sort_order == "desc"))
+    elif sort_by == "urgency":
+        # Projects with deadlines first, sorted by deadline proximity
+        projects.sort(key=lambda p: (
+            p.deadline is None,
+            p.deadline if p.deadline else datetime.max.replace(tzinfo=timezone.utc)
+        ), reverse=(sort_order == "asc"))
+    elif sort_by == "created_at":
+        # Sort by creation date
+        projects.sort(key=lambda p: p.created_at, reverse=(sort_order == "desc"))
+    
+    # Add badges to projects
+    add_project_badges(projects)
+    
     # Populate liberado_por_profiles for projects
     prof_ids = list({pid for p in projects for pid in (p.liberado_por or [])})
     if prof_ids:
@@ -220,6 +273,10 @@ async def read_nearby_combined(
             projects_non_remote.append(Project(**project_dict))
         logging.info(f"Nearby combined search: coords=({latitude},{longitude}) radius_km={radius_km} subcategories={effective_subcategories} results_all={len(projects_all)} non_remote={len(projects_non_remote)}")
 
+        # Add badges to projects
+        add_project_badges(projects_all)
+        add_project_badges(projects_non_remote)
+        
         return NearbyResponse(all=projects_all, non_remote=projects_non_remote)
 
     except Exception:

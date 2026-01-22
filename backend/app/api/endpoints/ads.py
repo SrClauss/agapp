@@ -10,6 +10,7 @@ import tempfile
 import jinja2
 from PIL import Image
 import io
+import logging
 
 from app.core.security import get_current_user, get_current_user_from_request
 from app.models.user import User
@@ -17,6 +18,27 @@ from app.models.user import User
 router = APIRouter()
 admin_router = APIRouter()
 mobile_router = APIRouter()
+
+# Setup loggers for ad tracking at module level to avoid repeated initialization
+def _setup_ad_logger(name: str, filename: str) -> logging.Logger:
+    """Setup a dedicated logger for ad tracking."""
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        log_dir = Path(__file__).resolve().parents[3] / "logs"
+        log_dir.mkdir(exist_ok=True)
+        handler = logging.FileHandler(log_dir / filename)
+        handler.setLevel(logging.INFO)
+        # Use ISO format for timezone-aware timestamps
+        formatter = logging.Formatter('%(message)s')  # JSON already includes timestamp
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+    return logger
+
+# Initialize loggers once at module level
+click_logger = _setup_ad_logger("ad_clicks", "ad_clicks.log")
+impression_logger = _setup_ad_logger("ad_impressions", "ad_impressions.log")
 
 # 4 fixed ad locations - HARDCODED
 FIXED_AD_LOCATIONS = [
@@ -1142,21 +1164,69 @@ async def serve_ad_index_html(
 # 13. PUBLIC - Track ad clicks (placeholder for analytics)
 # ============================================================================
 
-@router.post("/public/click/{location}", status_code=status.HTTP_204_NO_CONTENT)
+@mobile_router.post("/click/{ad_type}", status_code=status.HTTP_204_NO_CONTENT)
 async def track_ad_click(
-    location: Literal[
+    ad_type: Literal[
         "publi_screen_client",
         "publi_screen_professional",
         "banner_client_home",
         "banner_professional_home"
-    ]
+    ],
+    request: Request
 ):
     """
-    Track ad click (public endpoint for mobile app)
-
-    For now this is just a placeholder - analytics can be added later
-    if needed (e.g., write to a log file)
+    Track ad click (public endpoint for mobile app).
+    
+    Logs clicks to a file for analytics purposes.
+    Mobile app should call this when user clicks/interacts with an ad.
     """
-    # Could log to file here if analytics are needed
-    # Example: append to ads_clicks.log with timestamp and location
+    from datetime import datetime, timezone
+    
+    # Get client info
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
+    # Log the click with timezone-aware timestamp
+    click_data = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ad_type": ad_type,
+        "client_ip": client_ip,
+        "user_agent": user_agent
+    }
+    click_logger.info(json.dumps(click_data))
+    
+    return None
+
+
+@mobile_router.post("/impression/{ad_type}", status_code=status.HTTP_204_NO_CONTENT)
+async def track_ad_impression(
+    ad_type: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    request: Request
+):
+    """
+    Track ad impression (when ad is shown to user).
+    
+    Logs impressions to a file for analytics purposes.
+    Mobile app should call this when an ad is displayed to the user.
+    """
+    from datetime import datetime, timezone
+    
+    # Get client info
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
+    # Log the impression with timezone-aware timestamp
+    impression_data = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ad_type": ad_type,
+        "client_ip": client_ip,
+        "user_agent": user_agent
+    }
+    impression_logger.info(json.dumps(impression_data))
+    
     return None

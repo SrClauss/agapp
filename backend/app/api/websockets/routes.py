@@ -78,7 +78,19 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     {"_id": contact_id},
                     {"$push": {"chat": msg}, "$set": {"updated_at": datetime.now(timezone.utc)}}
                 )
-
+                
+                # Mark contact as "in_conversation" if it's the first user message
+                from app.utils.contact_helpers import is_first_user_message
+                # Re-fetch contact to get updated messages including the one we just added
+                updated_contact = await db.contacts.find_one({"_id": contact_id})
+                if updated_contact:
+                    contact_messages = updated_contact.get("chat", [])
+                    if is_first_user_message(contact_messages):
+                        await db.contacts.update_one(
+                            {"_id": contact_id},
+                            {"$set": {"status": "in_conversation"}}
+                        )
+                
                 # Enviar para os 2 participantes (cliente e profissional)
                 recipients = [
                     str(contact.get("client_id")),
