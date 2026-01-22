@@ -1142,21 +1142,95 @@ async def serve_ad_index_html(
 # 13. PUBLIC - Track ad clicks (placeholder for analytics)
 # ============================================================================
 
-@router.post("/public/click/{location}", status_code=status.HTTP_204_NO_CONTENT)
+@mobile_router.post("/click/{ad_type}", status_code=status.HTTP_204_NO_CONTENT)
 async def track_ad_click(
-    location: Literal[
+    ad_type: Literal[
         "publi_screen_client",
         "publi_screen_professional",
         "banner_client_home",
         "banner_professional_home"
-    ]
+    ],
+    request: Request
 ):
     """
-    Track ad click (public endpoint for mobile app)
-
-    For now this is just a placeholder - analytics can be added later
-    if needed (e.g., write to a log file)
+    Track ad click (public endpoint for mobile app).
+    
+    Logs clicks to a file for analytics purposes.
+    Mobile app should call this when user clicks/interacts with an ad.
     """
-    # Could log to file here if analytics are needed
-    # Example: append to ads_clicks.log with timestamp and location
+    from datetime import datetime, timezone
+    import logging
+    
+    # Create a dedicated logger for ad clicks
+    click_logger = logging.getLogger("ad_clicks")
+    if not click_logger.handlers:
+        # Set up file handler if not already configured
+        log_dir = Path(__file__).resolve().parents[3] / "logs"
+        log_dir.mkdir(exist_ok=True)
+        handler = logging.FileHandler(log_dir / "ad_clicks.log")
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        handler.setFormatter(formatter)
+        click_logger.addHandler(handler)
+        click_logger.setLevel(logging.INFO)
+    
+    # Get client info
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
+    # Log the click
+    click_data = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ad_type": ad_type,
+        "client_ip": client_ip,
+        "user_agent": user_agent
+    }
+    click_logger.info(json.dumps(click_data))
+    
+    return None
+
+
+@mobile_router.post("/impression/{ad_type}", status_code=status.HTTP_204_NO_CONTENT)
+async def track_ad_impression(
+    ad_type: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    request: Request
+):
+    """
+    Track ad impression (when ad is shown to user).
+    
+    Logs impressions to a file for analytics purposes.
+    Mobile app should call this when an ad is displayed to the user.
+    """
+    from datetime import datetime, timezone
+    import logging
+    
+    # Create a dedicated logger for ad impressions
+    impression_logger = logging.getLogger("ad_impressions")
+    if not impression_logger.handlers:
+        # Set up file handler if not already configured
+        log_dir = Path(__file__).resolve().parents[3] / "logs"
+        log_dir.mkdir(exist_ok=True)
+        handler = logging.FileHandler(log_dir / "ad_impressions.log")
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        handler.setFormatter(formatter)
+        impression_logger.addHandler(handler)
+        impression_logger.setLevel(logging.INFO)
+    
+    # Get client info
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
+    # Log the impression
+    impression_data = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ad_type": ad_type,
+        "client_ip": client_ip,
+        "user_agent": user_agent
+    }
+    impression_logger.info(json.dumps(impression_data))
+    
     return None
