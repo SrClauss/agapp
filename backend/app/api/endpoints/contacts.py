@@ -13,6 +13,57 @@ from bson import ObjectId
 
 router = APIRouter()
 
+@router.get("/{project_id}/cost-preview")
+async def preview_contact_cost(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Any = Depends(get_database)
+):
+    """
+    Preview the credit cost for creating a contact on a project.
+    Returns the number of credits that will be deducted and the pricing reason.
+    """
+    from app.utils.credit_pricing import calculate_contact_cost
+    
+    # Check if project exists
+    project = await get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Ensure user is a professional
+    if "professional" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="Only professionals can view contact costs")
+    
+    # Check if contact already exists
+    existing_contact = await db.contacts.find_one({
+        "project_id": project_id,
+        "professional_id": str(current_user.id)
+    })
+    if existing_contact:
+        return {
+            "credits_cost": 0,
+            "reason": "contact_already_exists",
+            "message": "You already have a contact with this project"
+        }
+    
+    # Calculate cost
+    try:
+        credits_cost, pricing_reason = await calculate_contact_cost(db, project_id, str(current_user.id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    # Get current balance
+    from app.crud.subscription import get_user_subscription
+    subscription = await get_user_subscription(db, str(current_user.id))
+    current_balance = subscription.credits if subscription else 0
+    
+    return {
+        "credits_cost": credits_cost,
+        "reason": pricing_reason,
+        "current_balance": current_balance,
+        "can_afford": current_balance >= credits_cost
+    }
+
 @router.post("/{project_id}", response_model=Contact, status_code=201)
 async def create_contact_for_project(
     project_id: str,
@@ -22,8 +73,15 @@ async def create_contact_for_project(
 ):
     """
     Professional creates contact to accept/propose for a project.
-    This deducts 1 credit from the professional's account.
+    Deducts credits based on dynamic pricing (3/2/1 credits depending on project age and history).
+    Uses atomic locking to prevent race conditions.
     """
+    from app.utils.credit_pricing import (
+        calculate_contact_cost,
+        validate_and_deduct_credits,
+        record_credit_transaction
+    )
+    
     # Check if project exists
     project = await get_project(db, project_id)
     if not project:
@@ -33,7 +91,7 @@ async def create_contact_for_project(
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="Only professionals can create contacts")
     
-    # Check if contact already exists
+    # Check if contact already exists (with atomic check to prevent duplicates)
     existing_contact = await db.contacts.find_one({
         "project_id": project_id,
         "professional_id": str(current_user.id)
@@ -41,21 +99,32 @@ async def create_contact_for_project(
     if existing_contact:
         raise HTTPException(status_code=400, detail="Contact already exists for this project")
     
-    # Check credits
-    has_credits = await validate_user_credits(str(current_user.id))
-    if not has_credits:
-        raise HTTPException(status_code=400, detail="Insufficient credits")
+    # Calculate dynamic credit cost
+    try:
+        credits_needed, pricing_reason = await calculate_contact_cost(db, project_id, str(current_user.id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
-    # Get subscription to deduct credits
-    subscription = await get_user_subscription(db, str(current_user.id))
-    if subscription:
-        new_credits = subscription.credits - 1
-        from app.crud.subscription import update_subscription
-        from app.schemas.subscription import SubscriptionUpdate
-        await update_subscription(db, str(subscription.id), SubscriptionUpdate(credits=new_credits))
+    # Atomically validate and deduct credits (with locking)
+    success, error_msg = await validate_and_deduct_credits(db, str(current_user.id), credits_needed)
+    if not success:
+        raise HTTPException(status_code=400, detail=error_msg or "Insufficient credits")
     
-    # Create contact
-    db_contact = await create_contact(db, contact, str(current_user.id), project_id, str(project.client_id), 1)
+    # Create contact with the actual credits used
+    db_contact = await create_contact(db, contact, str(current_user.id), project_id, str(project.client_id), credits_needed)
+    
+    # Record the credit transaction
+    await record_credit_transaction(
+        db,
+        user_id=str(current_user.id),
+        credits=-credits_needed,
+        transaction_type="contact",
+        metadata={
+            "project_id": project_id,
+            "contact_id": str(db_contact.id),
+            "pricing_reason": pricing_reason
+        }
+    )
     
     # Send push notification to client
     try:
