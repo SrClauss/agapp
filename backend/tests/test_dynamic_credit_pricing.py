@@ -18,23 +18,6 @@ async def test_new_project_0_24h_costs_3_credits():
     """Test that a brand new project (0-24h) costs 3 credits"""
     from app.utils.credit_pricing import calculate_contact_cost
     
-    # Mock database with a project created 12 hours ago
-    class FakeDB:
-        async def find_one(self, query):
-            if "projects" in str(query):
-                return {
-                    "_id": "project1",
-                    "created_at": datetime.now(timezone.utc) - timedelta(hours=12)
-                }
-            return None
-        
-        def find(self, query):
-            # Return empty list for contacts
-            class FakeCursor:
-                async def to_list(self, length):
-                    return []
-            return FakeCursor()
-    
     class MockProjects:
         async def find_one(self, query):
             return {
