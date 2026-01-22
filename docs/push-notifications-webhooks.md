@@ -431,6 +431,64 @@ open htmlcov/index.html
 
 ---
 
+## 🧪 Testes de Integração
+
+### Testes Implementados
+
+O arquivo `backend/tests/test_full_workflow_integration.py` contém 3 testes de integração completos:
+
+#### 1. Fluxo Completo de Serviço (`test_complete_service_workflow`)
+Testa o ciclo completo de um projeto:
+- ✅ Cliente cria projeto remoto
+- ✅ Profissional usa créditos para contactar (3 créditos - projeto novo)
+- ✅ Troca de 3 mensagens entre cliente e profissional
+- ✅ Status muda para "in_conversation"
+- ✅ Cliente fecha o serviço
+- ✅ Cliente avalia o profissional (5 estrelas)
+- ✅ Verificação de dedução de créditos e transações
+
+#### 2. Compra de Créditos via Asaas (`test_credit_purchase_with_asaas_webhook`)
+Testa o fluxo de pagamento:
+- ✅ Profissional inicia compra de pacote de créditos
+- ✅ Mock Asaas processa pagamento PIX
+- ✅ Webhook confirma pagamento
+- ✅ 12 créditos são adicionados (10 + 2 bônus)
+- ✅ Transação é registrada no histórico
+
+#### 3. Notificações Push (`test_push_notification_flow`)
+Testa o sistema de notificações:
+- ✅ Notificação quando profissional cria contato
+- ✅ Notificação quando cliente envia mensagem
+- ✅ Notificação quando projeto é fechado
+- ✅ Mock Firebase valida tokens e dados
+
+### Como Rodar os Testes
+
+```bash
+cd backend
+
+# Todos os testes de integração (requer MongoDB rodando)
+pytest tests/test_full_workflow_integration.py -v
+
+# Apenas um teste específico
+pytest tests/test_full_workflow_integration.py::test_complete_service_workflow -v
+pytest tests/test_full_workflow_integration.py::test_credit_purchase_with_asaas_webhook -v
+pytest tests/test_full_workflow_integration.py::test_push_notification_flow -v
+```
+
+**Nota:** Estes testes requerem MongoDB rodando localmente ou via Docker:
+
+```bash
+# Iniciar MongoDB com Docker
+docker run -d -p 27017:27017 --name mongodb-test mongo:latest
+
+# Configurar variáveis de ambiente
+export TEST_MONGODB_URL=mongodb://localhost:27017
+export TEST_MONGODB_DB_NAME=agapp_test
+```
+
+---
+
 ## 📚 Referências
 
 - [Firebase Cloud Messaging Docs](https://firebase.google.com/docs/cloud-messaging)
