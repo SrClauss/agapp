@@ -1168,6 +1168,7 @@ async def track_ad_click(
         log_dir = Path(__file__).resolve().parents[3] / "logs"
         log_dir.mkdir(exist_ok=True)
         handler = logging.FileHandler(log_dir / "ad_clicks.log")
+        handler.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(message)s')
         handler.setFormatter(formatter)
         click_logger.addHandler(handler)
@@ -1215,6 +1216,7 @@ async def track_ad_impression(
         log_dir = Path(__file__).resolve().parents[3] / "logs"
         log_dir.mkdir(exist_ok=True)
         handler = logging.FileHandler(log_dir / "ad_impressions.log")
+        handler.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(message)s')
         handler.setFormatter(formatter)
         impression_logger.addHandler(handler)

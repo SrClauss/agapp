@@ -11,6 +11,7 @@ from app.crud.project import get_projects, create_project, update_project, delet
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectFilter, ProjectClose, EvaluationCreate
 from app.schemas.user import User
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.utils.timezone import ensure_utc
 
 router = APIRouter()
 
@@ -26,17 +27,19 @@ def add_project_badges(projects: List[Project]) -> None:
         
         # Check if project is new (less than 24 hours old)
         if project.created_at:
-            hours_old = (now - project.created_at.replace(tzinfo=timezone.utc if project.created_at.tzinfo is None else project.created_at.tzinfo)).total_seconds() / 3600
+            created_at_utc = ensure_utc(project.created_at)
+            hours_old = (now - created_at_utc).total_seconds() / 3600
             if hours_old < 24:
                 badges.append("new")
         
         # Check if project is featured
         if project.is_featured and project.featured_until:
-            if project.featured_until.replace(tzinfo=timezone.utc if project.featured_until.tzinfo is None else project.featured_until.tzinfo) > now:
+            featured_until_utc = ensure_utc(project.featured_until)
+            if featured_until_utc > now:
                 badges.append("featured")
                 
                 # Check if featured status is expiring soon (less than 24 hours left)
-                hours_left = (project.featured_until.replace(tzinfo=timezone.utc if project.featured_until.tzinfo is None else project.featured_until.tzinfo) - now).total_seconds() / 3600
+                hours_left = (featured_until_utc - now).total_seconds() / 3600
                 if hours_left < 24:
                     badges.append("expiring_soon")
         

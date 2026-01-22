@@ -216,11 +216,11 @@ async def send_contact_message(
     )
     
     # Mark contact as "in_conversation" if it's the first user message
+    from app.utils.contact_helpers import is_first_user_message
     contact_dict = await db.contacts.find_one({"_id": contact_id})
     if contact_dict:
         contact_messages = contact_dict.get("chat", [])
-        user_messages = [m for m in contact_messages if not m.get("system", False)]
-        if len(user_messages) == 1:  # This is the first non-system message (we just added it)
+        if is_first_user_message(contact_messages):
             await db.contacts.update_one(
                 {"_id": contact_id},
                 {"$set": {"status": "in_conversation"}}
