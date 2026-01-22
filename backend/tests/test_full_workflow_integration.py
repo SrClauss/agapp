@@ -13,7 +13,8 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from ulid import new as new_ulid
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.core.security import create_access_token, hash_password
+from app.core.security import create_access_token
+from app.crud.user import get_password_hash
 
 
 @pytest.mark.integration
@@ -68,7 +69,7 @@ async def test_complete_service_workflow(db: AsyncIOMotorDatabase, mock_firebase
     
     # ==================== 2. Criar Cliente ====================
     client_id = str(new_ulid())
-    client_password = hash_password("client123")
+    client_password = get_password_hash("client123")
     client = {
         "_id": client_id,
         "email": "client@test.com",
@@ -118,7 +119,7 @@ async def test_complete_service_workflow(db: AsyncIOMotorDatabase, mock_firebase
     
     # ==================== 4. Criar Profissional com Créditos ====================
     professional_id = str(new_ulid())
-    professional_password = hash_password("prof123")
+    professional_password = get_password_hash("prof123")
     professional = {
         "_id": professional_id,
         "email": "professional@test.com",
@@ -418,7 +419,7 @@ async def test_credit_purchase_with_asaas_webhook(db: AsyncIOMotorDatabase, mock
     """
     # ==================== 1. Criar Profissional ====================
     professional_id = str(new_ulid())
-    professional_password = hash_password("prof123")
+    professional_password = get_password_hash("prof123")
     professional = {
         "_id": professional_id,
         "email": "professional_buyer@test.com",
@@ -627,7 +628,7 @@ async def test_push_notification_flow(db: AsyncIOMotorDatabase, mock_firebase):
     client = {
         "_id": client_id,
         "email": "client_notif@test.com",
-        "hashed_password": hash_password("client123"),
+        "hashed_password": get_password_hash("client123"),
         "full_name": "Cliente Notificações",
         "phone": "11987654321",
         "cpf": "11122233344",
@@ -647,7 +648,7 @@ async def test_push_notification_flow(db: AsyncIOMotorDatabase, mock_firebase):
     professional = {
         "_id": professional_id,
         "email": "prof_notif@test.com",
-        "hashed_password": hash_password("prof123"),
+        "hashed_password": get_password_hash("prof123"),
         "full_name": "Profissional Notificações",
         "phone": "11999887766",
         "cpf": "55566677788",
