@@ -14,7 +14,8 @@ class GeoPoint(BaseModel):
 
 
 class ProjectLocation(BaseModel):
-    address: Optional[Dict[str, Any]] = None  # can store geocoded fields or formatted address
+    # Aceita tanto um dicionário com dados geocodificados quanto uma string simples
+    address: Optional[Union[Dict[str, Any], str]] = None  # can store geocoded fields or formatted address
     coordinates: Optional[GeoPoint] = None
     geocode_source: Optional[str] = None
     geocode_confidence: Optional[float] = None

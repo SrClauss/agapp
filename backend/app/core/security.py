@@ -12,7 +12,18 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
+def create_access_token(subject: Union[str, Any] = None, expires_delta: timedelta = None, data: dict = None) -> str:
+    """Gera um JWT de acesso.
+
+    Compatível com chamadas antigas `create_access_token(subject=...)` e com o padrão
+    de testes que usam `create_access_token(data={"sub": ...})`.
+    """
+    # Se foi passado o payload completo via `data`, extrai o subject
+    if data is not None:
+        subject = data.get("sub", subject)
+    if subject is None:
+        raise ValueError("subject is required")
+
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:

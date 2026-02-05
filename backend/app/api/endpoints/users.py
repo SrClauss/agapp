@@ -70,6 +70,8 @@ class ReverseGeocodeRequest(BaseModel):
 
 @router.post('/address/reverse')
 async def reverse_user_address(req: ReverseGeocodeRequest):
+    # Importar dentro da função para permitir monkeypatch em testes
+    from app.services.geocoding import reverse_geocode
     address = await reverse_geocode(req.latitude, req.longitude)
     if not address:
         raise HTTPException(status_code=400, detail='Could not reverse geocode coordinates')

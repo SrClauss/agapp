@@ -95,7 +95,9 @@ async def create_new_project(
                 "type": "value_error.coordinates_required"
             })
     
-    db_project = await create_project(db, project, str(current_user.id))
+    # Importar create_project dinamicamente para que testes possam monkeypatchá-lo
+    from app.crud import project as crud_project
+    db_project = await crud_project.create_project(db, project, str(current_user.id))
     return db_project
 
 @router.get("/", response_model=List[Project])

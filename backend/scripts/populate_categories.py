@@ -359,13 +359,18 @@ async def populate_categories():
         existing_count = await db.categories.count_documents({})
         if existing_count > 0:
             print(f"⚠️  Já existem {existing_count} categorias no banco.")
-            response = input("Deseja remover todas e recomeçar? (s/N): ")
-            if response.lower() == 's':
+            force = os.getenv('POPULATE_CATEGORIES_FORCE', '').lower() in ('1','true','yes','y')
+            if force:
                 result = await db.categories.delete_many({})
-                print(f"🗑️  {result.deleted_count} categorias removidas.")
+                print(f"🗑️  {result.deleted_count} categorias removidas (POPULATE_CATEGORIES_FORCE=true).")
             else:
-                print("❌ Operação cancelada.")
-                return
+                response = input("Deseja remover todas e recomeçar? (s/N): ")
+                if response.lower() == 's':
+                    result = await db.categories.delete_many({})
+                    print(f"🗑️  {result.deleted_count} categorias removidas.")
+                else:
+                    print("❌ Operação cancelada.")
+                    return
 
         # Insert sample categories
         print(f"\n📝 Inserindo {len(SAMPLE_CATEGORIES)} categorias com tags ricas...")

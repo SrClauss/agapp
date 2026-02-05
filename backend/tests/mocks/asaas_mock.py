@@ -42,23 +42,31 @@ class MockAsaasService:
         self._subscription_counter += 1
         return f"sub_{self._subscription_counter}"
     
-    async def create_customer(self, user) -> Dict[str, Any]:
+    async def create_customer(self, user=None, **kwargs) -> Dict[str, Any]:
         """
         Mock: Criar cliente no Asaas
+        Aceita um objeto `user` (com atributos) ou kwargs (name, email, cpf_cnpj, phone)
         """
         customer_id = self._generate_customer_id()
-        
+
+        # Se kwargs foram passados, usá-los; caso contrário, tentar extrair do objeto user
+        name = kwargs.get('name') or (user.full_name if hasattr(user, 'full_name') else (user.get('name') if isinstance(user, dict) else None)) or 'Test User'
+        email = kwargs.get('email') or (user.email if hasattr(user, 'email') else (user.get('email') if isinstance(user, dict) else None)) or 'test@example.com'
+        phone = kwargs.get('phone') or (user.phone if hasattr(user, 'phone') else (user.get('phone') if isinstance(user, dict) else None))
+        cpf = kwargs.get('cpf') or kwargs.get('cpf_cnpj') or (user.cpf if hasattr(user, 'cpf') else (user.get('cpf') if isinstance(user, dict) else None))
+        external_ref = kwargs.get('external_reference') or (str(user.id) if hasattr(user, 'id') else (str(user.get('_id')) if isinstance(user, dict) and user.get('_id') else None))
+
         customer = {
             "id": customer_id,
-            "name": user.full_name if hasattr(user, 'full_name') else user.get('name', 'Test User'),
-            "email": user.email if hasattr(user, 'email') else user.get('email', 'test@example.com'),
-            "phone": user.phone if hasattr(user, 'phone') else user.get('phone'),
-            "cpfCnpj": user.cpf if hasattr(user, 'cpf') else user.get('cpf'),
-            "externalReference": str(user.id if hasattr(user, 'id') else user.get('_id')),
+            "name": name,
+            "email": email,
+            "phone": phone,
+            "cpfCnpj": cpf,
+            "externalReference": external_ref,
             "dateCreated": datetime.now(timezone.utc).isoformat(),
             "notificationDisabled": False,
         }
-        
+
         self.customers[customer_id] = customer
         return customer
     
@@ -88,12 +96,13 @@ class MockAsaasService:
         customer_id: str,
         billing_type: str,
         value: float,
-        due_date: str,
-        description: str,
+        due_date: Optional[str] = None,
+        description: str = "",
         external_reference: Optional[str] = None,
         installment_count: Optional[int] = None,
         discount: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
+        """Criar cobrança/pagamento. `due_date` é opcional para conveniência em testes."""
         """
         Mock: Criar cobrança/pagamento
         """
@@ -133,13 +142,22 @@ class MockAsaasService:
         if payment_id not in self.payments:
             raise Exception(f"Pagamento não encontrado: {payment_id}")
         return self.payments[payment_id]
+
+    def get_payments(self) -> List[Dict[str, Any]]:
+        """Retornar todos os pagamentos mockados"""
+        return list(self.payments.values())
+
+    def get_customers(self) -> List[Dict[str, Any]]:
+        """Retornar todos os customers mockados"""
+        return list(self.customers.values())
     
     async def confirm_payment(self, payment_id: str) -> Dict[str, Any]:
         """Mock: Confirmar pagamento manualmente (para testes)"""
         if payment_id not in self.payments:
             raise Exception(f"Pagamento não encontrado: {payment_id}")
         
-        self.payments[payment_id]["status"] = "RECEIVED"
+        # Marcar como confirmado (CONFIRMED) para compatibilidade com testes
+        self.payments[payment_id]["status"] = "CONFIRMED"
         self.payments[payment_id]["paymentDate"] = datetime.now(timezone.utc).isoformat()
         self.payments[payment_id]["confirmedDate"] = datetime.now(timezone.utc).isoformat()
         

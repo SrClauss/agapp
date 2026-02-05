@@ -10,8 +10,17 @@ from datetime import datetime
 from pymongo import MongoClient
 import bcrypt
 
-MONGO_URL = os.getenv('MONGODB_URL', 'mongodb://admin:AG%40ar1401al2312@mongodb:27017/agiliza_database?authSource=admin')
-DB_NAME = os.getenv('DATABASE_NAME', 'agiliza_database')
+# Use environment variables instead of hardcoded credentials
+MONGO_URL = os.getenv('MONGODB_URL', 'mongodb://localhost:27017/agiliza?authSource=admin')
+DB_NAME = os.getenv('DATABASE_NAME', 'agiliza')
+
+# Admin configuration (can be set via env)
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@agilizapp.com')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
+ADMIN_FULL_NAME = os.getenv('ADMIN_FULL_NAME', 'Administrador')
+ADMIN_ROLES = os.getenv('ADMIN_ROLES', 'admin').split(',')
+ADMIN_CPF = os.getenv('ADMIN_CPF', '00000000000')
+ADMIN_PHONE = os.getenv('ADMIN_PHONE')
 
 def main():
     try:
@@ -25,17 +34,17 @@ def main():
             print(f'[ensure_admin] Admin já existe ({admin_count} admin(s) encontrado(s))')
             return 0
         
-        # Criar admin
-        print('[ensure_admin] Nenhum admin encontrado, criando admin padrão...')
-        hashed_password = bcrypt.hashpw(b'admin123', bcrypt.gensalt()).decode()
+        # Criar admin com dados vindos da env
+        print(f"[ensure_admin] Nenhum admin encontrado, criando admin padrão ({ADMIN_EMAIL})...")
+        hashed_password = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt()).decode()
         
         admin_doc = {
-            'email': 'admin@agilizapp.com',
+            'email': ADMIN_EMAIL,
             'hashed_password': hashed_password,
-            'full_name': 'Administrador',
-            'cpf': '00000000000',
-            'phone': None,
-            'roles': ['admin'],
+            'full_name': ADMIN_FULL_NAME,
+            'cpf': ADMIN_CPF,
+            'phone': ADMIN_PHONE,
+            'roles': ADMIN_ROLES,
             'is_active': True,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow(),
@@ -46,7 +55,7 @@ def main():
         }
         
         db.users.insert_one(admin_doc)
-        print('[ensure_admin] Admin criado com sucesso: admin@agilizapp.com (senha: admin123)')
+        print(f"[ensure_admin] Admin criado com sucesso: {ADMIN_EMAIL} (senha definida via env)")
         return 0
         
     except Exception as e:

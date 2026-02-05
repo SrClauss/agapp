@@ -8,6 +8,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
+from motor.motor_asyncio import AsyncIOMotorClient
 from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search
 from app.api.endpoints import professional_api
 from app.api.admin import router as admin_router
@@ -200,6 +201,21 @@ app.include_router(ads.router, prefix="/ads", tags=["advertisements"])
 app.include_router(ads.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
 app.include_router(ads.mobile_router, prefix="/system-admin/api/public/ads")
 
+# Expor rotas também sob o prefixo /api para compatibilidade com clientes e testes
+app.include_router(auth.router, prefix="/api/auth")
+app.include_router(users.router, prefix="/api/users")
+app.include_router(projects.router, prefix="/api/projects")
+app.include_router(contacts.router, prefix="/api/contacts")
+app.include_router(payments.router, prefix="/api/payments")
+app.include_router(webhooks.router, prefix="/api/webhooks")
+app.include_router(admin_api.router, prefix="/api/admin")
+app.include_router(professional_api.router, prefix="/api/professional")
+app.include_router(support.router, prefix="/api/support")
+app.include_router(uploads.router, prefix="/api/uploads")
+app.include_router(documents.router, prefix="/api/documents")
+app.include_router(categories.router, prefix="/api/categories")
+app.include_router(contract_templates.router, prefix="/api/contract-templates")
+
 # Mount ad static files after including the ads router so the router's
 # dynamic endpoints are evaluated before the StaticFiles handler.
 app.mount("/ads", StaticFiles(directory="ads"), name="ads")
@@ -207,13 +223,20 @@ app.mount("/ads", StaticFiles(directory="ads"), name="ads")
 @app.on_event("startup")
 async def startup_event():
     # Verificar conexão com banco de dados
-    from app.core.database import database
+    from app.core import database as dbmod
+    from app.core.config import settings
+
     try:
+        # Recriar cliente e database no loop do servidor (evita problemas de event loop em testes)
+        dbmod.client = AsyncIOMotorClient(settings.mongodb_url)
+        dbmod.database = dbmod.client[settings.database_name]
+        database = dbmod.database
         # Testar conexão
         await database.command("ping")
         print("Conexão com MongoDB estabelecida.")
     except Exception as e:
         print(f"Erro ao conectar com MongoDB: {e}")
+        # Continuar sem interromper (alguns testes usam mocks/overrides do get_database)
         return
     
     # Create indexes

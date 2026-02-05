@@ -150,7 +150,9 @@ async def record_credit_transaction(
     transaction = {
         "_id": transaction_id,
         "user_id": user_id,
+        # Mantemos 'type' por compatibilidade e adicionamos 'transaction_type' esperado pelos testes
         "type": transaction_type,
+        "transaction_type": transaction_type,
         "credits": credits,
         "price": price,
         "currency": "BRL",

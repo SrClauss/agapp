@@ -136,13 +136,20 @@ def test_pagination_behaviour():
 
     class FakeCursor:
         def __init__(self, items):
-            self._items = items
+            self._items = list(items)
+            self._skip = 0
+            self._limit = None
         def skip(self, n):
+            self._skip = n
             return self
         def limit(self, l):
+            self._limit = l
             return self
         async def __aiter__(self):
-            for x in self._items:
+            items = self._items[self._skip:]
+            if self._limit is not None:
+                items = items[:self._limit]
+            for x in items:
                 yield x
 
     class FakeProjects:
