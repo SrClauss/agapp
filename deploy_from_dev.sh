@@ -16,7 +16,7 @@ git commit -m "$COMMIT_MESSAGE"
 
 # Etapa 2: Acessar o servidor remoto e executar o script de deploy
 echo "Conectando ao servidor $SERVER e executando o script de deploy..."
-ssh "$USER@$SERVER" << EOF
+ssh -t "$USER@$SERVER" << EOF
   set -e
   echo "Entrando no diretório $REMOTE_DIR..."
   cd $REMOTE_DIR
