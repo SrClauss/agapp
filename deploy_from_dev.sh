@@ -4,7 +4,7 @@
 SERVER="72.61.48.59"
 USER="root" # Substitua pelo seu usuário SSH
 REMOTE_DIR="/srv/agapp"
-DEPLOY_SCRIPT="deploy_backend"
+DEPLOY_SCRIPT="deploy_backend.sh"
 
 # Mensagem de commit
 COMMIT_MESSAGE="Deploy automático via script"
