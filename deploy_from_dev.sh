@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configurações
-SERVER="72.61.48.89"
+SERVER="72.61.48.59"
 USER="root" # Substitua pelo seu usuário SSH
 REMOTE_DIR="/srv/aggap"
 DEPLOY_SCRIPT="deploy_backend"
