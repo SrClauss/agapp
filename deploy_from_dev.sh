@@ -3,7 +3,7 @@
 # Configurações
 SERVER="72.61.48.59"
 USER="root" # Substitua pelo seu usuário SSH
-REMOTE_DIR="/srv/aggap"
+REMOTE_DIR="/srv/agapp"
 DEPLOY_SCRIPT="deploy_backend"
 
 # Mensagem de commit
