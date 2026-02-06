@@ -17,6 +17,12 @@ async def create_credit_transaction(db: AsyncIOMotorDatabase, tx: CreditTransact
     # Se existir coleção `credit_transactions`, preferimos inserir nela (compatível com testes)
     if hasattr(db, 'credit_transactions'):
         await db.credit_transactions.insert_one(tx_dict)
+        # Increment user's credits when transaction grants credits
+        if tx_dict.get('credits', 0) > 0:
+            await db.users.find_one_and_update(
+                {"_id": tx.user_id},
+                {"$inc": {"credits": int(tx_dict.get('credits', 0))}, "$set": {"updated_at": datetime.utcnow()}},
+            )
         return CreditTransaction(**tx_dict)
 
     # Fallback: embutir transação no documento do usuário (legacy)
@@ -25,6 +31,12 @@ async def create_credit_transaction(db: AsyncIOMotorDatabase, tx: CreditTransact
             {"_id": tx.user_id},
             {"$push": {"credit_transactions": tx_dict}}
         )
+        # If the transaction grants credits, update the aggregated field
+        if tx_dict.get('credits', 0) > 0:
+            await db.users.update_one(
+                {"_id": tx.user_id},
+                {"$inc": {"credits": int(tx_dict.get('credits', 0))}, "$set": {"updated_at": datetime.utcnow()}},
+            )
 
     return CreditTransaction(**tx_dict)
 

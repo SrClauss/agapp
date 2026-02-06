@@ -60,6 +60,7 @@ async def add_credits_to_user(db: AsyncIOMotorDatabase, user_id: str, credits: i
             {"_id": subscription.id},
             {"$set": {"credits": new_credits, "updated_at": datetime.utcnow()}}
         )
+
         # Refresh from database to get updated values
         subscription = await get_subscription(db, subscription.id)
         return subscription

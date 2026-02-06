@@ -81,18 +81,26 @@ async def calculate_contact_cost(
 
 async def get_user_credits(db: AsyncIOMotorDatabase, user_id: str) -> int:
     """
-    Get user's available credits from subscriptions collection.
-    This is the single source of truth for credit balance.
-    
+    Get user's available credits from the user document.
+    The `credits` field on `users` is the single source of truth.
+
     Args:
         db: Database connection
         user_id: ID of the user
-        
+
     Returns:
         Number of available credits
     """
-    subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
-    return int(subscription.get("credits", 0)) if subscription else 0
+    user = await db.users.find_one({"_id": user_id})
+    if not user:
+        # Try ObjectId fallback if necessary
+        try:
+            from bson import ObjectId
+            if ObjectId.is_valid(user_id):
+                user = await db.users.find_one({"_id": ObjectId(user_id)})
+        except Exception:
+            user = None
+    return int(user.get("credits", 0)) if user else 0
 
 
 async def validate_and_deduct_credits(
@@ -101,24 +109,22 @@ async def validate_and_deduct_credits(
     credits_needed: int
 ) -> Tuple[bool, Optional[str]]:
     """
-    Validate that a user has sufficient credits and deduct them atomically.
-    
-    Uses findOneAndUpdate with $gte check to prevent race conditions.
-    ALWAYS uses subscriptions collection as the single source of truth.
-    
+    Validate that a user has sufficient credits and deduct them atomically on the user document.
+
+    Uses find_one_and_update with $gte check to prevent race conditions.
+
     Args:
         db: Database connection
         user_id: ID of the user
         credits_needed: Number of credits to deduct
-        
+
     Returns:
         Tuple of (success: bool, error_message: Optional[str])
     """
-    # Use findOneAndUpdate with atomic decrement on subscriptions
-    result = await db.subscriptions.find_one_and_update(
+    # Atomic decrement on user's credits
+    result = await db.users.find_one_and_update(
         {
-            "user_id": user_id,
-            "status": "active",
+            "_id": user_id,
             "credits": {"$gte": credits_needed}
         },
         {
@@ -127,16 +133,22 @@ async def validate_and_deduct_credits(
         },
         return_document=True
     )
-    
+
     if result is None:
-        # Either no active subscription or insufficient credits
-        subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
-        if not subscription:
-            return False, "No active subscription found. Please purchase credits to continue."
-        else:
-            current_credits = subscription.get("credits", 0)
-            return False, f"Insufficient credits (have {current_credits}, need {credits_needed})"
-    
+        # Could be user not found or insufficient credits
+        user = await db.users.find_one({"_id": user_id})
+        if not user:
+            try:
+                from bson import ObjectId
+                if ObjectId.is_valid(user_id):
+                    user = await db.users.find_one({"_id": ObjectId(user_id)})
+            except Exception:
+                user = None
+        if not user:
+            return False, "User not found"
+        current_credits = user.get("credits", 0)
+        return False, f"Insufficient credits (have {current_credits}, need {credits_needed})"
+
     return True, None
 
 
@@ -149,21 +161,15 @@ async def record_credit_transaction(
     price: float = 0.0
 ) -> str:
     """
-    Record a credit transaction in the database.
-    
-    Args:
-        db: Database connection
-        user_id: ID of the user
-        credits: Number of credits (positive for additions, negative for deductions)
-        transaction_type: Type of transaction (e.g., "contact", "purchase", "refund")
-        metadata: Additional metadata (e.g., project_id, contact_id)
-        price: Price paid (if applicable)
-        
-    Returns:
-        Transaction ID
+    Record a credit transaction in the database and update the user's credits accordingly.
+
+    - For positive `credits` (grant), it increments `users.credits` atomically and records the transaction.
+    - For negative `credits` (deduction), it attempts an atomic deduction via `validate_and_deduct_credits` and records the transaction only on success.
+
+    Returns the transaction id.
     """
     from ulid import new as new_ulid
-    
+
     transaction_id = str(new_ulid())
     transaction = {
         "_id": transaction_id,
@@ -178,6 +184,16 @@ async def record_credit_transaction(
         "status": "completed",
         "created_at": datetime.now(timezone.utc)
     }
-    
+
+    # Insert transaction
     await db.credit_transactions.insert_one(transaction)
+
+    # If we are granting credits (credits > 0), increment user's credits
+    # For deductions (credits < 0), callers should perform the atomic deduction first
+    if credits > 0:
+        await db.users.find_one_and_update(
+            {"_id": user_id},
+            {"$inc": {"credits": credits}, "$set": {"updated_at": datetime.now(timezone.utc)}}
+        )
+
     return transaction_id

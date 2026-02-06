@@ -314,7 +314,9 @@ export default function ProjectProfessionalsDetailScreen() {
             <Dialog visible={ confirmVisible} onDismiss={() => setConfirmVisible(false)}>
               <Dialog.Title>Liberar projeto</Dialog.Title>
               <Dialog.Content>
-                <Text>Esta é uma funcionalidade futura. Em breve, você poderá liberar o projeto para o cliente e ter acesso às informações completas de contato.</Text>
+
+
+                <Text>Você consumira 3 creditos dos {credits} disponíveis.</Text>
               </Dialog.Content>
               <Dialog.Actions>
                 <Button onPress={() => setConfirmVisible(false)}>Fechar</Button>

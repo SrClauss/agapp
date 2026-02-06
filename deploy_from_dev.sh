@@ -6,8 +6,21 @@ USER="root" # Substitua pelo seu usuário SSH
 REMOTE_DIR="/srv/agapp"
 DEPLOY_SCRIPT="deploy-backend.sh"
 
-# Mensagem de commit
+# Mensagem de commit (padrão)
 COMMIT_MESSAGE="Deploy automático via script"
+
+# Suporte a mensagem de commit passada como parâmetro.
+# Uso: ./deploy_from_dev.sh "Minha mensagem de commit"
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  echo "Usage: $0 [commit message]"
+  echo "If no commit message is provided, defaults to: '$COMMIT_MESSAGE'"
+  exit 0
+fi
+
+# Se houver argumentos, use todos como mensagem de commit (permite múltiplas palavras)
+if [ "$#" -gt 0 ]; then
+  COMMIT_MESSAGE="$*"
+fi
 
 # Etapa 1: Fazer commit de todas as alterações
 echo "Fazendo commit de todas as alterações..."
