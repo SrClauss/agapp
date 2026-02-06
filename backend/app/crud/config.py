@@ -319,11 +319,16 @@ async def get_system_config(db: AsyncIOMotorDatabase) -> dict:
     default = {
         "_id": "singleton",
         "max_inperson_radius_km": 50.0,
+        # thresholds for inedito projects (hours -> credits)
         "thresholds": [
             {"max_hours": 12, "credits": 3},
             {"max_hours": 36, "credits": 2},
             {"max_hours": 44, "credits": 1}
         ],
+        # explicit non-inedito rules (fixed)
+        "non_inedito_0_24_credits": 2,
+        "non_inedito_24_48_credits": 3,
+        "non_inedito_expire_hours": 48,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
