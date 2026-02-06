@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, View, ImageBackground, Alert } from 'react-native';
 import { Text, Card, Avatar, Divider, IconButton, Button } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { getProject, Project, updateProject, deleteProject } from '../api/projects';
+import { getProject, Project, updateProject, deleteProject, getProjectContacts, ContactSummary } from '../api/projects';
 import { getUserPublic } from '../api/users';
 import useAuthStore from '../stores/authStore';
 import { colors } from '../theme/colors';
+import ProjectContactsList from '../components/ProjectContactsList';
 
 // Tipagem da rota
 interface Params {
@@ -24,6 +25,8 @@ const ProjectClientDetailScreen: React.FC = () => {
   const [project, setProject] = useState<Project | null>(projectParam || null);
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(!project);
+  const [contacts, setContacts] = useState<ContactSummary[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
   const { user } = useAuthStore();
 
@@ -97,6 +100,25 @@ const ProjectClientDetailScreen: React.FC = () => {
     loadClient();
     return () => { mounted = false; };
   }, [project]);
+
+  // Load contacts for the project
+  useEffect(() => {
+    if (!project || !projectId) return;
+    
+    const loadContacts = async () => {
+      setLoadingContacts(true);
+      try {
+        const contactsData = await getProjectContacts(projectId);
+        setContacts(contactsData);
+      } catch (e) {
+        console.warn('[ProjectClientDetail] failed to load contacts', e);
+      } finally {
+        setLoadingContacts(false);
+      }
+    };
+    
+    loadContacts();
+  }, [project, projectId]);
 
   if (loading) {
     return (
@@ -271,49 +293,15 @@ const ProjectClientDetailScreen: React.FC = () => {
           <Card.Content>
             <Text style={styles.sectionTitle}>Profissionais que entraram em contato</Text>
 
-            {project.liberado_por_profiles && project.liberado_por_profiles.length > 0 ? (
-              <View style={styles.professionalsContainer}>
-                {project.liberado_por_profiles.map((p) => (
-                  <View key={p.id} style={styles.professionalItem}>
-                    {p.avatar_url ? (
-                      <Avatar.Image size={48} source={{ uri: p.avatar_url }} style={styles.professionalAvatar} />
-                    ) : (
-                      <Avatar.Icon size={48} icon="account" style={styles.professionalAvatar} />
-                    )}
-                    <View style={styles.professionalInfo}>
-                      <Text style={styles.professionalName}>{p.full_name || 'Profissional'}</Text>
-                      <Text style={styles.professionalId}>ID: {p.id.substring(0, 8)}...</Text>
-                    </View>
-                    <View style={styles.contactButtonPlaceholder}>
-                      <Text>💬</Text>
-                    </View>
-                  </View>
-                ))}
-                <Text style={styles.futureFeatureText}>Em breve: possibilidade de contatar profissionais diretamente</Text>
-              </View>
-            ) : project.liberado_por && project.liberado_por.length > 0 ? (
-              <View style={styles.professionalsContainer}>
-                {project.liberado_por.map((professionalId, index) => (
-                  <View key={professionalId} style={styles.professionalItem}>
-                    <Avatar.Icon size={48} icon="account" style={styles.professionalAvatar} />
-                    <View style={styles.professionalInfo}>
-                      <Text style={styles.professionalName}>Profissional #{index + 1}</Text>
-                      <Text style={styles.professionalId}>ID: {professionalId.substring(0, 8)}...</Text>
-                    </View>
-                    <View style={styles.contactButtonPlaceholder}>
-                      <Text>💬</Text>
-                    </View>
-                  </View>
-                ))}
-                <Text style={styles.futureFeatureText}>Em breve: possibilidade de contatar profissionais diretamente</Text>
-              </View>
+            {loadingContacts ? (
+              <ActivityIndicator />
             ) : (
-              <View style={styles.emptyProfessionals}>
-                <Text style={styles.emptyProfessionalsText}>Nenhum profissional entrou em contato ainda</Text>
-                {project.status === 'open' && (
-                  <Text style={styles.emptyProfessionalsHint}>Aguarde, profissionais da região serão notificados</Text>
-                )}
-              </View>
+              <ProjectContactsList 
+                contacts={contacts}
+                onContactPress={(contactId) => {
+                  (navigation as any).navigate('ContactDetail', { contactId });
+                }}
+              />
             )}
           </Card.Content>
         </Card>

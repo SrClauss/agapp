@@ -13,6 +13,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import {
   getContactDetails,
   sendContactMessage,
+  markContactMessagesAsRead,
   Contact,
   ChatMessage,
 } from '../api/contacts';
@@ -59,6 +60,13 @@ export default function ContactDetailScreen() {
         const contactData = await getContactDetails(contactId);
         setContact(contactData);
         setMessages(contactData.chat || []);
+
+        // Mark messages as read
+        try {
+          await markContactMessagesAsRead(contactId);
+        } catch (e) {
+          console.warn('[ContactDetail] failed to mark messages as read', e);
+        }
 
         // Load project details
         try {
