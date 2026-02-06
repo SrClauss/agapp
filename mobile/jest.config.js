@@ -2,7 +2,7 @@ module.exports = {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|react-native-vector-icons|@testing-library|@react-navigation|@expo)/)',
+    'node_modules/(?!(react-native|@react-native|react-native-vector-icons|@testing-library|@react-navigation|@expo|expo)/)',
   ],
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { configFile: './babel.config.js' }],
