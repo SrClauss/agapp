@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from app.core.database import get_database
 from app.core.security import get_current_user, get_current_admin_user
 from app.crud.contact import get_contact, get_contacts_by_user, create_contact, update_contact, get_contacts, delete_contact
-from app.crud.project import get_project
+from app.crud.project import get_project, create_contact_in_project, get_contacts_by_user as get_contacts_by_user_project
 from app.schemas.contact import Contact, ContactCreate, ContactUpdate
 from app.schemas.user import User
 from app.utils.validators import validate_user_credits
@@ -36,9 +36,9 @@ async def preview_contact_cost(
         raise HTTPException(status_code=403, detail="Only professionals can view contact costs")
     
     # Check if contact already exists
-    existing_contact = await db.contacts.find_one({
-        "project_id": project_id,
-        "professional_id": str(current_user.id)
+    existing_contact = await db.projects.find_one({
+        "_id": project_id,
+        "contacts.professional_id": str(current_user.id)
     })
     if existing_contact:
         return {
@@ -93,9 +93,9 @@ async def create_contact_for_project(
         raise HTTPException(status_code=403, detail="Only professionals can create contacts")
     
     # Check if contact already exists (with atomic check to prevent duplicates)
-    existing_contact = await db.contacts.find_one({
-        "project_id": project_id,
-        "professional_id": str(current_user.id)
+    existing_contact = await db.projects.find_one({
+        "_id": project_id,
+        "contacts.professional_id": str(current_user.id)
     })
     if existing_contact:
         raise HTTPException(status_code=400, detail="Contact already exists for this project")
@@ -112,7 +112,18 @@ async def create_contact_for_project(
         raise HTTPException(status_code=400, detail=error_msg or "Insufficient credits")
     
     # Create contact with the actual credits used
-    db_contact = await create_contact(db, contact, str(current_user.id), project_id, str(project.client_id), credits_needed)
+    updated_project = await create_contact_in_project(db, project_id, contact.dict(), str(current_user.id), str(project.client_id), credits_needed)
+    if not updated_project:
+        raise HTTPException(status_code=500, detail="Failed to create contact")
+    
+    # Encontrar o contato recém-criado (último no array)
+    new_contact = updated_project.contacts[-1]
+    # Adicionar campos para compatibilidade
+    contact_dict = new_contact.dict()
+    contact_dict["id"] = f"{project_id}_{len(updated_project.contacts)-1}"  # ID temporário
+    contact_dict["project_id"] = project_id
+    
+    db_contact = Contact(**contact_dict)
     
     # Record the credit transaction
     await record_credit_transaction(
@@ -122,7 +133,7 @@ async def create_contact_for_project(
         transaction_type="contact",
         metadata={
             "project_id": project_id,
-            "contact_id": str(db_contact.id),
+            "contact_id": contact_dict["id"],
             "pricing_reason": pricing_reason
         }
     )
@@ -140,7 +151,7 @@ async def create_contact_for_project(
                     body=f"{current_user.full_name} demonstrou interesse no seu projeto: {project.title}",
                     data={
                         "type": "new_contact",
-                        "contact_id": str(db_contact.id),
+                        "contact_id": contact_dict["id"],
                         "project_id": project_id,
                         "professional_id": str(current_user.id)
                     }
@@ -160,7 +171,12 @@ async def read_contact_history(
     Get contact history for current user.
     user_type: 'professional' or 'client'
     """
-    contacts = await get_contacts_by_user(db, str(current_user.id), user_type)
+    contacts_data = await get_contacts_by_user_project(db, str(current_user.id), user_type)
+    # Converter para Contact objects
+    contacts = []
+    for c in contacts_data:
+        c["id"] = c.get("id", f"{c['project_id']}_{contacts_data.index(c)}")
+        contacts.append(Contact(**c))
     return contacts
 
 @router.get("/{contact_id}", response_model=Contact)

@@ -52,26 +52,8 @@ async def contacted_projects(
 
     user_id = str(current_user.id)
 
-    # obter project_ids distintos que esse profissional contatou
-    project_ids = await db.contacts.distinct("project_id", {"professional_id": user_id})
-    if not project_ids:
-        return []
-
-    ids = []
-    for pid in project_ids:
-        if pid is None:
-            continue
-        # manter string
-        ids.append(pid)
-        # adicionar ObjectId variante quando válido
-        try:
-            if ObjectId.is_valid(str(pid)):
-                ids.append(ObjectId(str(pid)))
-        except Exception:
-            pass
-
     query = {
-        "_id": {"$in": ids},
+        "contacts.professional_id": user_id,
         "$or": [
             {"professional_id": {"$exists": False}},
             {"professional_id": None},

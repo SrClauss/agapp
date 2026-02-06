@@ -7,6 +7,21 @@ class ProjectCategory(BaseModel):
     main: str  # Categoria principal (ex: "Programação")
     sub: str   # Subcategoria (ex: "Desenvolvimento Web")
 
+class Contact(BaseModel):
+    """Contato aninhado dentro de um projeto"""
+    professional_id: str
+    professional_name: Optional[str] = None
+    professional_user: Optional[Dict[str, Any]] = None  # User completo do profissional
+    client_id: str
+    client_name: Optional[str] = None
+    contact_type: str = "proposal"  # proposal, inquiry
+    credits_used: int = 1
+    status: str = "pending"  # pending, accepted, rejected, completed
+    contact_details: Dict[str, Any]  # {message, proposal_price, etc.}
+    chats: List[Dict[str, Any]] = []  # Chat messages: [{sender_id, message, timestamp}]
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
 class Project(BaseModel):
     id: str = Field(alias="_id")
     client_id: str
@@ -40,6 +55,7 @@ class Project(BaseModel):
     chat: List[Dict[str, Any]] = []  # Array of chats, each {professional_id, messages: []}
     # Execução Remota
     remote_execution: bool = False  # Permite execução remota do projeto
+    contacts: List[Contact] = []  # Lista de contatos aninhados
 
     model_config = {
         "populate_by_name": True,

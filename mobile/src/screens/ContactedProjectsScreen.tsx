@@ -2,9 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native-paper';
 import { getContactedProjects } from '../api/professional';
-import CardProjeto from './CardProjeto';
 import { useFocusEffect } from '@react-navigation/native';
-
+import {ProjectContactedCard}  from '../components/ProjectContatedCard';
 export default function ContactedProjectsScreen() {
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
@@ -51,7 +50,7 @@ export default function ContactedProjectsScreen() {
         data={projects}
         keyExtractor={(item) => item.id || item._id}
         renderItem={({ item }) => (
-          <CardProjeto projeto={item} onPress={() => { /* navigation handled inside CardProjeto */ }} />
+          <ProjectContactedCard project={item} />
         )}
         ListEmptyComponent={() => (
           <View style={styles.center}>

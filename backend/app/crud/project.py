@@ -3,7 +3,8 @@ from bson import ObjectId
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from ulid import new as new_ulid
-from app.models.project import Project
+from app.models.project import Project, Contact
+from app.models.professional_liberation import ProfessionalLiberation
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectFilter
 
 
@@ -183,3 +184,87 @@ async def get_recommended_categories_for_client(db: AsyncIOMotorDatabase, client
         if len(recommended) >= 5:
             break
     return recommended
+
+# Funções para gerenciar contacts dentro de projects
+
+async def create_contact_in_project(db: AsyncIOMotorDatabase, project_id: str, contact_data: Dict[str, Any], professional_id: str, client_id: str, credits_used: int) -> Optional[Project]:
+    # Buscar projeto
+    project = await get_project(db, project_id)
+    if not project:
+        return None
+    
+    # Buscar users
+    professional = await db.users.find_one({"_id": professional_id})
+    client = await db.users.find_one({"_id": client_id})
+    
+    # Criar novo contact
+    contact_dict = {
+        "professional_id": professional_id,
+        "client_id": client_id,
+        "contact_type": contact_data.get("contact_type", "proposal"),
+        "credits_used": credits_used,
+        "status": "pending",
+        "contact_details": contact_data.get("contact_details", {}),
+        "chats": [],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    # Adicionar nomes e user completo
+    contact_dict["professional_name"] = professional.get("full_name") if professional else None
+    contact_dict["client_name"] = client.get("full_name") if client else None
+    contact_dict["professional_user"] = professional
+    
+    # Adicionar ao array contacts do projeto e ao liberado_por
+    await db.projects.update_one(
+        {"_id": project_id},
+        {
+            "$push": {"contacts": contact_dict},
+            "$addToSet": {"liberado_por": professional_id}
+        }
+    )
+    
+    # Criar registro de liberação para busca rápida
+    liberation_dict = {
+        "_id": str(new_ulid()),
+        "professional_id": professional_id,
+        "project_id": project_id,
+        "created_at": datetime.utcnow()
+    }
+    await db.professional_liberations.insert_one(liberation_dict)
+    
+    # Retornar projeto atualizado
+    return await get_project(db, project_id)
+
+async def get_contacts_by_user(db: AsyncIOMotorDatabase, user_id: str, user_type: str = "professional") -> List[Dict[str, Any]]:
+    query = {}
+    if user_type == "professional":
+        query["contacts.professional_id"] = user_id
+    else:
+        query["contacts.client_id"] = user_id
+    
+    contacts = []
+    async for project in db.projects.find(query, {"contacts": 1, "title": 1, "_id": 1}):
+        for contact in project.get("contacts", []):
+            if (user_type == "professional" and contact["professional_id"] == user_id) or \
+               (user_type == "client" and contact["client_id"] == user_id):
+                contact["project_id"] = project["_id"]
+                contact["project_title"] = project["title"]
+                contacts.append(contact)
+    return contacts
+
+async def update_contact_in_project(db: AsyncIOMotorDatabase, project_id: str, contact_index: int, update_data: Dict[str, Any]) -> Optional[Project]:
+    update_data["updated_at"] = datetime.utcnow()
+    await db.projects.update_one(
+        {"_id": project_id},
+        {"$set": {f"contacts.{contact_index}": update_data}}
+    )
+    return await get_project(db, project_id)
+
+async def add_message_to_contact_chat(db: AsyncIOMotorDatabase, project_id: str, contact_index: int, message: Dict[str, Any]) -> Optional[Project]:
+    message["timestamp"] = datetime.utcnow()
+    await db.projects.update_one(
+        {"_id": project_id},
+        {"$push": {f"contacts.{contact_index}.chats": message}}
+    )
+    return await get_project(db, project_id)
