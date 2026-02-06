@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
-import { Text, TextInput, IconButton, Divider, Card } from 'react-native-paper';
+import { Text, TextInput, IconButton, Divider, Card, Snackbar } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import {
   getContactDetails,
@@ -16,9 +16,10 @@ import {
   Contact,
   ChatMessage,
 } from '../api/contacts';
-import { getProject, Project } from '../api/projects';
+import { getProject, Project, evaluateProject } from '../api/projects';
 import useAuthStore from '../stores/authStore';
 import { createWebsocket } from '../services/websocket';
+import EvaluationModal from '../components/EvaluationModal';
 
 interface Params {
   contactId: string;
@@ -37,6 +38,10 @@ export default function ContactDetailScreen() {
   const [sending, setSending] = useState<boolean>(false);
   const [messageText, setMessageText] = useState<string>('');
   const [wsConnected, setWsConnected] = useState<boolean>(false);
+  const [evaluationVisible, setEvaluationVisible] = useState<boolean>(false);
+  const [snackbarVisible, setSnackbarVisible] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [hasEvaluated, setHasEvaluated] = useState<boolean>(false);
 
   const { user } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
@@ -59,6 +64,14 @@ export default function ContactDetailScreen() {
         try {
           const projectData = await getProject(contactData.project_id);
           setProject(projectData);
+
+          // Check if project is closed and prompt for evaluation
+          if (projectData.status === 'closed' && !hasEvaluated) {
+            // Give user a moment to see the closed status
+            setTimeout(() => {
+              setEvaluationVisible(true);
+            }, 1500);
+          }
         } catch (e) {
           console.warn('[ContactDetail] failed to load project', e);
         }
@@ -71,7 +84,7 @@ export default function ContactDetailScreen() {
     };
 
     loadContact();
-  }, [contactId, navigation]);
+  }, [contactId, navigation, hasEvaluated]);
 
   // Setup WebSocket connection for real-time updates
   useEffect(() => {
@@ -151,6 +164,26 @@ export default function ContactDetailScreen() {
       setMessageText(tempMessage.content);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleSubmitEvaluation = async (
+    rating: number,
+    comment: string,
+    wouldRecommend: boolean
+  ) => {
+    if (!project?.id) return;
+
+    try {
+      await evaluateProject(project.id, { rating, comment, would_recommend: wouldRecommend });
+      setEvaluationVisible(false);
+      setHasEvaluated(true);
+      setSnackbarMessage('Avaliação enviada com sucesso!');
+      setSnackbarVisible(true);
+    } catch (e: any) {
+      console.error('[ContactDetail] failed to submit evaluation', e);
+      setSnackbarMessage('Erro ao enviar avaliação. Tente novamente.');
+      setSnackbarVisible(true);
     }
   };
 
@@ -306,6 +339,29 @@ export default function ContactDetailScreen() {
           iconColor={messageText.trim() && !sending ? '#3B82F6' : '#9CA3AF'}
         />
       </View>
+
+      {/* Evaluation Modal */}
+      {project && (
+        <EvaluationModal
+          visible={evaluationVisible}
+          onDismiss={() => setEvaluationVisible(false)}
+          onSubmit={handleSubmitEvaluation}
+          projectTitle={project.title}
+        />
+      )}
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        action={{
+          label: 'OK',
+          onPress: () => setSnackbarVisible(false),
+        }}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </KeyboardAvoidingView>
   );
 }
