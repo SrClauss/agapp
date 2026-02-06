@@ -59,9 +59,10 @@ async def calculate_contact_cost(
         ]
 
     # Check if there are any existing contacts for this project
-    existing_contacts = await db.contacts.find({"project_id": project_id}).to_list(length=None)
-    
-    if len(existing_contacts) == 0:
+    # Prefer using project.contacts (nested) instead of legacy db.contacts collection
+    project_contacts = project.get("contacts", []) if project else []
+
+    if len(project_contacts) == 0:
         # Brand new project - no contacts yet; evaluate against thresholds
         prev_max = 0
         for t in thresholds:
@@ -77,10 +78,9 @@ async def calculate_contact_cost(
         # If beyond last threshold, free to negotiate
         return 0, "new_project_free"
     else:
-        # Project is non-inedito (has prior contacts). New rules:
-        # - first 24h after posting: 2 credits
-        # - 24-48h after posting: 3 credits
-        # - after 48h: project expires and becomes inactive
+        # Project has prior contacts. Use the time since project creation to determine pricing
+        # Keep the previous rules but also consider the timestamp of the most recent contact
+        # to support more advanced rules in the future.
         if hours_since_creation <= 24:
             return 2, "non_inedito_0_24h"
         elif hours_since_creation <= 48:

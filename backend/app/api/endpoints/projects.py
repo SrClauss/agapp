@@ -490,8 +490,16 @@ async def create_contact_on_project(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    # Log current balance for debugging
+    try:
+        current_balance = await get_user_credits(db, str(current_user.id))
+        logging.info(f"create_contact_on_project: user={current_user.id} credits_needed={credits_needed} current_balance={current_balance} pricing_reason={pricing_reason}")
+    except Exception:
+        logging.exception("create_contact_on_project: failed to fetch current balance")
+
     success, error_msg = await validate_and_deduct_credits(db, str(current_user.id), credits_needed)
     if not success:
+        logging.warning(f"create_contact_on_project: deduction failed for user={current_user.id} need={credits_needed} error={error_msg}")
         raise HTTPException(status_code=400, detail=error_msg or "Insufficient credits")
 
     updated_project = await create_contact_in_project(db, project_id, contact, str(current_user.id), str(project.client_id), credits_needed)
