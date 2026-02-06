@@ -46,6 +46,7 @@ ssh -tt "$USER@$SERVER" << EOF
   echo "Status do processo de deploy (últimas 100 linhas):"
   echo "-----------------------------"
   tail -n 100 deploy.log
+  exit 0
 EOF
 
 echo "Deploy concluído com sucesso!"

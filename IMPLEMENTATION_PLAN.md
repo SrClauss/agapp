@@ -80,11 +80,16 @@ Com base na decisão de manter "contacts" como array interno em "projects" (sem 
   - Remova imports/referências a APIs separadas para `contacts` e `chats`.
   - Teste navegação e renderização para garantir que contatos e chats apareçam corretamente.
 
-## 3. Passos Gerais de Implementação
-- **Ordem**: Comece pelo backend (schema e APIs), depois frontend.
-- **Testes**: Execute o app, crie um projeto com contatos/chats e verifique se `ContactedProjectsScreen` carrega corretamente.
-- **Limpeza**: Após implementação, remova arquivos/códigos obsoletos relacionados a entidades separadas.
-- **Tempo Estimado**: 4-6 horas para backend + 2-4 horas para frontend, dependendo da complexidade.
+## 6. Limpeza e Remoção de Dependências Antigas
+- **Arquivos Removidos**:
+  - `models/contact.py`
+  - `crud/contact.py`
+  - `schemas/contact.py`
+  - `api/endpoints/contacts.py`
+- **Atualizações em main.py**:
+  - Remover import e include_router de contacts.
+- **Testes**: Verificar se o backend inicia sem erros e endpoints funcionam.
+- **Migração Futura**: Se necessário, migrar dados existentes de contacts para projects (mas usuário disse não precisa).
 
 ## 4. Funcionalidade Adicional: Liberar Projeto para Profissional
 - **Descrição**: Quando um profissional cria um contato (demonstra interesse) em um projeto, adicionar seu `professional_id` ao array `liberado_por` do projeto, se ainda não estiver presente. Isso permite rastrear quais profissionais "liberaram" ou demonstraram interesse no projeto.
