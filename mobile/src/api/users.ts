@@ -45,3 +45,23 @@ export async function getUserPublic(userId: string): Promise<{ id: string; full_
   return data;
 }
 
+export interface Evaluation {
+  id: string;
+  client_id: string;
+  client_name?: string;
+  project_id: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+}
+
+/**
+ * Get all evaluations received by current user
+ */
+export async function getUserEvaluations(token: string): Promise<Evaluation[]> {
+  const { data } = await client.get('/users/me/evaluations', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return data;
+}
+

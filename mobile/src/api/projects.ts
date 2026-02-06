@@ -275,4 +275,39 @@ export async function evaluateProject(
   return response.data;
 }
 
+/**
+ * Contact summary for listing contacts in project details
+ */
+export interface ContactSummary {
+  id: string;
+  professional_id: string;
+  professional_name: string;
+  professional_avatar?: string;
+  status: string;
+  created_at: string;
+  last_message?: {
+    id: string;
+    sender_id: string;
+    content: string;
+    created_at: string;
+  };
+  unread_count: number;
+  contact_details: {
+    message?: string;
+    proposal_price?: number;
+    [key: string]: any;
+  };
+}
+
+/**
+ * Get all contacts for a project (client view)
+ */
+export async function getProjectContacts(projectId: string): Promise<ContactSummary[]> {
+  const token = useAuthStore.getState().token;
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+  
+  const response = await client.get(`/projects/${projectId}/contacts`, config);
+  return response.data;
+}
+
 

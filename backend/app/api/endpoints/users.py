@@ -16,6 +16,40 @@ router = APIRouter()
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+@router.get("/me/evaluations", response_model=List[dict])
+async def get_my_evaluations(
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Retorna todas as avaliações recebidas pelo usuário atual.
+    """
+    from bson import ObjectId
+    
+    evaluations = []
+    async for evaluation in db.evaluations.find({"professional_id": str(current_user.id)}).sort("created_at", -1):
+        # Buscar nome do cliente
+        client_id = evaluation.get("client_id")
+        client = None
+        if client_id:
+            # Try string ID first
+            client = await db.users.find_one({"_id": client_id})
+            # Try ObjectId if string didn't work
+            if not client and ObjectId.is_valid(client_id):
+                client = await db.users.find_one({"_id": ObjectId(client_id)})
+        
+        evaluations.append({
+            "id": str(evaluation["_id"]),
+            "client_id": str(evaluation["client_id"]),
+            "client_name": client.get("full_name") if client else None,
+            "project_id": str(evaluation["project_id"]),
+            "rating": evaluation["rating"],
+            "comment": evaluation.get("comment"),
+            "created_at": evaluation["created_at"]
+        })
+    
+    return evaluations
+
 @router.put("/me", response_model=User)
 async def update_user_me(
     user_update: UserUpdate,

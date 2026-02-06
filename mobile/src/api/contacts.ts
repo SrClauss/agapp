@@ -142,3 +142,13 @@ export async function updateContactStatus(
   );
   return response.data;
 }
+
+/**
+ * Mark all messages in a contact as read
+ */
+export async function markContactMessagesAsRead(contactId: string): Promise<void> {
+  const token = useAuthStore.getState().token;
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+  
+  await client.post(`/contacts/${contactId}/messages/mark-read`, {}, config);
+}

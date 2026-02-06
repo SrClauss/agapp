@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Any
+from datetime import datetime, timezone
 from app.core.database import get_database
 from app.core.security import get_current_user, get_current_admin_user
 from app.crud.contact import get_contact, get_contacts_by_user, create_contact, update_contact, get_contacts, delete_contact
@@ -250,6 +251,49 @@ async def send_contact_message(
         print(f"Error sending push notification: {e}")
     
     return {"message": "Message sent successfully", "message_id": msg["id"]}
+
+@router.post("/{contact_id}/messages/mark-read")
+async def mark_messages_as_read(
+    contact_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Any = Depends(get_database)
+):
+    """
+    Marca todas as mensagens não lidas como lidas pelo usuário atual.
+    """
+    contact = await get_contact(db, contact_id)
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    # Verificar autorização
+    if str(current_user.id) not in [str(contact.professional_id), str(contact.client_id)]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Atualizar mensagens: marcar como lidas as que foram enviadas pelo outro participante
+    other_user_id = str(contact.client_id) if str(current_user.id) == str(contact.professional_id) else str(contact.professional_id)
+    
+    now = datetime.now(timezone.utc)
+    
+    # Atualizar no MongoDB: marcar read_at para mensagens do outro usuário que ainda não foram lidas
+    result = await db.contacts.update_one(
+        {"_id": contact_id},
+        {
+            "$set": {
+                "chat.$[elem].read_at": now
+            }
+        },
+        array_filters=[
+            {
+                "elem.sender_id": other_user_id,
+                "$or": [
+                    {"elem.read_at": None},
+                    {"elem.read_at": {"$exists": False}}
+                ]
+            }
+        ]
+    )
+    
+    return {"message": "Messages marked as read", "modified_count": result.modified_count}
 
 @router.put("/{contact_id}/status", response_model=Contact)
 async def update_contact_status(

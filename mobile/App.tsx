@@ -17,6 +17,8 @@ import ProfileSelectionScreen from './src/screens/ProfileSelectionScreen';
 import AdScreen from './src/screens/AdScreen';
 import WelcomeProfessionalScreen from './src/screens/WelcomeProfessionalScreen';
 import ProjectsListScreen from './src/screens/ProjectsListScreen';
+import ContactDetailScreen from './src/screens/ContactDetailScreen';
+import ProfileEvaluationsScreen from './src/screens/ProfileEvaluationsScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
 import { getRouteForRoles } from './src/utils/roles';
@@ -122,6 +124,8 @@ export default function App() {
           <Stack.Screen name="ProjectsList" component={ProjectsListScreen} options={{ title: 'Projetos' }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ContactDetail" component={ContactDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ProfileEvaluations" component={ProfileEvaluationsScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style="auto" />
