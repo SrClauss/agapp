@@ -32,9 +32,11 @@ def add_project_badges(projects: List[Project]) -> None:
             if hours_old < 24:
                 badges.append("new")
         
-        # Check if project is featured
-        if project.is_featured and project.featured_until:
-            featured_until_utc = ensure_utc(project.featured_until)
+        # Check if project is featured (use getattr for safety with older projects)
+        is_featured = getattr(project, 'is_featured', False)
+        featured_until = getattr(project, 'featured_until', None)
+        if is_featured and featured_until:
+            featured_until_utc = ensure_utc(featured_until)
             if featured_until_utc > now:
                 badges.append("featured")
                 

@@ -73,6 +73,14 @@ export function useGoogleAuth() {
 
         console.log('Login bem-sucedido!', userInfo);
 
+        // Tentar pegar o usuário atual para verificar se está logado
+        try {
+          const currentUser = await GoogleSigninModule.getCurrentUser();
+          console.log('Usuário atual do Google:', currentUser ? 'Encontrado' : 'Não encontrado');
+        } catch (error) {
+          console.warn('Erro ao verificar usuário atual:', error);
+        }
+
         // Pegar o ID Token
         const tokens = await GoogleSigninModule.getTokens();
         const idToken = tokens.idToken;

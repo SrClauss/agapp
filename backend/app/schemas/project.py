@@ -70,6 +70,12 @@ class ProjectInDBBase(ProjectBase):
     closed_by: Optional[str] = None  # Professional ID who closed the project
     closed_by_name: Optional[str] = None  # Added professional name
     liberado_por_profiles: List[Dict[str, Any]] = []  # Profiles for professionals who liberated the project
+    # Featured project fields
+    is_featured: bool = False
+    featured_until: Optional[datetime] = None
+    featured_price: Optional[float] = None
+    featured_purchased_at: Optional[datetime] = None
+    featured_payment_id: Optional[str] = None
 
     class Config:
         from_attributes = True

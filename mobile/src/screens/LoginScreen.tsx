@@ -15,6 +15,7 @@ import { Modal, ActivityIndicator, Linking } from 'react-native';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
+  const token = useAuthStore((s: AuthState) => s.token);
   const setToken = useAuthStore((s: AuthState) => s.setToken);
   const setUser = useAuthStore((s: AuthState) => s.setUser);
 
@@ -45,9 +46,11 @@ export default function LoginScreen() {
 
   const checkAdAndNavigate = async (user: any) => {
     console.log('🔍 Verificando anúncios para usuário:', user.email, 'roles:', user.roles);
+    console.log('🔍 [checkAdAndNavigate] Token no store:', token ? 'Existe ✓' : 'NULL ✗');
 
     if (!user.is_profile_complete) {
       console.log('📝 Usuário precisa completar perfil');
+      console.log('🚀 Navegando para CompleteProfile...');
       navigation.navigate('CompleteProfile' as never);
       return;
     }
@@ -246,9 +249,15 @@ export default function LoginScreen() {
 
       console.log('Enviando token para o backend...');
       const data = await loginWithGoogle(idToken);
-
+      
+      console.log('✅ Login com Google bem-sucedido');
+      console.log('🔍 data.token:', data.token ? 'Existe ✓' : 'NULL ✗');
+      console.log('🔍 data.user:', data.user ? 'Existe ✓' : 'NULL ✗');
+      
       await setToken(data.token);
       let user = data.user || (await fetchCurrentUser(data.token));
+      console.log('👤 User recebido:', user ? user.email : 'NULL');
+      
       // If backend didn't return avatar_url, try to get from Google profile or accessToken
       if (user && (!user.avatar_url || user.avatar_url === '')) {
         // Try to use profile returned from native GoogleSignIn
@@ -272,6 +281,14 @@ export default function LoginScreen() {
         }
       }
       setUser(user);
+      
+      console.log('💾 Token e User salvos no store');
+      console.log('🔑 Token salvo:', data.token ? 'SIM ✓' : 'NÃO ✗');
+      console.log('👤 User salvo:', user ? user.email : 'NULL');
+      
+      // Aguardar um pouco para garantir que o estado seja persistido
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Register push token on successful Google login
       try {
         const pushToken = await NotificationsService.registerForPushNotificationsAsync();

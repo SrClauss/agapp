@@ -174,7 +174,7 @@ export default function SignUpScreen() {
   useEffect(() => {
     if (isCompleting && currentUser) {
       setFullName(currentUser.full_name || '');
-      setCpf(currentUser.cpf || '');
+      setCpf(currentUser?.cpf || '000.000.000-00');
       setPhone(currentUser.phone || '');
       setEmail(currentUser.email || '');
       setIsProfessional(currentUser.roles?.includes('professional') || false);
@@ -215,9 +215,9 @@ export default function SignUpScreen() {
             keyboardType="numeric"
             style={commonStyles.input}
             maxLength={14}
-            editable={!isCompleting || !currentUser?.cpf}
+            editable={true} // Sempre editável por enquanto
           />
-          {isCompleting && currentUser?.cpf ? <HelperText type="info">CPF já cadastrado e não pode ser alterado</HelperText> : null}
+          <HelperText type="info">Digite seu CPF completo (apenas números)</HelperText>
 
           <TextInput
             label="Telefone (opcional)"

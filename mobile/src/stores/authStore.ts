@@ -60,7 +60,7 @@ export type AuthState = {
   activeRole: string | null;
   isHydrated: boolean;
   setToken: (token: string | null) => Promise<void>;
-  setUser: (user: User | null) => void;
+  setUser: (user: User | null) => Promise<void>;
   setActiveRole: (role: string) => void;
   setHydrated: () => void;
   logout: () => Promise<void>;
@@ -80,15 +80,39 @@ export const useAuthStore = create<AuthState>()(
       isHydrated: false,
       setToken: async (token: string | null) => {
         set({ token });
-        // O middleware persist vai salvar automaticamente no SecureStore
-        },
-      setUser: (user: User | null) => set({ user }),
+        // Persist explicitly as a fallback in case the middleware fails
+        try {
+          const fullState = get();
+          await SecureStore.setItemAsync('auth-storage', JSON.stringify({ state: fullState }));
+          console.log('[AuthStore] Token persistido explicitamente no SecureStore (fallback)');
+        } catch (e) {
+          console.log('[AuthStore] Falha ao persistir token no SecureStore (fallback):', e);
+        }
+      },
+      setUser: async (user: User | null) => {
+        set({ user });
+        // Persist explicitly
+        try {
+          const fullState = get();
+          await SecureStore.setItemAsync('auth-storage', JSON.stringify({ state: fullState }));
+          console.log('[AuthStore] User persistido explicitamente no SecureStore');
+        } catch (e) {
+          console.log('[AuthStore] Falha ao persistir user no SecureStore:', e);
+        }
+      },
       // projectsNearby moved to dedicated store `useProjectsNearbyStore`
       setActiveRole: (role: string) => set({ activeRole: role }),
       setHydrated: () => set({ isHydrated: true }),
       getToken: () => get().token,
       logout: async () => {
         set({ token: null, user: null, activeRole: null });
+        // Clear SecureStore to break the loop
+        try {
+          await SecureStore.deleteItemAsync('auth-storage');
+          console.log('[AuthStore] SecureStore limpo no logout');
+        } catch (e) {
+          console.log('[AuthStore] Falha ao limpar SecureStore no logout:', e);
+        }
       },
       // DEV helper: inspect what's stored in SecureStore under the persist key
       // This is a safe, masked debug helper only intended for development.

@@ -14,6 +14,10 @@ echo "Fazendo commit de todas as alterações..."
 git add .
 git commit -m "$COMMIT_MESSAGE"
 
+# Adicionando o comando para fazer o push após o commit
+echo "Fazendo push das alterações..."
+git push
+
 # Etapa 2: Acessar o servidor remoto e executar o script de deploy
 echo "Conectando ao servidor $SERVER e executando o script de deploy..."
 ssh -tt "$USER@$SERVER" << EOF

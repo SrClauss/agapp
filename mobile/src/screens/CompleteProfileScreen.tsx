@@ -10,16 +10,21 @@ import { commonStyles } from '../theme/styles';
 
 export default function CompleteProfileScreen() {
   const navigation = useNavigation();
-  const token = useAuthStore((s: AuthState) => s.token);
-  const user = useAuthStore((s: AuthState) => s.user);
-  const setUser = useAuthStore((s: AuthState) => s.setUser);
-  const setToken = useAuthStore((s: AuthState) => s.setToken);
+  const authStore = useAuthStore();
+  const token = authStore.token;
+  const user = authStore.user;
+  const setUser = authStore.setUser;
+  const setToken = authStore.setToken;
 
+  console.log('🔍 [CompleteProfile] Renderizando - Token:', token ? 'Existe ✓' : 'NULL ✗');
+  console.log('🔍 [CompleteProfile] Renderizando - User:', user ? user.email : 'NULL ✗');
+
+  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [roles, setRoles] = useState<string[]>(['client']); // Default to client
+  const [roles, setRoles] = useState<string[]>(['client']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -35,18 +40,29 @@ export default function CompleteProfileScreen() {
     }
   };
 
-  // Prefill cpf/phone/roles from current user when available
+  // Prefill cpf/phone/roles/fullName from current user when available
   React.useEffect(() => {
     if (user) {
-      setCpf(user.cpf || '');
-      setPhone(user.phone || '');
-      setRoles(user.roles || ['client']);
+      // Remove qualquer formatação do CPF que venha do servidor
+      const cleanCpf = user?.cpf ? user.cpf.replace(/\D/g, '') : '';
+      // Só preenche se não for um CPF temporário
+      setCpf(cleanCpf === '00000000000' ? '' : cleanCpf);
+      setPhone(user?.phone || '');
+      setRoles(user?.roles || ['client']);
+      setFullName(user?.full_name || '');
     }
   }, [user]);
 
   const onCompleteProfile = async () => {
-    if (!token || !user) {
-      setError('Token ou usuário não encontrado');
+    console.log('🔍 [CompleteProfile] Token:', token ? 'Existe' : 'NULL');
+    console.log('🔍 [CompleteProfile] User:', user ? user.email : 'NULL');
+    
+    if (!token) {
+      setError('Token não encontrado. Faça login novamente.');
+      return;
+    }
+    if (!fullName.trim()) {
+      setError('Nome completo é obrigatório');
       return;
     }
     if (password !== confirmPassword) {
@@ -67,7 +83,7 @@ export default function CompleteProfileScreen() {
       // Preparar payload e enviar somente senha se fornecida
       const payload: any = {
         phone,
-        full_name: user.full_name, // Usar o nome do Google
+        full_name: fullName, // Usar o nome editável
         roles,
       };
       
@@ -81,12 +97,12 @@ export default function CompleteProfileScreen() {
       const updatedUser = await completeProfile(token, payload);
 
       // If password was provided, log in with email/password to get fresh tokens
-      if (password) {
+      if (password && updatedUser.email) {
         try {
           // Import login function lazily to avoid circular deps
           const { loginWithEmail } = await import('../api/auth');
           // Use current token in Authorization header to bypass Turnstile for auto-login
-          const loginResult = await loginWithEmail(user.email, password, undefined, token);
+          const loginResult = await loginWithEmail(updatedUser.email, password, undefined, token);
           // Save token and user
           await setToken(loginResult.token);
           setUser(loginResult.user || { ...updatedUser, avatar_url: user?.avatar_url });
@@ -130,24 +146,19 @@ export default function CompleteProfileScreen() {
 
         <TextInput
           label="Nome Completo"
-          value={user?.full_name || ''}
-          editable={false}
+          value={fullName}
+          onChangeText={setFullName}
           style={commonStyles.input}
         />
 
         <TextInput
           label="CPF"
           value={cpf}
-          onChangeText={setCpf}
+          onChangeText={(text) => setCpf(text.replace(/\D/g, ''))} // Remove qualquer caractere não numérico
           keyboardType="numeric"
           style={commonStyles.input}
-          editable={!user?.cpf || user.cpf === '000.000.000-00'}
         />
-        {user?.cpf && user.cpf !== '000.000.000-00' ? (
-          <HelperText type="info">CPF já cadastrado e não pode ser alterado</HelperText>
-        ) : (
-          <HelperText type="info">Digite seu CPF completo (apenas números)</HelperText>
-        )}
+        <HelperText type="info">Digite seu CPF completo (apenas números, sem formatação)</HelperText>
 
         <TextInput
           label="Telefone"

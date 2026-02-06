@@ -93,7 +93,7 @@ export default function App() {
     }
 
     initializeApp();
-  }, [isHydrated, token]);
+  }, [isHydrated]); // Remover 'token' das dependências para evitar checkAuth a cada mudança de token
 
   if (isLoading) {
     return (
