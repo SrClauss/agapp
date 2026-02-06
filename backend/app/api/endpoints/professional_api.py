@@ -88,3 +88,52 @@ async def contacted_projects(
         projects.append(p)
 
     return projects
+@router.get("/liberated-projects")
+async def liberated_projects(
+    skip: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+) -> List[Dict]:
+    """Retorna projetos que o profissional liberou para o cliente."""
+    if 'professional' not in current_user.roles:
+        raise HTTPException(status_code=403, detail='User is not a professional')
+
+    user_id = str(current_user.id)
+
+    query = {
+        "liberado_por": user_id
+    }
+
+    cursor = db.projects.find(query).skip(int(skip)).limit(int(limit))
+    projects = []
+    async for p in cursor:
+        # normalize _id to string for response
+        p["_id"] = str(p.get("_id"))
+        projects.append(p)
+
+    return projects
+
+
+
+
+@router.get("/credits")
+async def get_credits(
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+) -> Dict:
+    """Retorna créditos disponíveis para o profissional autenticado"""
+    if 'professional' not in current_user.roles:
+        raise HTTPException(status_code=403, detail='User is not a professional')
+
+    user_id = str(current_user.id)
+
+    # Credits available: always from subscriptions (single source of truth)
+    from app.utils.credit_pricing import get_user_credits
+    credits_available = await get_user_credits(db, user_id)
+
+    return {
+        "credits_available": credits_available
+    }   
+
+    
