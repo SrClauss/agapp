@@ -650,8 +650,8 @@ async def admin_config(
     current_user: User = Depends(get_current_user_from_request),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    """Página de configurações do sistema"""
-    # Buscar todas as configurações
+    """Página de configurações do sistema (geral)"""
+    # Buscar todas as configurações (planos, pacotes e destaque)
     plans = await db.plan_configs.find({"is_active": True}).to_list(length=100)
     packages = await db.credit_packages.find().sort("sort_order", 1).to_list(length=100)
     featured_pricings = await db.featured_pricings.find().sort("duration_days", 1).to_list(length=100)
@@ -662,6 +662,20 @@ async def admin_config(
         "plans": plans,
         "packages": packages,
         "featured_pricings": featured_pricings
+    })
+
+
+@router.get("/config/system", response_class=HTMLResponse)
+async def admin_system_config(
+    request: Request,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Página separada para configuração do sistema"""
+    # The template fetches data via the API; just render the page
+    return templates.TemplateResponse("admin/system_config.html", {
+        "request": request,
+        "current_user": current_user
     })
 
 @router.get("/categories", response_class=HTMLResponse)

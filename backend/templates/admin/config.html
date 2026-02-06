@@ -26,11 +26,6 @@
             <i class="fas fa-star me-1 d-none d-sm-inline"></i><span class="d-none d-sm-inline">Destaque</span><span class="d-sm-none">Destaque</span>
         </button>
     </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab">
-            <i class="fas fa-cog me-1 d-none d-sm-inline"></i><span class="d-none d-sm-inline">Sistema</span><span class="d-sm-none">Sistema</span>
-        </button>
-    </li>
 </ul>
 
 <!-- Tabs Content -->
@@ -246,85 +241,6 @@
     </div>
 </div>
 
-    <!-- Sistema (configurações globais) -->
-    <div class="tab-pane fade" id="system" role="tabpanel">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="m-0 fw-bold">Configurações do Sistema</h6>
-                <button class="btn btn-secondary btn-sm" onclick="saveSystemConfig()">Salvar</button>
-            </div>
-            <div class="card-body">
-                <form id="systemConfigForm" onsubmit="event.preventDefault(); saveSystemConfig();">
-                    <div class="mb-3">
-                        <label class="form-label">Raio máximo para projetos presenciais (km)</label>
-                        <input type="number" step="0.1" min="0" class="form-control" id="maxRadius" name="max_inperson_radius_km">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Thresholds de créditos para projetos ineditos</label>
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label">Até (horas)</label>
-                                <input type="number" class="form-control" id="inedito_h1">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Créditos</label>
-                                <input type="number" class="form-control" id="inedito_c1">
-                            </div>
-                            <div class="col-md-4 align-self-end">
-                                <small class="text-muted">Faixa 1</small>
-                            </div>
-                        </div>
-                        <div class="row g-2 mt-2">
-                            <div class="col-md-4">
-                                <label class="form-label">Até (horas)</label>
-                                <input type="number" class="form-control" id="inedito_h2">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Créditos</label>
-                                <input type="number" class="form-control" id="inedito_c2">
-                            </div>
-                            <div class="col-md-4 align-self-end">
-                                <small class="text-muted">Faixa 2</small>
-                            </div>
-                        </div>
-                        <div class="row g-2 mt-2">
-                            <div class="col-md-4">
-                                <label class="form-label">Até (horas)</label>
-                                <input type="number" class="form-control" id="inedito_h3">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Créditos</label>
-                                <input type="number" class="form-control" id="inedito_c3">
-                            </div>
-                            <div class="col-md-4 align-self-end">
-                                <small class="text-muted">Faixa 3</small>
-                            </div>
-                        </div>
-                        <small class="text-muted d-block mt-2">Projetos ineditos além do último threshold são gratuitos para negociação.</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Regras para projetos não-ineditos</label>
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label">0-24h (créditos)</label>
-                                <input type="number" class="form-control" id="non_h0_24">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">24-48h (créditos)</label>
-                                <input type="number" class="form-control" id="non_h24_48">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Expira após (horas)</label>
-                                <input type="number" class="form-control" id="non_expire_hours">
-                            </div>
-                        </div>
-                        <small class="text-muted d-block mt-2">Projetos não-ineditos expiram automaticamente após o tempo acima e ficam com status "expired".</small>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
 <!-- Modal: Adicionar Plano -->
 <div class="modal fade" id="addPlanModal" tabindex="-1">
