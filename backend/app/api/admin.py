@@ -11,7 +11,6 @@ from app.core.database import get_database
 from app.core.security import get_current_admin_user, create_access_token, verify_password, get_current_user_from_request
 from app.crud.user import get_users, get_user_by_email, get_user_in_db_by_email, get_user, toggle_user_status, update_user_profile, delete_user, get_user_stats
 from app.crud.project import get_projects
-from app.crud.contact import get_contacts
 from app.crud.subscription import get_subscriptions
 from app.crud.category import get_categories, get_category, create_category, update_category, delete_category, delete_category_permanent
 from app.models.category import CategoryCreate, CategoryUpdate
@@ -82,13 +81,32 @@ async def admin_dashboard(
     # Get statistics
     users_count = await db.users.count_documents({})
     projects_count = await db.projects.count_documents({})
-    contacts_count = await db.contacts.count_documents({})
+
+    # Total contacts via aggregation over projects
+    agg = await db.projects.aggregate([
+        {"$project": {"n": {"$size": {"$ifNull": ["$contacts", []]}}}},
+        {"$group": {"_id": None, "total": {"$sum": "$n"}}}
+    ]).to_list(length=1)
+    contacts_count = agg[0]["total"] if agg else 0
+
     subscriptions_count = await db.subscriptions.count_documents({})
 
     # Get recent items
     recent_users = await get_users(db, limit=5)
     recent_projects = await get_projects(db, limit=5)
-    recent_contacts = await get_contacts(db, limit=5)
+
+    # recent contacts: unwind and sort
+    recent_contacts = []
+    pipeline = [
+        {"$match": {"contacts": {"$exists": True, "$ne": []}}},
+        {"$unwind": "$contacts"},
+        {"$sort": {"contacts.created_at": -1}},
+        {"$limit": 5},
+        {"$project": {"project_id": "$_id", "title": "$title", "contact": "$contacts"}}
+    ]
+    async for doc in db.projects.aggregate(pipeline):
+        recent_contacts.append(doc)
+
     recent_subscriptions = await get_subscriptions(db, limit=5)
 
     return templates.TemplateResponse("admin/dashboard.html", {
@@ -239,8 +257,21 @@ async def admin_project_detail(
         if project.professional_id:
             professional = await get_user(db, project.professional_id)
         
-        # Buscar contatos relacionados ao projeto
-        contacts = await get_contacts(db, query_filter={"project_id": project_id})
+        # Buscar contatos relacionados ao projeto (contacts aninhados em projects)
+        contacts = []
+        for i, c in enumerate(project.contacts or []):
+            contact_dict = {
+                "id": f"{project_id}_{i}",
+                "professional_id": c.get("professional_id"),
+                "professional_name": c.get("professional_name"),
+                "client_id": c.get("client_id"),
+                "client_name": c.get("client_name"),
+                "status": c.get("status"),
+                "created_at": c.get("created_at"),
+                "contact_details": c.get("contact_details", {}),
+                "last_message": c.get("chats", [])[-1] if c.get("chats") else None
+            }
+            contacts.append(contact_dict)
         
         # Buscar categorias
         from app.crud.category import get_categories
@@ -371,15 +402,61 @@ async def admin_contacts(
     if client_id:
         query_filter["client_id"] = client_id
     
-    contacts = await get_contacts(db, skip=skip, limit=limit, query_filter=query_filter)
-    total_contacts = await db.contacts.count_documents(query_filter)
+    # Build aggregation match for projects with contacts
+    match = {"contacts": {"$exists": True, "$ne": []}}
+    if search:
+        match["$or"] = [
+            {"contacts.contact_details.message": {"$regex": search, "$options": "i"}},
+            {"contacts.professional_name": {"$regex": search, "$options": "i"}},
+            {"contacts.client_name": {"$regex": search, "$options": "i"}}
+        ]
+    if status:
+        match["contacts.status"] = status
+    if professional_id:
+        match["contacts.professional_id"] = professional_id
+    if client_id:
+        match["contacts.client_id"] = client_id
+
+    pipeline = [
+        {"$match": match},
+        {"$unwind": "$contacts"},
+        {"$sort": {"contacts.created_at": -1}},
+        {"$skip": int(skip)},
+        {"$limit": int(limit)},
+        {"$project": {"project_id": "$_id", "project_title": "$title", "contact": "$contacts"}}
+    ]
+
+    contacts = []
+    async for doc in db.projects.aggregate(pipeline):
+        c = doc.get("contact", {})
+        contact_dict = {
+            "id": f"{str(doc['project_id'])}_{str(c.get('created_at')) if c.get('created_at') else ''}",
+            "project_id": str(doc['project_id']),
+            "project_title": doc.get("project_title"),
+            "professional_id": c.get("professional_id"),
+            "professional_name": c.get("professional_name"),
+            "client_id": c.get("client_id"),
+            "client_name": c.get("client_name"),
+            "status": c.get("status"),
+            "created_at": c.get("created_at"),
+            "contact_details": c.get("contact_details", {}),
+            "last_message": c.get("chats", [])[-1] if c.get("chats") else None
+        }
+        contacts.append(contact_dict)
+
+    # Count total contacts matching filter
+    count_pipeline = [
+        {"$match": match},
+        {"$project": {"n": {"$size": {"$ifNull": ["$contacts", []]}}}},
+        {"$group": {"_id": None, "total": {"$sum": "$n"}}}
+    ]
+    count_res = await db.projects.aggregate(count_pipeline).to_list(length=1)
+    total_contacts = count_res[0]["total"] if count_res else 0
     total_pages = (total_contacts + limit - 1) // limit
 
     # Get professionals and clients for filter dropdowns
     professionals = await get_users(db, query_filter={"roles": "professional"})
     clients = await get_users(db, query_filter={"roles": "client"})
-
-    print("DEBUG: Contatos carregados:", contacts)  # Debug line to check loaded contacts
 
     return templates.TemplateResponse("admin/contacts.html", {
         "request": request,
