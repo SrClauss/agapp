@@ -35,6 +35,29 @@ export interface ContactCreate {
   contact_details: ContactDetails;
 }
 
+export interface CostPreview {
+  credits_cost: number;
+  reason: string;
+  current_balance: number;
+  can_afford: boolean;
+  message?: string;
+}
+
+/**
+ * Get cost preview for creating contact with a project
+ */
+export async function getContactCostPreview(
+  projectId: string
+): Promise<CostPreview> {
+  const token = useAuthStore.getState().token;
+  const config = token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : undefined;
+
+  const response = await client.get(`/contacts/${projectId}/cost-preview`, config);
+  return response.data;
+}
+
 /**
  * Create contact for a project (professional accepts/proposes)
  */

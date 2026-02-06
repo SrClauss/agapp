@@ -249,3 +249,30 @@ export async function getNearbyCombinedProjects(token?: string, params?: { latit
   return response.data as { all: Project[]; non_remote: Project[] };
 }
 
+/**
+ * Evaluate a project after completion
+ */
+export interface ProjectEvaluation {
+  rating: number;
+  comment?: string;
+  would_recommend?: boolean;
+}
+
+export async function evaluateProject(
+  projectId: string,
+  evaluation: ProjectEvaluation
+): Promise<{ message: string; evaluation_id: string }> {
+  const token = useAuthStore.getState().token;
+  const config = token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : undefined;
+
+  const response = await client.post(
+    `/projects/${projectId}/evaluate`,
+    evaluation,
+    config
+  );
+  return response.data;
+}
+
+
