@@ -1,12 +1,13 @@
-import React, { use, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, View, ImageBackground } from 'react-native';
-import { Text, Card, Avatar, Button, Portal, Dialog } from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, ActivityIndicator, View, ImageBackground, Alert } from 'react-native';
+import { Text, Card, Avatar, Button, Snackbar } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { getProject, Project } from '../api/projects';
 import { getCreditsByProfessional } from '../api/professional';
+import { getContactCostPreview, createContactForProject, CostPreview } from '../api/contacts';
 import useAuthStore from '../stores/authStore';
 import { maskName, maskPhone } from '../utils/format';
-import client from '../api/axiosClient';
+import ConfirmContactModal from '../components/ConfirmContactModal';
 
 interface Params {
   projectId?: string;
@@ -14,22 +15,24 @@ interface Params {
 }
 
 export default function ProjectProfessionalsDetailScreen() {
-
   const route = useRoute();
   const navigation = useNavigation();
   const params = (route.params ?? {}) as Params | undefined;
   const projectId = params?.projectId;
   const projectParam = params?.project;
-  const [credits, setCredits] = useState<number>(useAuthStore.getState().user?.credits || 0);
 
   const [project, setProject] = useState<Project | null>(projectParam || null);
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(!project);
-  const [liberado, setLiberado] = useState<boolean>(false); // estado local, padrão false
+  const [costPreview, setCostPreview] = useState<CostPreview | null>(null);
+  const [loadingCostPreview, setLoadingCostPreview] = useState<boolean>(false);
   const [confirmVisible, setConfirmVisible] = useState<boolean>(false);
+  const [creating, setCreating] = useState<boolean>(false);
+  const [snackbarVisible, setSnackbarVisible] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [existingContactId, setExistingContactId] = useState<string | null>(null);
 
-
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
 
   useEffect(() => {
     let mounted = true;
@@ -45,20 +48,174 @@ export default function ProjectProfessionalsDetailScreen() {
           if (mounted) setLoading(false);
         }
       }
-
-      
-      
     };
     
     load();
     return () => { mounted = false; };
   }, [projectId]);
+
+  // Load cost preview when project is loaded
+  useEffect(() => {
+    if (!project || !projectId || !user || !user.roles.includes('professional')) {
+      return;
+    }
+
+    const loadPreview = async () => {
+      setLoadingCostPreview(true);
+      try {
+        const preview = await getContactCostPreview(projectId);
+        setCostPreview(preview);
+        
+        // If contact already exists, extract the contact ID from the response if available
+        if (preview.reason === 'contact_already_exists') {
+          // We would need to fetch the contact ID from the contacts history
+          // For now, we'll show a message
+          setExistingContactId('existing');
+        }
+      } catch (e: any) {
+        console.warn('[ProjectProfessionalsDetail] failed to fetch cost preview', e);
+        if (e?.response?.status === 404) {
+          setSnackbarMessage('Projeto não encontrado');
+          setSnackbarVisible(true);
+        }
+      } finally {
+        setLoadingCostPreview(false);
+      }
+    };
+
+    loadPreview();
+  }, [project, projectId, user]);
+
+  const handleContactButtonPress = () => {
+    if (!costPreview) {
+      setSnackbarMessage('Aguarde o carregamento das informações');
+      setSnackbarVisible(true);
+      return;
+    }
+
+    if (costPreview.reason === 'contact_already_exists') {
+      // Navigate to existing contact/chat
+      setSnackbarMessage('Você já tem um contato com este projeto');
+      setSnackbarVisible(true);
+      // TODO: Navigate to ContactDetailScreen when implemented
+      return;
+    }
+
+    if (!costPreview.can_afford) {
+      Alert.alert(
+        'Créditos Insuficientes',
+        'Você não tem créditos suficientes para contatar este projeto. Deseja comprar mais créditos?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Comprar Créditos',
+            onPress: () => {
+              // TODO: Navigate to credit purchase screen
+              setSnackbarMessage('Funcionalidade de compra em desenvolvimento');
+              setSnackbarVisible(true);
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    setConfirmVisible(true);
+  };
+
+  const handleConfirmContact = async (message: string, proposalPrice?: number) => {
+    if (!projectId || creating) return;
+
+    setCreating(true);
+    try {
+      const contact = await createContactForProject(projectId, {
+        contact_type: 'proposal',
+        contact_details: {
+          message,
+          proposal_price: proposalPrice,
+        },
+      });
+
+      // Refresh user credits
+      try {
+        const creditsData = await getCreditsByProfessional();
+        if (user) {
+          setUser({ ...user, credits: creditsData.credits_available });
+        }
+      } catch (e) {
+        console.warn('[ProjectProfessionalsDetail] failed to refresh credits', e);
+      }
+
+      setConfirmVisible(false);
+      setSnackbarMessage('Contato criado com sucesso!');
+      setSnackbarVisible(true);
+
+      // Navigate to contact detail/chat screen
+      // TODO: Navigate to ContactDetailScreen with contact.id
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1500);
+    } catch (e: any) {
+      console.error('[ProjectProfessionalsDetail] failed to create contact', e);
+      
+      if (e?.response?.status === 400) {
+        const detail = e?.response?.data?.detail || '';
+        
+        if (detail.includes('already exists') || detail.includes('Contact already exists')) {
+          setSnackbarMessage('Você já tem um contato com este projeto');
+          setSnackbarVisible(true);
+          setConfirmVisible(false);
+          setExistingContactId('existing');
+        } else if (detail.includes('Insufficient credits')) {
+          Alert.alert(
+            'Créditos Insuficientes',
+            'Você não tem créditos suficientes. Deseja comprar mais créditos?',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              {
+                text: 'Comprar Créditos',
+                onPress: () => {
+                  setConfirmVisible(false);
+                  // TODO: Navigate to credit purchase screen
+                },
+              },
+            ]
+          );
+        } else {
+          setSnackbarMessage(detail || 'Erro ao criar contato');
+          setSnackbarVisible(true);
+        }
+      } else if (!e?.response) {
+        // Network error
+        Alert.alert(
+          'Erro de Conexão',
+          'Não foi possível criar o contato. Verifique sua conexão e tente novamente.',
+          [
+            { text: 'OK', style: 'cancel' },
+            {
+              text: 'Tentar Novamente',
+              onPress: () => handleConfirmContact(message, proposalPrice),
+            },
+          ]
+        );
+      } else {
+        setSnackbarMessage('Erro ao criar contato. Tente novamente.');
+        setSnackbarVisible(true);
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+  
   const handleGetMe = async () => {
     console.log("[ProjectProfessionalsDetail] handleGetMe called");
-    let me = await client.get('users/me')
-    console.log(me.data)
-
-  }
+    try {
+      const me = await require('../api/axiosClient').default.get('users/me');
+      console.log(me.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (projectId) {
@@ -237,7 +394,7 @@ export default function ProjectProfessionalsDetailScreen() {
               <View style={styles.detailIcon}><Text>👤</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.detailLabel}>Cliente Responsável</Text>
-                <Text style={styles.detailTitle}>{liberado ? (clientInfo?.full_name || project.client_name || '—') : maskName(clientName)}</Text>
+                <Text style={styles.detailTitle}>{existingContactId ? (clientInfo?.full_name || project.client_name || '—') : maskName(clientName)}</Text>
               </View>
             </View>
 
@@ -246,7 +403,7 @@ export default function ProjectProfessionalsDetailScreen() {
                 <View style={styles.detailIcon}><Text>📞</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.detailLabel}>Telefone do Cliente</Text>
-                  <Text style={styles.detailTitle}>{liberado ? (clientInfo?.phone || (project as any).client_phone || '—') : maskPhone(clientPhone)}</Text>
+                  <Text style={styles.detailTitle}>{existingContactId ? (clientInfo?.phone || (project as any).client_phone || '—') : maskPhone(clientPhone)}</Text>
                 </View>
               </View>
             )}
@@ -255,7 +412,7 @@ export default function ProjectProfessionalsDetailScreen() {
               <View style={styles.detailIcon}><Text>📍</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.detailLabel}>Local da Obra</Text>
-                <Text style={styles.detailTitle}>{liberado ? addressFormatted : cityState}</Text>
+                <Text style={styles.detailTitle}>{existingContactId ? addressFormatted : cityState}</Text>
               </View>
             </View>
           </View>
@@ -296,26 +453,68 @@ export default function ProjectProfessionalsDetailScreen() {
         )}
 
         <View style={styles.actionsContainer}>
-          <Button mode="contained" onPress={() => setConfirmVisible(true)} style={{ marginBottom: 8 }}>Liberar projeto</Button>
-        <Button mode="outlined" onPress={handleGetMe} style={{ marginBottom: 8 }}>Me</Button>
-          {liberado && (
-          <Button mode="outlined" onPress={() => { /* no-op */ }} style={{ marginBottom: 8 }}>Contatar cliente</Button>
+          {user && user.roles.includes('professional') && project.status === 'open' && (
+            <>
+              {loadingCostPreview ? (
+                <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
+              ) : costPreview ? (
+                existingContactId ? (
+                  <Button
+                    mode="outlined"
+                    onPress={() => {
+                      // TODO: Navigate to ContactDetailScreen
+                      setSnackbarMessage('Navegação para chat em desenvolvimento');
+                      setSnackbarVisible(true);
+                    }}
+                    style={{ marginBottom: 8 }}
+                  >
+                    Ver Conversa Existente
+                  </Button>
+                ) : (
+                  <Button
+                    mode="contained"
+                    onPress={handleContactButtonPress}
+                    disabled={creating}
+                    loading={creating}
+                    style={{ marginBottom: 8 }}
+                  >
+                    {costPreview.can_afford
+                      ? `Contatar — ${costPreview.credits_cost} créditos`
+                      : 'Créditos Insuficientes'}
+                  </Button>
+                )
+              ) : null}
+
+              <Button
+                mode="outlined"
+                onPress={handleGetMe}
+                style={{ marginBottom: 8 }}
+              >
+                Debug: Ver Meu Perfil
+              </Button>
+            </>
           )}
-
-          <Portal>
-            <Dialog visible={ confirmVisible} onDismiss={() => setConfirmVisible(false)}>
-              <Dialog.Title>Liberar projeto</Dialog.Title>
-              <Dialog.Content>
-                <Text>Você tem {credits} créditos disponíveis.</Text>
-
-
-              </Dialog.Content>
-              <Dialog.Actions>
-                <Button onPress={() => setConfirmVisible(false)}>Fechar</Button>
-              </Dialog.Actions>
-            </Dialog>
-          </Portal>
         </View>
+
+        <ConfirmContactModal
+          visible={confirmVisible}
+          onDismiss={() => setConfirmVisible(false)}
+          onConfirm={handleConfirmContact}
+          costPreview={costPreview}
+          loading={creating}
+        />
+
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={3000}
+          action={{
+            label: 'OK',
+            onPress: () => setSnackbarVisible(false),
+          }}
+        >
+          {snackbarMessage}
+        </Snackbar>
       </ScrollView>
     </View>
   );
