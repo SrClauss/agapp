@@ -250,24 +250,25 @@
     <div class="tab-pane fade" id="system" role="tabpanel">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="m-0 fw-bold">Configurações do Sistema (fixas display)</h6>
+                <h6 class="m-0 fw-bold">Configurações do Sistema</h6>
+                <button class="btn btn-secondary btn-sm" onclick="saveSystemConfig()">Salvar</button>
             </div>
             <div class="card-body">
-                <form id="systemConfigForm">
+                <form id="systemConfigForm" onsubmit="event.preventDefault(); saveSystemConfig();">
                     <div class="mb-3">
                         <label class="form-label">Raio máximo para projetos presenciais (km)</label>
-                        <input type="number" step="0.1" min="0" class="form-control" id="maxRadius" name="max_inperson_radius_km" disabled>
+                        <input type="number" step="0.1" min="0" class="form-control" id="maxRadius" name="max_inperson_radius_km">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Thresholds de créditos para projetos ineditos</label>
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label">Até (horas)</label>
-                                <input type="number" class="form-control" id="inedito_h1" disabled>
+                                <input type="number" class="form-control" id="inedito_h1">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Créditos</label>
-                                <input type="number" class="form-control" id="inedito_c1" disabled>
+                                <input type="number" class="form-control" id="inedito_c1">
                             </div>
                             <div class="col-md-4 align-self-end">
                                 <small class="text-muted">Faixa 1</small>
@@ -276,11 +277,11 @@
                         <div class="row g-2 mt-2">
                             <div class="col-md-4">
                                 <label class="form-label">Até (horas)</label>
-                                <input type="number" class="form-control" id="inedito_h2" disabled>
+                                <input type="number" class="form-control" id="inedito_h2">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Créditos</label>
-                                <input type="number" class="form-control" id="inedito_c2" disabled>
+                                <input type="number" class="form-control" id="inedito_c2">
                             </div>
                             <div class="col-md-4 align-self-end">
                                 <small class="text-muted">Faixa 2</small>
@@ -289,11 +290,11 @@
                         <div class="row g-2 mt-2">
                             <div class="col-md-4">
                                 <label class="form-label">Até (horas)</label>
-                                <input type="number" class="form-control" id="inedito_h3" disabled>
+                                <input type="number" class="form-control" id="inedito_h3">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Créditos</label>
-                                <input type="number" class="form-control" id="inedito_c3" disabled>
+                                <input type="number" class="form-control" id="inedito_c3">
                             </div>
                             <div class="col-md-4 align-self-end">
                                 <small class="text-muted">Faixa 3</small>
@@ -303,19 +304,19 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Regras para projetos não-ineditos (fixas)</label>
+                        <label class="form-label">Regras para projetos não-ineditos</label>
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label">0-24h (créditos)</label>
-                                <input type="number" class="form-control" id="non_h0_24" disabled>
+                                <input type="number" class="form-control" id="non_h0_24">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">24-48h (créditos)</label>
-                                <input type="number" class="form-control" id="non_h24_48" disabled>
+                                <input type="number" class="form-control" id="non_h24_48">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Expira após (horas)</label>
-                                <input type="number" class="form-control" id="non_expire_hours" disabled>
+                                <input type="number" class="form-control" id="non_expire_hours">
                             </div>
                         </div>
                         <small class="text-muted d-block mt-2">Projetos não-ineditos expiram automaticamente após o tempo acima e ficam com status "expired".</small>
@@ -656,13 +657,44 @@ async function getSystemConfig() {
             if (t.length >= 2) { document.getElementById('inedito_h2').value = t[1].max_hours || ''; document.getElementById('inedito_c2').value = t[1].credits || ''; }
             if (t.length >= 3) { document.getElementById('inedito_h3').value = t[2].max_hours || ''; document.getElementById('inedito_c3').value = t[2].credits || ''; }
 
-            // Non-inedito rules (fixed)
+            // Non-inedito rules
             document.getElementById('non_h0_24').value = cfg.non_inedito_0_24_credits || '';
             document.getElementById('non_h24_48').value = cfg.non_inedito_24_48_credits || '';
             document.getElementById('non_expire_hours').value = cfg.non_inedito_expire_hours || '';
         }
     } catch (err) {
         console.warn('Could not load system config:', err.message);
+    }
+}
+
+async function saveSystemConfig() {
+    // Build thresholds array from fields
+    const h1 = parseInt(document.getElementById('inedito_h1').value || '0');
+    const c1 = parseInt(document.getElementById('inedito_c1').value || '0');
+    const h2 = parseInt(document.getElementById('inedito_h2').value || '0');
+    const c2 = parseInt(document.getElementById('inedito_c2').value || '0');
+    const h3 = parseInt(document.getElementById('inedito_h3').value || '0');
+    const c3 = parseInt(document.getElementById('inedito_c3').value || '0');
+
+    const thresholds = [];
+    if (h1 > 0 && c1 > 0) thresholds.push({ max_hours: h1, credits: c1 });
+    if (h2 > 0 && c2 > 0) thresholds.push({ max_hours: h2, credits: c2 });
+    if (h3 > 0 && c3 > 0) thresholds.push({ max_hours: h3, credits: c3 });
+
+    const payload = {
+        max_inperson_radius_km: parseFloat(document.getElementById('maxRadius').value || 0),
+        thresholds: thresholds,
+        non_inedito_0_24_credits: parseInt(document.getElementById('non_h0_24').value || 0),
+        non_inedito_24_48_credits: parseInt(document.getElementById('non_h24_48').value || 0),
+        non_inedito_expire_hours: parseInt(document.getElementById('non_expire_hours').value || 0)
+    };
+
+    try {
+        await apiCall('/api/admin/config/system', 'PUT', payload);
+        alert('Configurações do sistema salvas com sucesso');
+        getSystemConfig();
+    } catch (err) {
+        alert('Erro ao salvar configurações: ' + err.message);
     }
 }
 
