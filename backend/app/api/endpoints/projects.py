@@ -9,7 +9,6 @@ from app.core.security import get_current_user, get_current_admin_user, get_curr
 from app.crud.document import get_documents_by_project
 from app.crud.project import get_projects, create_project, update_project, delete_project, get_project, _normalize_project_dict
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectFilter, ProjectClose, EvaluationCreate
-from app.schemas.contact import ContactSummary
 from app.schemas.user import User
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.utils.timezone import ensure_utc
@@ -424,7 +423,7 @@ async def read_project(
 
     return project
 
-@router.get("/{project_id}/contacts", response_model=List[ContactSummary])
+@router.get("/{project_id}/contacts", response_model=List[dict])
 async def get_project_contacts(
     project_id: str,
     current_user: User = Depends(get_current_user),
@@ -443,38 +442,28 @@ async def get_project_contacts(
     if str(current_user.id) != str(project.client_id):
         raise HTTPException(status_code=403, detail="Only project owner can view contacts")
     
-    # Buscar todos os contatos do projeto
+    # Retornar contacts do projeto
     contacts = []
-    async for contact in db.contacts.find({"project_id": project_id}).sort("created_at", -1):
-        # Buscar informações do profissional
-        professional_id = contact.get("professional_id")
-        professional = None
-        if professional_id:
-            # Try to find by string ID first
-            professional = await db.users.find_one({"_id": professional_id})
-            # If not found and it's a valid ObjectId, try that
-            if not professional and ObjectId.is_valid(professional_id):
-                professional = await db.users.find_one({"_id": ObjectId(professional_id)})
-        
-        # Contar mensagens não lidas (mensagens do profissional que o cliente ainda não viu)
-        chat = contact.get("chat", [])
+    for i, contact in enumerate(project.contacts):
+        professional = contact.professional_user or {}
+        chat = contact.chats or []
         unread_count = sum(
             1 for msg in chat 
-            if str(msg.get("sender_id")) == str(professional_id) 
-            and not msg.get("read_at")  # This handles both None and missing field
+            if str(msg.get("sender_id")) == str(contact.professional_id) 
+            and not msg.get("read_at")
         )
         
-        contact_summary = ContactSummary(
-            id=str(contact["_id"]),
-            professional_id=str(professional_id),
-            professional_name=professional.get("full_name") if professional else "Profissional",
-            professional_avatar=professional.get("avatar_url") if professional else None,
-            status=contact.get("status", "pending"),
-            created_at=contact.get("created_at"),
-            last_message=chat[-1] if chat else None,
-            unread_count=unread_count,
-            contact_details=contact.get("contact_details", {})
-        )
+        contact_summary = {
+            "id": f"{project_id}_{i}",
+            "professional_id": str(contact.professional_id),
+            "professional_name": contact.professional_name or professional.get("full_name", "Profissional"),
+            "professional_avatar": professional.get("avatar_url"),
+            "status": contact.status,
+            "created_at": contact.created_at,
+            "last_message": chat[-1] if chat else None,
+            "unread_count": unread_count,
+            "contact_details": contact.contact_details
+        }
         contacts.append(contact_summary)
     
     return contacts
