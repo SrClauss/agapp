@@ -4,7 +4,7 @@ import { Text, Card, Avatar, Button, Snackbar } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { getProject, Project } from '../api/projects';
 import { getCreditsByProfessional } from '../api/professional';
-import { getContactCostPreview, createContactForProject, CostPreview } from '../api/contacts';
+import { getContactCostPreview, createContactForProject, getContactHistory, CostPreview } from '../api/contacts';
 import useAuthStore from '../stores/authStore';
 import { maskName, maskPhone } from '../utils/format';
 import ConfirmContactModal from '../components/ConfirmContactModal';
@@ -66,11 +66,20 @@ export default function ProjectProfessionalsDetailScreen() {
         const preview = await getContactCostPreview(projectId);
         setCostPreview(preview);
         
-        // If contact already exists, extract the contact ID from the response if available
+        // If contact already exists, fetch the actual contact ID
         if (preview.reason === 'contact_already_exists') {
-          // We would need to fetch the contact ID from the contacts history
-          // For now, we'll show a message
-          setExistingContactId('existing');
+          try {
+            const contacts = await getContactHistory('professional');
+            const existingContact = contacts.find(c => c.project_id === projectId);
+            if (existingContact) {
+              setExistingContactId(existingContact.id);
+            } else {
+              setExistingContactId('existing'); // fallback
+            }
+          } catch (e) {
+            console.warn('[ProjectProfessionalsDetail] failed to fetch existing contact', e);
+            setExistingContactId('existing'); // fallback
+          }
         }
       } catch (e: any) {
         console.warn('[ProjectProfessionalsDetail] failed to fetch cost preview', e);
@@ -151,10 +160,7 @@ export default function ProjectProfessionalsDetailScreen() {
       setSnackbarVisible(true);
 
       // Navigate to contact detail/chat screen
-      // TODO: Navigate to ContactDetailScreen with contact.id
-      setTimeout(() => {
-        navigation.goBack();
-      }, 1500);
+      navigation.navigate('ContactDetail', { contactId: contact.id });
     } catch (e: any) {
       console.error('[ProjectProfessionalsDetail] failed to create contact', e);
       
@@ -165,7 +171,20 @@ export default function ProjectProfessionalsDetailScreen() {
           setSnackbarMessage('Você já tem um contato com este projeto');
           setSnackbarVisible(true);
           setConfirmVisible(false);
-          setExistingContactId('existing');
+          
+          // Try to fetch the existing contact ID
+          try {
+            const contacts = await getContactHistory('professional');
+            const existingContact = contacts.find(c => c.project_id === projectId);
+            if (existingContact) {
+              setExistingContactId(existingContact.id);
+            } else {
+              setExistingContactId('existing');
+            }
+          } catch (e) {
+            console.warn('[ProjectProfessionalsDetail] failed to fetch existing contact after creation', e);
+            setExistingContactId('existing');
+          }
         } else if (detail.includes('Insufficient credits')) {
           Alert.alert(
             'Créditos Insuficientes',
@@ -462,9 +481,12 @@ export default function ProjectProfessionalsDetailScreen() {
                   <Button
                     mode="outlined"
                     onPress={() => {
-                      // TODO: Navigate to ContactDetailScreen
-                      setSnackbarMessage('Navegação para chat em desenvolvimento');
-                      setSnackbarVisible(true);
+                      if (existingContactId && existingContactId !== 'existing') {
+                        navigation.navigate('ContactDetail', { contactId: existingContactId });
+                      } else {
+                        setSnackbarMessage('Erro ao acessar conversa. Tente novamente.');
+                        setSnackbarVisible(true);
+                      }
                     }}
                     style={{ marginBottom: 8 }}
                   >

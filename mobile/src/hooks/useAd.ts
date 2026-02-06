@@ -45,7 +45,7 @@ const ensureImageLocal = async (img: ImageItem, adTypeParam: string): Promise<st
     return '';
   }
 
-  const folder = `${FileSystem.cacheDirectory}ads/${adTypeParam}/`;
+  const folder = `${(FileSystem as any).documentDirectory}ads/${adTypeParam}/`;
   
 
   try {
@@ -65,7 +65,7 @@ const ensureImageLocal = async (img: ImageItem, adTypeParam: string): Promise<st
   if (img.content && img.content.startsWith('data:image')) {
     try {
       const base64 = img.content.split(',')[1];
-      await FileSystem.writeAsStringAsync(localPath, base64, { encoding: FileSystem.EncodingType.Base64 });
+      await FileSystem.writeAsStringAsync(localPath, base64, { encoding: 'base64' });
       return localPath;
     } catch (error) {
       console.error('[ensureImageLocal] Error saving base64 image:', error);
@@ -349,7 +349,7 @@ export function useClearAdCache() {
         await AsyncStorage.removeItem(cacheKey);
         // Remove local cached images for this adType
         try {
-          const folder = `${FileSystem.cacheDirectory}ads/${adType}`;
+          const folder = `${(FileSystem as any).documentDirectory}ads/${adType}`;
           const info = await FileSystem.getInfoAsync(folder);
           if (info.exists) {
             await FileSystem.deleteAsync(folder, { idempotent: true });
@@ -364,7 +364,7 @@ export function useClearAdCache() {
         await AsyncStorage.multiRemove(adKeys);
         // Delete all ad images in local cache
         try {
-          const root = `${FileSystem.cacheDirectory}ads`;
+          const root = `${(FileSystem as any).documentDirectory}ads`;
           const info = await FileSystem.getInfoAsync(root);
           if (info.exists) {
             await FileSystem.deleteAsync(root, { idempotent: true });

@@ -22,7 +22,7 @@ type RootStackParamList = {
 
 const ProjectClientDetailScreen: React.FC = () => {
   const route = useRoute();
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation();
   const params = (route.params ?? {}) as Params | undefined;
   const projectId = params?.projectId;
   const projectParam = params?.project;

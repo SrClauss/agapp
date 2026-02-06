@@ -69,6 +69,7 @@ export interface ProjectCreateData {
 
 export interface Project {
   _id: string;
+  id?: string; // Alias para compatibilidade
   title: string;
   description: string;
   category: ProjectCategory | string;

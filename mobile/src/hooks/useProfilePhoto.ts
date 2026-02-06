@@ -20,7 +20,7 @@ export function useProfilePhoto(userId?: string | null, remoteAvatarUrl?: string
         // Determine extension from remote URL or default .jpg
         const extMatch = remoteAvatarUrl.split('?')[0].split('.').pop() || 'jpg';
         const filename = `profile_${userId}.${extMatch}`;
-        const folder = `${FileSystem.cacheDirectory}profile/`;
+        const folder = `${(FileSystem as any).documentDirectory}profile/`;
         await FileSystem.makeDirectoryAsync(folder, { intermediates: true }).catch(() => {});
         const localPath = `${folder}${filename}`;
 

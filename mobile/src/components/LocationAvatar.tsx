@@ -30,7 +30,7 @@ export default function LocationAvatar({ backgroundUri }: Props) {
   useEffect(() => {
     async function findCachedPhoto() {
       try {
-        const folder = `${FileSystem.cacheDirectory}profile/`;
+        const folder = `${(FileSystem as any).documentDirectory}profile/`;
         const dirInfo = await FileSystem.getInfoAsync(folder);
         if (!dirInfo.exists) {
           setCachedPhotoUri(null);

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, TextInput, IconButton, Divider, Card, Snackbar } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import {
@@ -285,11 +286,12 @@ export default function ContactDetailScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
       {/* Project Info Header */}
       {project && (
         <Card style={styles.projectCard}>
@@ -370,14 +372,18 @@ export default function ContactDetailScreen() {
       >
         {snackbarMessage}
       </Snackbar>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  container: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
