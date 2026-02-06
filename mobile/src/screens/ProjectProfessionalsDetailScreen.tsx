@@ -3,8 +3,8 @@ import { ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, View, ImageBac
 import { Text, Card, Avatar, Button, Portal, Dialog } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { getProject, Project } from '../api/projects';
+import { getCreditsByProfessional } from '../api/professional';
 import useAuthStore from '../stores/authStore';
-import { colors } from '../theme/colors';
 import { maskName, maskPhone } from '../utils/format';
 import client from '../api/axiosClient';
 
@@ -26,6 +26,7 @@ export default function ProjectProfessionalsDetailScreen() {
   const [loading, setLoading] = useState<boolean>(!project);
   const [liberado, setLiberado] = useState<boolean>(false); // estado local, padrão false
   const [confirmVisible, setConfirmVisible] = useState<boolean>(false);
+  const [credits, setCredits] = useState<number>(0);
 
   const { user } = useAuthStore();
 
@@ -43,7 +44,20 @@ export default function ProjectProfessionalsDetailScreen() {
           if (mounted) setLoading(false);
         }
       }
+
+      
+      
     };
+    const loadCredits = async () => {
+      try {
+        const res = await getCreditsByProfessional();
+        if (mounted) setCredits(res.credits_available);
+      } catch (e) {
+        console.warn('[ProjectProfessionalsDetail] failed to fetch credits', e);
+      }
+
+    };
+    loadCredits();
     load();
     return () => { mounted = false; };
   }, [projectId]);

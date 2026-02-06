@@ -11,6 +11,10 @@ export async function getProfessionalStats(): Promise<ProfessionalStats> {
   const res = await client.get('/api/professional/stats');
   return res.data as ProfessionalStats;
 }
+export async function getCreditsByProfessional(): Promise<{ credits_available: number}> {
+  const response = await client.get('/professionals/credits');
+  return response.data;
+}
 
 export async function getContactedProjects(skip = 0, limit = 50) {
   const res = await client.get('/api/professional/contacted-projects', { params: { skip, limit } });

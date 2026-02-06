@@ -216,6 +216,7 @@ export async function getProject(projectId: string): Promise<Project> {
   return response.data;
 }
 
+
 export async function geocodeAddress(address: string): Promise<{ address: string; coordinates: [number, number]; provider?: string; raw?: any }> {
   const response = await client.post('/users/address/geocode', { address });
   return response.data;
