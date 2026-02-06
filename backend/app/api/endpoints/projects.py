@@ -10,6 +10,8 @@ from app.crud.document import get_documents_by_project
 from app.crud.project import get_projects, create_project, update_project, delete_project, get_project, _normalize_project_dict
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectFilter, ProjectClose, EvaluationCreate
 from app.schemas.user import User
+from app.core.security import get_current_user
+from app.utils.credit_pricing import calculate_contact_cost, get_user_credits, validate_and_deduct_credits, record_credit_transaction
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.utils.timezone import ensure_utc
 from bson import ObjectId
@@ -422,6 +424,110 @@ async def read_project(
         logging.exception(f"read_project: error while populating client_name for project={project_id}")
 
     return project
+
+@router.get("/{project_id}/contact-cost-preview")
+async def project_contact_cost_preview(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Preview the credit cost for creating a contact on a project (project-scoped endpoint)."""
+    # Check if project exists
+    project = await get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Ensure user is a professional
+    if "professional" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="Only professionals can view contact costs")
+
+    # Check if contact already exists on project
+    existing = await db.projects.find_one({"_id": project_id, "contacts.professional_id": str(current_user.id)})
+    if existing:
+        return {
+            "credits_cost": 0,
+            "reason": "contact_already_exists",
+            "message": "You already have a contact with this project",
+            "current_balance": await get_user_credits(db, str(current_user.id)),
+            "can_afford": True
+        }
+
+    try:
+        credits_cost, pricing_reason = await calculate_contact_cost(db, project_id, str(current_user.id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    current_balance = await get_user_credits(db, str(current_user.id))
+
+    return {
+        "credits_cost": credits_cost,
+        "reason": pricing_reason,
+        "current_balance": current_balance,
+        "can_afford": current_balance >= credits_cost
+    }
+
+@router.post("/{project_id}/contacts")
+async def create_contact_on_project(
+    project_id: str,
+    contact: Dict[str, Any],
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Create a contact for a project (project-scoped endpoint)."""
+    project = await get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if "professional" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="Only professionals can create contacts")
+
+    existing = await db.projects.find_one({"_id": project_id, "contacts.professional_id": str(current_user.id)})
+    if existing:
+        raise HTTPException(status_code=400, detail="Contact already exists for this project")
+
+    try:
+        credits_needed, pricing_reason = await calculate_contact_cost(db, project_id, str(current_user.id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    success, error_msg = await validate_and_deduct_credits(db, str(current_user.id), credits_needed)
+    if not success:
+        raise HTTPException(status_code=400, detail=error_msg or "Insufficient credits")
+
+    updated_project = await create_contact_in_project(db, project_id, contact, str(current_user.id), str(project.client_id), credits_needed)
+    if not updated_project:
+        raise HTTPException(status_code=500, detail="Failed to create contact")
+
+    new_contact = updated_project.contacts[-1]
+    contact_dict = new_contact.dict() if hasattr(new_contact, 'dict') else dict(new_contact)
+    contact_dict["id"] = f"{project_id}_{len(updated_project.contacts)-1}"
+    contact_dict["project_id"] = project_id
+
+    await record_credit_transaction(
+        db,
+        user_id=str(current_user.id),
+        credits=-credits_needed,
+        transaction_type="contact",
+        metadata={"project_id": project_id, "contact_id": contact_dict["id"], "pricing_reason": pricing_reason}
+    )
+
+    # Send notification to client (best-effort)
+    try:
+        client = await db.users.find_one({"_id": str(project.client_id)})
+        if client and client.get("fcm_tokens"):
+            from app.core.firebase import send_multicast_notification
+            fcm_tokens = [t["token"] for t in client["fcm_tokens"] if "token" in t]
+            if fcm_tokens:
+                await send_multicast_notification(
+                    fcm_tokens=fcm_tokens,
+                    title="Nova Proposta Recebida",
+                    body=f"{current_user.full_name} demonstrou interesse no seu projeto: {project.title}",
+                    data={"type": "new_contact", "project_id": project_id, "professional_id": str(current_user.id)}
+                )
+    except Exception:
+        pass
+
+    return contact_dict
 
 @router.get("/{project_id}/contacts", response_model=List[dict])
 async def get_project_contacts(

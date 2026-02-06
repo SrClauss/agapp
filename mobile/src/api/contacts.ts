@@ -54,7 +54,7 @@ export async function getContactCostPreview(
     ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
-  const response = await client.get(`/contacts/${projectId}/cost-preview`, config);
+  const response = await client.get(`/projects/${projectId}/contact-cost-preview`, config);
   return response.data;
 }
 
@@ -70,7 +70,7 @@ export async function createContactForProject(
     ? { headers: { Authorization: `Bearer ${token}` } }
     : undefined;
 
-  const response = await client.post(`/contacts/${projectId}`, contactData, config);
+  const response = await client.post(`/projects/${projectId}/contacts`, contactData, config);
   return response.data;
 }
 

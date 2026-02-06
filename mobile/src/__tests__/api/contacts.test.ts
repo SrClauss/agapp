@@ -30,7 +30,7 @@ describe('Contacts API', () => {
       const result = await getContactCostPreview('project-123');
 
       expect(mockClient.get).toHaveBeenCalledWith(
-        '/contacts/project-123/cost-preview',
+        '/projects/project-123/contact-cost-preview',
         { headers: { Authorization: 'Bearer mock-token' } }
       );
       expect(result).toEqual(mockPreview);
@@ -94,7 +94,7 @@ describe('Contacts API', () => {
       });
 
       expect(mockClient.post).toHaveBeenCalledWith(
-        '/contacts/project-123',
+        '/projects/project-123/contacts',
         { contact_type: 'proposal', contact_details: { message: 'Hello' } },
         { headers: { Authorization: 'Bearer mock-token' } }
       );

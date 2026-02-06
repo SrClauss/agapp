@@ -25,7 +25,7 @@ def test_complete_contact_flow_with_api(client, db, test_user, test_professional
     """
     # 1. Visualizar custo do contato
     response = client.get(
-        f"/api/contacts/{test_project['_id']}/cost-preview",
+        f"/api/projects/{test_project['_id']}/contact-cost-preview",
         headers={"Authorization": f"Bearer {test_professional_jwt_token}"}
     )
     
@@ -48,7 +48,7 @@ def test_complete_contact_flow_with_api(client, db, test_user, test_professional
     }
     
     response = client.post(
-        f"/api/contacts/{test_project['_id']}",
+        f"/api/projects/{test_project['_id']}/contacts",
         json=contact_data,
         headers={"Authorization": f"Bearer {test_professional_jwt_token}"}
     )
@@ -62,7 +62,7 @@ def test_complete_contact_flow_with_api(client, db, test_user, test_professional
     
     # 3. Verificar que créditos foram deduzidos
     response = client.get(
-        f"/api/contacts/{test_project['_id']}/cost-preview",
+        f"/api/projects/{test_project['_id']}/contact-cost-preview",
         headers={"Authorization": f"Bearer {test_professional_jwt_token}"}
     )
     
