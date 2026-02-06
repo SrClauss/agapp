@@ -15,10 +15,14 @@ export default function ProjectContactsList({ contacts, onContactPress }: Props)
     <TouchableOpacity onPress={() => onContactPress(item.id)}>
       <Card style={styles.card}>
         <View style={styles.row}>
-          <Avatar.Image 
-            size={48} 
-            source={{ uri: item.professional_avatar || 'https://via.placeholder.com/150' }} 
-          />
+          {item.professional_avatar ? (
+            <Avatar.Image 
+              size={48} 
+              source={{ uri: item.professional_avatar }} 
+            />
+          ) : (
+            <Avatar.Icon size={48} icon="account" />
+          )}
           <View style={styles.info}>
             <View style={styles.header}>
               <Text style={styles.name}>{item.professional_name}</Text>

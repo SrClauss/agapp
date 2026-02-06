@@ -285,7 +285,10 @@ async def mark_messages_as_read(
         array_filters=[
             {
                 "elem.sender_id": other_user_id,
-                "elem.read_at": None
+                "$or": [
+                    {"elem.read_at": None},
+                    {"elem.read_at": {"$exists": False}}
+                ]
             }
         ]
     )

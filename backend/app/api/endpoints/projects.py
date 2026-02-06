@@ -458,7 +458,11 @@ async def get_project_contacts(
         
         # Contar mensagens não lidas (mensagens do profissional que o cliente ainda não viu)
         chat = contact.get("chat", [])
-        unread_count = sum(1 for msg in chat if str(msg.get("sender_id")) == str(professional_id) and msg.get("read_at") is None)
+        unread_count = sum(
+            1 for msg in chat 
+            if str(msg.get("sender_id")) == str(professional_id) 
+            and not msg.get("read_at")  # This handles both None and missing field
+        )
         
         contact_summary = ContactSummary(
             id=str(contact["_id"]),

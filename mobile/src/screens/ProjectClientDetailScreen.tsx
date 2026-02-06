@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, View, ImageBackground, Alert } from 'react-native';
 import { Text, Card, Avatar, Divider, IconButton, Button } from 'react-native-paper';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, NavigationProp } from '@react-navigation/native';
 import { getProject, Project, updateProject, deleteProject, getProjectContacts, ContactSummary } from '../api/projects';
 import { getUserPublic } from '../api/users';
 import useAuthStore from '../stores/authStore';
@@ -14,10 +14,15 @@ interface Params {
   project?: Project;
 }
 
+type RootStackParamList = {
+  ContactDetail: { contactId: string };
+  [key: string]: any;
+};
+
 
 const ProjectClientDetailScreen: React.FC = () => {
   const route = useRoute();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const params = (route.params ?? {}) as Params | undefined;
   const projectId = params?.projectId;
   const projectParam = params?.project;
@@ -299,7 +304,7 @@ const ProjectClientDetailScreen: React.FC = () => {
               <ProjectContactsList 
                 contacts={contacts}
                 onContactPress={(contactId) => {
-                  (navigation as any).navigate('ContactDetail', { contactId });
+                  navigation.navigate('ContactDetail', { contactId });
                 }}
               />
             )}
