@@ -37,11 +37,15 @@ ssh -tt "$USER@$SERVER" << EOF
   set -e
   echo "Entrando no diretório $REMOTE_DIR..."
   cd $REMOTE_DIR
-  echo "Executando o script $DEPLOY_SCRIPT..."
-  bash $DEPLOY_SCRIPT
-  echo "Status do processo de deploy:"
+  echo "Executando o script $DEPLOY_SCRIPT (saída será gravada em deploy.log)..."
+  # Adiciona um cabeçalho com timestamp e grava toda a saída (stdout+stderr) em deploy.log
+  echo "=== Deploy started: $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> deploy.log
+  bash $DEPLOY_SCRIPT 2>&1 | tee -a deploy.log
+  echo "=== Deploy finished: $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> deploy.log
+
+  echo "Status do processo de deploy (últimas 100 linhas):"
   echo "-----------------------------"
-  tail -n 20 deploy.log
+  tail -n 100 deploy.log
 EOF
 
 echo "Deploy concluído com sucesso!"
