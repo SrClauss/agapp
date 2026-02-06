@@ -79,6 +79,22 @@ async def calculate_contact_cost(
             return 1, "contacted_project_24h_plus_after_first"
 
 
+async def get_user_credits(db: AsyncIOMotorDatabase, user_id: str) -> int:
+    """
+    Get user's available credits from subscriptions collection.
+    This is the single source of truth for credit balance.
+    
+    Args:
+        db: Database connection
+        user_id: ID of the user
+        
+    Returns:
+        Number of available credits
+    """
+    subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
+    return int(subscription.get("credits", 0)) if subscription else 0
+
+
 async def validate_and_deduct_credits(
     db: AsyncIOMotorDatabase,
     user_id: str,
@@ -88,6 +104,7 @@ async def validate_and_deduct_credits(
     Validate that a user has sufficient credits and deduct them atomically.
     
     Uses findOneAndUpdate with $gte check to prevent race conditions.
+    ALWAYS uses subscriptions collection as the single source of truth.
     
     Args:
         db: Database connection
@@ -97,10 +114,11 @@ async def validate_and_deduct_credits(
     Returns:
         Tuple of (success: bool, error_message: Optional[str])
     """
-    # Use findOneAndUpdate with atomic decrement directly on user document
-    result = await db.users.find_one_and_update(
+    # Use findOneAndUpdate with atomic decrement on subscriptions
+    result = await db.subscriptions.find_one_and_update(
         {
-            "_id": user_id,
+            "user_id": user_id,
+            "status": "active",
             "credits": {"$gte": credits_needed}
         },
         {
@@ -111,12 +129,12 @@ async def validate_and_deduct_credits(
     )
     
     if result is None:
-        # Either user doesn't exist or insufficient credits
-        user = await db.users.find_one({"_id": user_id})
-        if not user:
-            return False, "User not found"
+        # Either no active subscription or insufficient credits
+        subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
+        if not subscription:
+            return False, "No active subscription found. Please purchase credits to continue."
         else:
-            current_credits = user.get("credits", 0)
+            current_credits = subscription.get("credits", 0)
             return False, f"Insufficient credits (have {current_credits}, need {credits_needed})"
     
     return True, None

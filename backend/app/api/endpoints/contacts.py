@@ -46,16 +46,16 @@ async def preview_contact_cost(
             "message": "You already have a contact with this project"
         }
     
-    # Calculate cost
+    # Calculate cost and get current balance from subscriptions
+    from app.utils.credit_pricing import get_user_credits
+    
     try:
         credits_cost, pricing_reason = await calculate_contact_cost(db, project_id, str(current_user.id))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-    # Get current balance
-    from app.crud.subscription import get_user_subscription
-    subscription = await get_user_subscription(db, str(current_user.id))
-    current_balance = subscription.credits if subscription else 0
+    # Get current balance from subscriptions (single source of truth)
+    current_balance = await get_user_credits(db, str(current_user.id))
     
     return {
         "credits_cost": credits_cost,

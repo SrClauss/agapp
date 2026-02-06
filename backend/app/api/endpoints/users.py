@@ -92,9 +92,9 @@ async def professional_stats(
     # Active subscriptions count
     active_subs = await db.subscriptions.count_documents({"user_id": user_id, "status": "active"})
 
-    # Credits available: try active subscription then fallback to user.credits
-    subscription = await db.subscriptions.find_one({"user_id": user_id, "status": "active"})
-    credits_available = int(subscription.get('credits', 0)) if subscription else getattr(current_user, 'credits', 0)
+    # Credits available: always from subscriptions (single source of truth)
+    from app.utils.credit_pricing import get_user_credits
+    credits_available = await get_user_credits(db, user_id)
 
     # Contacts received (as professional)
     contacts_received = await db.contacts.count_documents({"professional_id": user_id})
