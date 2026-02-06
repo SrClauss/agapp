@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search
+from app.api.endpoints import auth, users, projects, contacts, subscriptions, uploads, documents, admin_api, system_config_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search
 from app.api.endpoints import professional_api
 from app.api.admin import router as admin_router
 from app.api.professional import router as professional_router
@@ -191,6 +191,8 @@ app.include_router(webhooks.router, tags=["webhooks"])
 app.include_router(turnstile.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin_router, prefix="/system-admin", tags=["admin"])
 app.include_router(professional_router, prefix="/professional", tags=["professional"])
+# System config API (admin)
+app.include_router(system_config_api.router, prefix="/api/admin")
 # API endpoint for professional stats (mobile expects /api/professional/stats)
 app.include_router(professional_api.router)
 app.include_router(admin_api.router, tags=["admin-api"])
@@ -269,6 +271,12 @@ async def startup_event():
     await database.support_tickets.create_index("category")
     await database.support_tickets.create_index("created_at")
     # A criação do admin é feita via script de inicialização do container (mongo-init)
+    # Ensure system configuration singleton exists
+    try:
+        from app.crud import config as config_crud
+        await config_crud.get_system_config(database)
+    except Exception:
+        pass
 
 @app.get("/")
 async def root():

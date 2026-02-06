@@ -306,3 +306,34 @@ async def get_unprocessed_webhooks(
     cursor = db.payment_webhooks.find({"processed": False}).sort("created_at", 1).limit(limit)
     webhooks = await cursor.to_list(length=None)
     return [PaymentWebhook(**webhook) for webhook in webhooks]
+
+
+# ------------------- SYSTEM CONFIG -------------------
+async def get_system_config(db: AsyncIOMotorDatabase) -> dict:
+    """Retrieve the singleton system configuration document.
+    If missing, insert and return sensible defaults."""
+    doc = await db.system_config.find_one({"_id": "singleton"})
+    if doc:
+        return doc
+
+    default = {
+        "_id": "singleton",
+        "max_inperson_radius_km": 50.0,
+        "thresholds": [
+            {"max_hours": 12, "credits": 3},
+            {"max_hours": 36, "credits": 2},
+            {"max_hours": 44, "credits": 1}
+        ],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    await db.system_config.insert_one(default)
+    return default
+
+
+async def update_system_config(db: AsyncIOMotorDatabase, data: dict) -> dict:
+    """Update/Upsert the singleton system configuration with provided data."""
+    update_data = {k: v for k, v in data.items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    await db.system_config.update_one({"_id": "singleton"}, {"$set": update_data}, upsert=True)
+    return await get_system_config(db)

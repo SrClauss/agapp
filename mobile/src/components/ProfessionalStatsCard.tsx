@@ -3,13 +3,21 @@ import { View, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-nat
 import { Card, Text, Title, IconButton } from 'react-native-paper';
 import { colors } from '../theme/colors';
 import { getProfessionalStats, ProfessionalStats } from '../api/professional';
+import useAuthStore from '../stores/authStore';
 import { useFocusEffect } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
+export function getDisplayedCredits(store: any) {
+  return store?.user?.credits ?? 0;
+}
 
 export default function ProfessionalStatsCard() {
   const [loading, setLoading] = useState<boolean>(false);
   const [stats, setStats] = useState<ProfessionalStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Read auth store unconditionally to avoid changing hook order between renders
+  const authStore = useAuthStore((s) => s);
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -68,7 +76,7 @@ export default function ProfessionalStatsCard() {
                 <MaterialCommunityIcons name="currency-usd" size={20} color={colors.primary} />
               </View>
               <Text style={styles.smallLabel}>Meus Créditos</Text>
-              <Text style={styles.bigValue}>{stats.credits_available ?? 0}</Text>
+              <Text style={styles.bigValue}>{getDisplayedCredits(authStore)}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.8} style={styles.statCard} onPress={() => {}}>

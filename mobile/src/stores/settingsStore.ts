@@ -55,7 +55,9 @@ export const useSettingsStore = create<SettingsState>()(
         },
         setItem: async (name: string, value: any) => {
           try {
-            await AsyncStorage.setItem(name, value);
+            // Persist as string; persist middleware may pass objects
+            const str = typeof value === 'string' ? value : JSON.stringify(value);
+            await AsyncStorage.setItem(name, str);
           } catch (e) {
             // ignore
           }

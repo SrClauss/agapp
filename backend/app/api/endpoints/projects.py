@@ -533,20 +533,31 @@ async def close_project(
     
     # Update project directly in DB
     from datetime import datetime, timezone
+    closed_event = {
+        "professional_id": close_data.professional_id,
+        "professional_name": professional_name,
+        "final_budget": close_data.final_budget,
+        "closed_at": datetime.now(timezone.utc)
+    }
+
     result = await db.projects.update_one(
         {"_id": project_id}, 
-        {"$set": {
-            "status": "closed",
-            "final_budget": close_data.final_budget,
-            "closed_by": close_data.professional_id,
-            "closed_by_name": professional_name,
-            "updated_at": datetime.now(timezone.utc)
-        }}
+        {
+            "$set": {
+                "status": "closed",
+                "final_budget": close_data.final_budget,
+                "closed_by": close_data.professional_id,
+                "closed_by_name": professional_name,
+                "closed_at": closed_event["closed_at"],
+                "updated_at": datetime.now(timezone.utc)
+            },
+            "$push": {"closed_by_history": closed_event}
+        }
     )
-    
+
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Project not found")
-    
+
     return {"message": "Project closed successfully", "project_id": project_id}
 
 @router.post("/{project_id}/evaluate")

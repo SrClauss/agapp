@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, View, ImageBackground } from 'react-native';
 import { Text, Card, Avatar, Button, Portal, Dialog } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -20,13 +20,14 @@ export default function ProjectProfessionalsDetailScreen() {
   const params = (route.params ?? {}) as Params | undefined;
   const projectId = params?.projectId;
   const projectParam = params?.project;
+  const [credits, setCredits] = useState<number>(useAuthStore.getState().user?.credits || 0);
 
   const [project, setProject] = useState<Project | null>(projectParam || null);
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(!project);
   const [liberado, setLiberado] = useState<boolean>(false); // estado local, padrão false
   const [confirmVisible, setConfirmVisible] = useState<boolean>(false);
-  const [credits, setCredits] = useState<number>(0);
+
 
   const { user } = useAuthStore();
 
@@ -48,16 +49,7 @@ export default function ProjectProfessionalsDetailScreen() {
       
       
     };
-    const loadCredits = async () => {
-      try {
-        const res = await getCreditsByProfessional();
-        if (mounted) setCredits(res.credits_available);
-      } catch (e) {
-        console.warn('[ProjectProfessionalsDetail] failed to fetch credits', e);
-      }
-
-    };
-    loadCredits();
+    
     load();
     return () => { mounted = false; };
   }, [projectId]);
@@ -314,9 +306,9 @@ export default function ProjectProfessionalsDetailScreen() {
             <Dialog visible={ confirmVisible} onDismiss={() => setConfirmVisible(false)}>
               <Dialog.Title>Liberar projeto</Dialog.Title>
               <Dialog.Content>
+                <Text>Você tem {credits} créditos disponíveis.</Text>
 
 
-                <Text>Você consumira 3 creditos dos {credits} disponíveis.</Text>
               </Dialog.Content>
               <Dialog.Actions>
                 <Button onPress={() => setConfirmVisible(false)}>Fechar</Button>

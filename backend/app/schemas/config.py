@@ -72,3 +72,15 @@ class FeaturedPricingUpdate(BaseModel):
     price: Optional[float] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
+
+
+# System-wide configuration schema
+class SystemConfig(BaseModel):
+    max_inperson_radius_km: float = 50.0
+    # thresholds: list of dicts like {"max_hours": 12, "credits": 3}
+    thresholds: List[dict] = []
+
+
+class SystemConfigUpdate(BaseModel):
+    max_inperson_radius_km: Optional[float] = None
+    thresholds: Optional[List[dict]] = None

@@ -20,14 +20,8 @@ async def calculate_contact_cost(
 ) -> Tuple[int, str]:
     """
     Calculate the credit cost for creating a contact on a project.
-    
-    Args:
-        db: Database connection
-        project_id: ID of the project
-        professional_id: ID of the professional making contact
-        
-    Returns:
-        Tuple of (credits_cost, reason)
+    Uses system configuration `system_config` (singleton) to determine thresholds.
+    Returns (credits_cost, reason)
     """
     # Get project
     project = await db.projects.find_one({"_id": project_id})
@@ -46,37 +40,58 @@ async def calculate_contact_cost(
     now = datetime.now(timezone.utc)
     hours_since_creation = (now - project_created_at).total_seconds() / 3600
     
+    # Load system config (optional)
+    try:
+        sysconf = await db.system_config.find_one({"_id": "singleton"})
+    except Exception:
+        sysconf = None
+
+    thresholds = None
+    if sysconf and isinstance(sysconf.get("thresholds"), list) and len(sysconf.get("thresholds")) > 0:
+        # Expect list of {"max_hours": int, "credits": int}
+        thresholds = sorted(sysconf.get("thresholds"), key=lambda t: t.get("max_hours", 0))
+    else:
+        # Fallback defaults
+        thresholds = [
+            {"max_hours": 12, "credits": 3},
+            {"max_hours": 36, "credits": 2},
+            {"max_hours": 44, "credits": 1}
+        ]
+
     # Check if there are any existing contacts for this project
     existing_contacts = await db.contacts.find({"project_id": project_id}).to_list(length=None)
     
     if len(existing_contacts) == 0:
-        # Brand new project - no contacts yet
-        if hours_since_creation <= 24:
-            return 3, "new_project_0_24h"
-        elif hours_since_creation <= 36:
-            return 2, "new_project_24_36h"
-        else:
-            return 1, "new_project_36h_plus"
+        # Brand new project - no contacts yet; evaluate against thresholds
+        prev_max = 0
+        for t in thresholds:
+            max_h = int(t.get("max_hours", 0))
+            credits = int(t.get("credits", 0))
+            if hours_since_creation <= max_h:
+                if prev_max == 0:
+                    reason = f"new_project_0_{max_h}h"
+                else:
+                    reason = f"new_project_{prev_max}_{max_h}h"
+                return credits, reason
+            prev_max = max_h
+        # If beyond last threshold, free to negotiate
+        return 0, "new_project_free"
     else:
-        # Project has prior contacts
-        # Find the earliest contact
-        first_contact = min(existing_contacts, key=lambda c: c.get("created_at", now))
-        first_contact_at = first_contact.get("created_at")
-        
-        if not first_contact_at:
-            # Fallback if no creation date on contact
-            return 1, "contacted_project_unknown_time"
-        
-        # Ensure timezone awareness
-        if first_contact_at.tzinfo is None:
-            first_contact_at = first_contact_at.replace(tzinfo=timezone.utc)
-        
-        hours_since_first_contact = (now - first_contact_at).total_seconds() / 3600
-        
-        if hours_since_first_contact <= 24:
-            return 2, "contacted_project_0_24h_after_first"
+        # Project is non-inedito (has prior contacts). New rules:
+        # - first 24h after posting: 2 credits
+        # - 24-48h after posting: 3 credits
+        # - after 48h: project expires and becomes inactive
+        if hours_since_creation <= 24:
+            return 2, "non_inedito_0_24h"
+        elif hours_since_creation <= 48:
+            return 3, "non_inedito_24_48h"
         else:
-            return 1, "contacted_project_24h_plus_after_first"
+            # Mark project as expired to prevent further contacts
+            try:
+                await db.projects.update_one({"_id": project_id}, {"$set": {"status": "expired", "expired_at": now, "expired_by": "system", "expired_reason": "auto_timeout", "updated_at": now}})
+            except Exception:
+                pass
+            return 0, "non_inedito_expired"
 
 
 async def get_user_credits(db: AsyncIOMotorDatabase, user_id: str) -> int:
