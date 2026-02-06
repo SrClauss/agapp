@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 class ContactBase(BaseModel):
@@ -30,3 +30,18 @@ class ContactInDBBase(ContactBase):
 
 class Contact(ContactInDBBase):
     pass
+
+class ContactSummary(BaseModel):
+    """Summary of a contact for listing in project details"""
+    id: str
+    professional_id: str
+    professional_name: str
+    professional_avatar: Optional[str] = None
+    status: str
+    created_at: datetime
+    last_message: Optional[Dict[str, Any]] = None
+    unread_count: int = 0
+    contact_details: Dict[str, Any] = {}
+    
+    class Config:
+        from_attributes = True
