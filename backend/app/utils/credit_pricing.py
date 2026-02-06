@@ -97,10 +97,10 @@ async def validate_and_deduct_credits(
     Returns:
         Tuple of (success: bool, error_message: Optional[str])
     """
-    # Use findOneAndUpdate with atomic decrement
-    result = await db.subscriptions.find_one_and_update(
+    # Use findOneAndUpdate with atomic decrement directly on user document
+    result = await db.users.find_one_and_update(
         {
-            "user_id": user_id,
+            "_id": user_id,
             "credits": {"$gte": credits_needed}
         },
         {
@@ -111,12 +111,12 @@ async def validate_and_deduct_credits(
     )
     
     if result is None:
-        # Either subscription doesn't exist or insufficient credits
-        subscription = await db.subscriptions.find_one({"user_id": user_id})
-        if not subscription:
-            return False, "No active subscription"
+        # Either user doesn't exist or insufficient credits
+        user = await db.users.find_one({"_id": user_id})
+        if not user:
+            return False, "User not found"
         else:
-            current_credits = subscription.get("credits", 0)
+            current_credits = user.get("credits", 0)
             return False, f"Insufficient credits (have {current_credits}, need {credits_needed})"
     
     return True, None
