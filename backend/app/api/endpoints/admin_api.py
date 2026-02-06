@@ -4,14 +4,12 @@ from typing import List, Optional
 from app.core.security import get_current_admin_user
 from app.crud.user import get_users
 from app.crud.project import get_projects
-from app.crud.contact import get_contacts
 from app.crud.subscription import get_subscriptions, create_subscription, add_credits_to_user
 from app.crud import config as config_crud
 from app.schemas.subscription import SubscriptionCreate, Subscription
 from app.crud.transactions import create_credit_transaction
 from app.models.user import User
 from app.models.project import Project
-from app.models.contact import Contact
 from app.models.subscription import Subscription
 from app.models.config import PlanConfig, CreditPackage, FeaturedPricing
 from app.schemas.config import (
@@ -113,28 +111,43 @@ async def get_admin_contacts_api(
     current_user: User = Depends(get_current_admin_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    """Get contacts data for admin panel (JSON API)"""
-    # Build query filter
-    query_filter = {}
-
+    """Get contacts data for admin panel (aggregated from projects.contacts)"""
+    match = {"contacts": {"$exists": True, "$ne": []}}
     if search:
-        query_filter["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
-            {"message": {"$regex": search, "$options": "i"}}
+        match["$or"] = [
+            {"contacts.contact_details.message": {"$regex": search, "$options": "i"}},
+            {"contacts.professional_name": {"$regex": search, "$options": "i"}},
+            {"contacts.client_name": {"$regex": search, "$options": "i"}}
         ]
 
-    contacts = await get_contacts(db, skip=skip, limit=limit, query_filter=query_filter)
+    pipeline = [
+        {"$match": match},
+        {"$unwind": "$contacts"},
+        {"$sort": {"contacts.created_at": -1}},
+        {"$skip": int(skip)},
+        {"$limit": int(limit)},
+        {"$project": {"project_id": "$_id", "project_title": "$title", "contact": "$contacts"}}
+    ]
 
-    # Return contacts as dicts with dummy names for now
-    result = []
-    for contact in contacts:
-        contact_dict = contact.dict()
-        contact_dict["client_name"] = "Test Client"
-        contact_dict["professional_name"] = "Test Professional"
-        result.append(contact_dict)
+    contacts = []
+    async for doc in db.projects.aggregate(pipeline):
+        c = doc.get("contact", {})
+        contact_dict = {
+            "id": f"{str(doc['project_id'])}_{str(c.get('created_at')) if c.get('created_at') else ''}",
+            "project_id": str(doc['project_id']),
+            "project_title": doc.get("project_title"),
+            "professional_id": c.get("professional_id"),
+            "professional_name": c.get("professional_name"),
+            "client_id": c.get("client_id"),
+            "client_name": c.get("client_name"),
+            "status": c.get("status"),
+            "created_at": c.get("created_at"),
+            "contact_details": c.get("contact_details", {}),
+            "last_message": c.get("chats", [])[-1] if c.get("chats") else None
+        }
+        contacts.append(contact_dict)
 
-    return result
+    return contacts
 
 @router.get("/subscriptions", response_model=List[Subscription])
 async def get_admin_subscriptions_api(
@@ -177,13 +190,31 @@ async def get_admin_dashboard_api(
     # Get counts
     total_users = await db.users.count_documents({})
     total_projects = await db.projects.count_documents({})
-    total_contacts = await db.contacts.count_documents({})
+
+    # Total contacts via aggregation over projects
+    agg = await db.projects.aggregate([
+        {"$project": {"n": {"$size": {"$ifNull": ["$contacts", []]}}}},
+        {"$group": {"_id": None, "total": {"$sum": "$n"}}}
+    ]).to_list(length=1)
+    total_contacts = agg[0]["total"] if agg else 0
+
     total_subscriptions = await db.subscriptions.count_documents({})
 
-    # Get recent activity (last 10 items from each collection)
+    # Get recent activity (last 5 users, projects, contacts)
     recent_users = await db.users.find({}).sort("created_at", -1).limit(5).to_list(length=None)
     recent_projects = await db.projects.find({}).sort("created_at", -1).limit(5).to_list(length=None)
-    recent_contacts = await db.contacts.find({}).sort("created_at", -1).limit(5).to_list(length=None)
+
+    # recent contacts: unwind and sort
+    recent_contacts = []
+    pipeline = [
+        {"$match": {"contacts": {"$exists": True, "$ne": []}}},
+        {"$unwind": "$contacts"},
+        {"$sort": {"contacts.created_at": -1}},
+        {"$limit": 5},
+        {"$project": {"project_id": "$_id", "title": "$title", "contact": "$contacts"}}
+    ]
+    async for doc in db.projects.aggregate(pipeline):
+        recent_contacts.append(doc)
 
     return {
         "stats": {
