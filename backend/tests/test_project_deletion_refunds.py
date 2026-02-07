@@ -388,7 +388,8 @@ async def test_refund_ignores_contacts_with_zero_credits(db):
 @pytest.mark.asyncio
 async def test_refund_handles_missing_professional_gracefully(db):
     """
-    Test that refund logic handles missing professionals without failing
+    Test that refund logic handles missing professionals without failing.
+    When a professional doesn't exist, the refund should be skipped and no transaction created.
     """
     from app.crud.project import delete_project
     
@@ -430,8 +431,8 @@ async def test_refund_handles_missing_professional_gracefully(db):
         "user_id": "nonexistent_prof_id",
         "type": "refund"
     })
-    # Transaction may or may not exist depending on implementation
-    # The important thing is that the delete succeeded
+    # Based on implementation, refund is skipped when user doesn't exist
+    assert refund_tx is None
 
 
 @pytest.mark.integration

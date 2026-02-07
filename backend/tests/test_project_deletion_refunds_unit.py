@@ -255,7 +255,8 @@ async def test_delete_project_with_refund_flag_false():
     
     class MockProjects:
         async def find_one(self, query):
-            refund_called.append(True)  # This shouldn't be called
+            # Track that this was called (refund logic would call this)
+            refund_called.append(True)
             return {"_id": "project1", "contacts": []}
         
         async def delete_one(self, query):
@@ -266,7 +267,8 @@ async def test_delete_project_with_refund_flag_false():
     result = await delete_project(db, "project1", refund_credits=False)
     
     assert result is True
-    assert len(refund_called) == 0  # Refund was not called
+    # Since refund_credits=False, find_one for refund should not be called
+    assert len(refund_called) == 0
 
 
 @pytest.mark.asyncio
