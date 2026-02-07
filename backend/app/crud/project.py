@@ -141,7 +141,75 @@ async def update_project(db: AsyncIOMotorDatabase, project_id: str, project_upda
     project = await get_project(db, project_id)
     return project
 
-async def delete_project(db: AsyncIOMotorDatabase, project_id: str) -> bool:
+async def refund_credits_for_project(db: AsyncIOMotorDatabase, project_id: str) -> int:
+    """
+    Refund credits to all professionals who contacted a project before deletion.
+    
+    Args:
+        db: Database connection
+        project_id: ID of the project being deleted
+    
+    Returns:
+        Number of professionals refunded
+    """
+    # Get the project with all contacts
+    project = await db.projects.find_one({"_id": project_id})
+    if not project:
+        return 0
+    
+    contacts = project.get("contacts", [])
+    if not contacts:
+        return 0
+    
+    refund_count = 0
+    
+    # Refund credits to each professional who contacted the project
+    for contact in contacts:
+        professional_id = contact.get("professional_id")
+        credits_used = contact.get("credits_used", 0)
+        
+        if not professional_id or credits_used <= 0:
+            continue
+        
+        # Check if user exists before refunding
+        user = await db.users.find_one({"_id": professional_id})
+        if not user:
+            continue
+        
+        # Record refund transaction (this will also increment the user's credits)
+        from app.utils.credit_pricing import record_credit_transaction
+        await record_credit_transaction(
+            db,
+            user_id=professional_id,
+            credits=credits_used,  # Positive for refund
+            transaction_type="refund",
+            metadata={
+                "project_id": project_id,
+                "reason": "project_deleted",
+                "original_credits_used": credits_used
+            }
+        )
+        refund_count += 1
+    
+    return refund_count
+
+
+async def delete_project(db: AsyncIOMotorDatabase, project_id: str, refund_credits: bool = True) -> bool:
+    """
+    Delete a project and optionally refund credits to professionals who contacted it.
+    
+    Args:
+        db: Database connection
+        project_id: ID of the project to delete
+        refund_credits: Whether to refund credits to professionals (default: True)
+    
+    Returns:
+        True if project was deleted, False otherwise
+    """
+    # Refund credits before deletion if requested
+    if refund_credits:
+        await refund_credits_for_project(db, project_id)
+    
     result = await db.projects.delete_one({"_id": project_id})
     return result.deleted_count > 0
 
