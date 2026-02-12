@@ -64,7 +64,12 @@ export const ChatModal: React.FC<ChatModalProps> = ({
           
           if (data.type === 'new_message' && data.contact_id === contactId) {
             const newMessage = data.message;
-            setMessages((prev) => [...prev, newMessage]);
+            // Check if message already exists to avoid duplicates
+            setMessages((prev) => {
+              const exists = prev.some(msg => msg.id === newMessage.id);
+              if (exists) return prev;
+              return [...prev, newMessage];
+            });
             
             // Scroll to bottom
             setTimeout(() => {
@@ -123,8 +128,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({
       // Send via API (will also broadcast via WebSocket)
       await sendContactMessage(contactId, messageText);
       
-      // Reload to get the new message (it will come via WebSocket too, but this ensures consistency)
-      await loadContact();
+      // No need to reload - WebSocket will deliver the message
     } catch (error) {
       console.error('Error sending message:', error);
       setInputText(messageText); // Restore text on error
