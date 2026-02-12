@@ -4,15 +4,26 @@ import { Text, Avatar, Badge, Card } from 'react-native-paper';
 import { ContactSummary } from '../api/projects';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import useChatStore from '../stores/chatStore';
 
 interface Props {
   contacts: ContactSummary[];
-  onContactPress: (contactId: string) => void;
+  onContactPress?: (contactId: string) => void;
 }
 
 export default function ProjectContactsList({ contacts, onContactPress }: Props) {
+  const { openChat } = useChatStore();
+
+  const handleContactPress = (contactId: string) => {
+    if (onContactPress) {
+      onContactPress(contactId);
+    } else {
+      openChat(contactId);
+    }
+  };
+
   const renderContact = ({ item }: { item: ContactSummary }) => (
-    <TouchableOpacity onPress={() => onContactPress(item.id)}>
+    <TouchableOpacity onPress={() => handleContactPress(item.id)}>
       <Card style={styles.card}>
         <View style={styles.row}>
           {item.professional_avatar ? (
