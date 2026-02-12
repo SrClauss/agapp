@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { registerFcmToken } from '../api/auth';
 import useAuthStore, { AuthState } from '../stores/authStore';
+import useChatStore from '../stores/chatStore';
 
 export async function registerForPushNotificationsAsync() {
   if (!Device.isDevice) {
@@ -45,18 +46,45 @@ export async function registerPushTokenOnServer(deviceToken: string) {
   }
 }
 
-// Optional: configure a foreground notification handler
+// Configure notification handler for foreground notifications
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
     shouldShowBanner: true,
-    shouldShowList: false,
+    shouldShowList: true,
   }),
 });
+
+// Handle notification responses (when user taps on notification)
+export function setupNotificationResponseListener() {
+  return Notifications.addNotificationResponseReceivedListener((response) => {
+    const data = response.notification.request.content.data;
+    
+    // Handle different notification types
+    if (data.type === 'new_message' || data.type === 'new_contact') {
+      const contactId = data.contact_id as string;
+      if (contactId) {
+        // Open chat modal with the contact
+        useChatStore.getState().openChat(contactId);
+      }
+    }
+    // Add more notification type handlers as needed
+  });
+}
+
+// Handle notifications received while app is in foreground
+export function setupNotificationReceivedListener() {
+  return Notifications.addNotificationReceivedListener((notification) => {
+    console.log('Notification received in foreground:', notification);
+    // You can customize foreground notification behavior here
+  });
+}
 
 export default {
   registerForPushNotificationsAsync,
   registerPushTokenOnServer,
+  setupNotificationResponseListener,
+  setupNotificationReceivedListener,
 };
