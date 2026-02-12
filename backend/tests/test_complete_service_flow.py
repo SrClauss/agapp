@@ -8,12 +8,13 @@ This test implements a complete end-to-end flow covering:
 3. Admin grants credits to the professional
 4. Professional uses credits to contact/take service
 5. Verify credit deduction is correct
-6. Test websocket message sending and receiving
+6. Test message sending and receiving (websocket-style storage)
 
 Note: The test with HTTP client (test_complete_service_flow_with_websocket) is skipped
-because the FastAPI TestClient hangs on websocket connections. The comprehensive test
-using CRUD functions directly (test_complete_service_flow_using_crud) covers all
-the required functionality.
+due to a known FastAPI TestClient limitation with websocket connections. The comprehensive test
+using CRUD functions directly (test_complete_service_flow_using_crud) covers all business logic
+for message storage and retrieval. For actual websocket connection testing, consider integration
+tests with a running server.
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -23,7 +24,7 @@ import asyncio
 import json
 
 
-@pytest.mark.skip(reason="TestClient hangs on websocket connections - use test_complete_service_flow_using_crud instead")
+@pytest.mark.skip(reason="Skipped due to FastAPI TestClient limitation with websocket connections - functionality validated via test_complete_service_flow_using_crud")
 @pytest.mark.e2e
 @pytest.mark.websocket
 @pytest.mark.asyncio
@@ -702,7 +703,9 @@ async def test_credit_grant_and_deduction_only(db):
     
     # Verify credits
     user_after = await db.users.find_one({"_id": user_id})
-    assert user_after["credits"] == 4, f"Expected 4 credits, got {user_after.get('credits', 0)}"
+    expected_credits = total_credits  # 3 + 1 bonus = 4
+    assert user_after["credits"] == expected_credits, \
+        f"Expected {expected_credits} credits, got {user_after.get('credits', 0)}"
     
     # Verify transaction
     tx_record = await db.credit_transactions.find_one({
@@ -710,6 +713,7 @@ async def test_credit_grant_and_deduction_only(db):
         "type": "admin_grant"
     })
     assert tx_record is not None, "Transaction not recorded"
-    assert tx_record["credits"] == 4, f"Expected 4 credits in transaction, got {tx_record.get('credits')}"
+    assert tx_record["credits"] == expected_credits, \
+        f"Expected {expected_credits} credits in transaction, got {tx_record.get('credits')}"
     
     print("✓ Simple credit grant test passed")
