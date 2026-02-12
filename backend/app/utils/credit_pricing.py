@@ -84,7 +84,7 @@ async def calculate_contact_cost(
         if hours_since_creation <= 24:
             return 2, "non_inedito_0_24h"
         elif hours_since_creation <= 48:
-            return 3, "non_inedito_24_48h"
+            return 1, "non_inedito_24_48h"
         else:
             # Mark project as expired to prevent further contacts
             try:
