@@ -6,8 +6,10 @@ import { getProject, Project } from '../api/projects';
 import { getCreditsByProfessional } from '../api/professional';
 import { getContactCostPreview, createContactForProject, getContactHistory, CostPreview } from '../api/contacts';
 import useAuthStore from '../stores/authStore';
+import useChatStore from '../stores/chatStore';
 import { maskName, maskPhone } from '../utils/format';
 import ConfirmContactModal from '../components/ConfirmContactModal';
+import { ProfileCard } from '../components/ProfileCard';
 
 interface Params {
   projectId?: string;
@@ -33,6 +35,7 @@ export default function ProjectProfessionalsDetailScreen() {
   const [existingContactId, setExistingContactId] = useState<string | null>(null);
 
   const { user, setUser } = useAuthStore();
+  const { openChat } = useChatStore();
 
   useEffect(() => {
     let mounted = true;
@@ -103,10 +106,13 @@ export default function ProjectProfessionalsDetailScreen() {
     }
 
     if (costPreview.reason === 'contact_already_exists') {
-      // Navigate to existing contact/chat
-      setSnackbarMessage('Você já tem um contato com este projeto');
-      setSnackbarVisible(true);
-      // TODO: Navigate to ContactDetailScreen when implemented
+      // Open existing contact chat
+      if (existingContactId && existingContactId !== 'existing') {
+        openChat(existingContactId);
+      } else {
+        setSnackbarMessage('Você já tem um contato com este projeto');
+        setSnackbarVisible(true);
+      }
       return;
     }
 
@@ -159,8 +165,8 @@ export default function ProjectProfessionalsDetailScreen() {
       setSnackbarMessage('Contato criado com sucesso!');
       setSnackbarVisible(true);
 
-      // Navigate to contact detail/chat screen
-      navigation.navigate('ContactDetail', { contactId: contact.id });
+      // Open chat with new contact
+      openChat(contact.id);
     } catch (e: any) {
       console.error('[ProjectProfessionalsDetail] failed to create contact', e);
       
@@ -172,12 +178,13 @@ export default function ProjectProfessionalsDetailScreen() {
           setSnackbarVisible(true);
           setConfirmVisible(false);
           
-          // Try to fetch the existing contact ID
+          // Try to fetch the existing contact ID and open chat
           try {
             const contacts = await getContactHistory('professional');
             const existingContact = contacts.find(c => c.project_id === projectId);
             if (existingContact) {
               setExistingContactId(existingContact.id);
+              openChat(existingContact.id);
             } else {
               setExistingContactId('existing');
             }
@@ -443,6 +450,23 @@ export default function ProjectProfessionalsDetailScreen() {
             <Text style={styles.description}>{project.description}</Text>
           </View>
         </View>
+
+        {/* Client Profile Card - only show if contact exists */}
+        {existingContactId && existingContactId !== 'existing' && clientInfo && (
+          <View style={styles.cardRounded}>
+            <View style={styles.cardContentPadded}>
+              <Text style={styles.sectionTitle}>Cliente</Text>
+              <ProfileCard
+                name={clientInfo.full_name || project.client_name || 'Cliente'}
+                email={clientInfo.email}
+                phone={clientInfo.phone}
+                avatarUrl={clientInfo.avatar_url}
+                role="Cliente"
+                onChatPress={() => openChat(existingContactId)}
+              />
+            </View>
+          </View>
+        )}
 
         <Card style={styles.card}>
           <Card.Content>

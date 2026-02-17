@@ -21,8 +21,16 @@ import ContactDetailScreen from './src/screens/ContactDetailScreen';
 import ProfileEvaluationsScreen from './src/screens/ProfileEvaluationsScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
+import useChatStore from './src/stores/chatStore';
 import { getRouteForRoles } from './src/utils/roles';
 import { fetchCurrentUser } from './src/api/auth';
+import { ChatModal } from './src/components/ChatModal';
+import { 
+  registerForPushNotificationsAsync, 
+  registerPushTokenOnServer,
+  setupNotificationResponseListener,
+  setupNotificationReceivedListener,
+} from './src/services/notifications';
 
 const Stack = createNativeStackNavigator();
 
@@ -30,6 +38,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState<string>('Login');
   const { token, setUser, isHydrated, activeRole } = useAuthStore();
+  const { isChatOpen, activeContactId, closeChat } = useChatStore();
 
   console.log(`[App] Componente App renderizado. isHydrated: ${isHydrated}, token: ${!!token}`);
 
@@ -70,6 +79,41 @@ export default function App() {
     }
   };
 
+  // Setup push notifications
+  useEffect(() => {
+    let responseListener: any;
+    let receivedListener: any;
+
+    const setupNotifications = async () => {
+      if (token) {
+        try {
+          // Register for push notifications
+          const pushToken = await registerForPushNotificationsAsync();
+          if (pushToken) {
+            await registerPushTokenOnServer(pushToken);
+            console.log('[App] Push notifications registered');
+          }
+
+          // Setup notification listeners
+          responseListener = setupNotificationResponseListener();
+          receivedListener = setupNotificationReceivedListener();
+        } catch (error) {
+          console.error('[App] Error setting up notifications:', error);
+        }
+      }
+    };
+
+    setupNotifications();
+
+    return () => {
+      if (responseListener) {
+        responseListener.remove();
+      }
+      if (receivedListener) {
+        receivedListener.remove();
+      }
+    };
+  }, [token]);
 
   useEffect(() => {
     async function initializeApp() {
@@ -129,6 +173,15 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style="auto" />
+      
+      {/* Global Chat Modal */}
+      {isChatOpen && activeContactId && (
+        <ChatModal
+          visible={isChatOpen}
+          onClose={closeChat}
+          contactId={activeContactId}
+        />
+      )}
     </PaperProvider>
   );
 }
