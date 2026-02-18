@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Portal, Dialog, Button, Text, Divider } from 'react-native-paper';
 import { CostPreview } from '../api/contacts';
@@ -22,15 +22,54 @@ export default function ConfirmContactModal({
   const [proposalPrice, setProposalPrice] = useState('');
   const [confirming, setConfirming] = useState(false);
 
-  const handleConfirm = async () => {
+  // Ref-based debounce to prevent multiple rapid taps
+  const lastConfirmPressTime = useRef<number>(0);
+  const isConfirmingRef = useRef<boolean>(false);
+  const DEBOUNCE_DELAY = 2000; // 2 second delay to prevent double-tap
+
+  const handleConfirm = useCallback(async () => {
+    console.log('[ConfirmContactModal] handleConfirm called', {
+      timestamp: Date.now(),
+      confirming,
+      isConfirmingRef: isConfirmingRef.current,
+    });
+
+    // Check debounce timing
+    const now = Date.now();
+    const timeSinceLastPress = now - lastConfirmPressTime.current;
+    if (timeSinceLastPress < DEBOUNCE_DELAY) {
+      console.log('[ConfirmContactModal] Confirm press ignored - debounce active', {
+        timeSinceLastPress,
+        debounceDelay: DEBOUNCE_DELAY,
+      });
+      return;
+    }
+    lastConfirmPressTime.current = now;
+
+    // Triple-check to prevent concurrent calls
+    if (confirming || isConfirmingRef.current) {
+      console.log('[ConfirmContactModal] Confirm press ignored - already confirming');
+      return;
+    }
+
+    console.log('[ConfirmContactModal] Starting confirmation...');
     setConfirming(true);
+    isConfirmingRef.current = true;
+
     try {
       const price = proposalPrice ? parseFloat(proposalPrice) : undefined;
+      console.log('[ConfirmContactModal] Calling onConfirm callback...');
       await onConfirm(message || 'Olá! Tenho interesse neste projeto.', price);
+      console.log('[ConfirmContactModal] Confirmation completed successfully');
+    } catch (error) {
+      console.error('[ConfirmContactModal] Confirmation failed', error);
+      throw error;
     } finally {
+      console.log('[ConfirmContactModal] Confirmation finished, resetting state');
       setConfirming(false);
+      isConfirmingRef.current = false;
     }
-  };
+  }, [confirming, message, proposalPrice, onConfirm]);
 
   if (!costPreview) {
     return null;
