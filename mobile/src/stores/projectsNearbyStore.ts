@@ -67,6 +67,24 @@ export const useProjectsNearbyStore = create<ProjectsNearbyState>((set, get) => 
         }
       }
 
+      // If no explicit subcategories passed, and the user is a professional,
+      // attempt to load the professional settings and use their saved subcategories.
+      if (subcategories === undefined) {
+        try {
+          const user = useAuthStore.getState().user;
+          const token = useAuthStore.getState().token;
+          if (user && user.roles && user.roles.includes('professional') && token) {
+            await useSettingsStore.getState().loadFromServer(token);
+            const subs = useSettingsStore.getState().subcategories;
+            if (subs && Array.isArray(subs) && subs.length > 0) {
+              subcategories = subs;
+            }
+          }
+        } catch (e) {
+          console.warn('[ProjectsNearbyStore] could not load professional subcategories', e);
+        }
+      }
+
       // If we have coords but no explicit radius, use sensible default (50 km)
       if ((latitude !== undefined && longitude !== undefined) && radius_km === undefined) {
         radius_km = 50;
