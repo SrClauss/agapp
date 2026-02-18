@@ -78,6 +78,7 @@ export default function WelcomeProfessionalScreen() {
             <ProfessionalStatsCard />
             <View style={{ marginTop: 10 }}>
               <Button mode="outlined" onPress={() => (navigation as any).navigate('ContactedProjects')}>Projetos que contatei</Button>
+              <Button mode="outlined" onPress={() => (navigation as any).navigate('EditProfessionalSettings')}>Editar categorias</Button>
             </View>
           </View>
 

@@ -164,6 +164,7 @@ export default function App() {
           <Stack.Screen name="ProjectProfessionalsDetail" component={ProjectProfessionalsDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />
           <Stack.Screen name="WelcomeProfessional" component={WelcomeProfessionalScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="EditProfessionalSettings" component={require('./src/screens/EditProfessionalSettingsScreen').default} options={{ title: 'Editar categorias' }} />
           <Stack.Screen name="ContactedProjects" component={require('./src/screens/ContactedProjectsScreen').default} options={{ title: 'Projetos Contatados' }} />
           <Stack.Screen name="ProjectsList" component={ProjectsListScreen} options={{ title: 'Projetos' }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />

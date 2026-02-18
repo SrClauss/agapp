@@ -5,9 +5,11 @@ import { getProfessionalSettings, updateProfessionalSettings } from '../api/user
 
 export type SettingsState = {
   service_radius_km?: number;
+  subcategories?: string[];
   loading: boolean;
   error?: string;
   setServiceRadiusKm: (radius?: number) => void;
+  setSubcategories: (subs?: string[]) => void;
   loadFromServer: (token: string) => Promise<void>;
   saveToServer: (token: string) => Promise<void>;
   clear: () => void;
@@ -20,11 +22,12 @@ export const useSettingsStore = create<SettingsState>()(
       loading: false,
       error: undefined,
       setServiceRadiusKm: (radius?: number) => set({ service_radius_km: radius, error: undefined }),
+      setSubcategories: (subs?: string[]) => set({ subcategories: subs, error: undefined }),
       loadFromServer: async (token: string) => {
         set({ loading: true, error: undefined });
         try {
           const data = await getProfessionalSettings(token);
-          set({ service_radius_km: data?.service_radius_km, loading: false });
+          set({ service_radius_km: data?.service_radius_km, subcategories: data?.subcategories || [], loading: false });
         } catch (err: any) {
           console.warn('[SettingsStore] erro ao carregar configurações do servidor', err);
           set({ error: err?.message || 'load_error', loading: false });
@@ -33,15 +36,15 @@ export const useSettingsStore = create<SettingsState>()(
       saveToServer: async (token: string) => {
         set({ loading: true, error: undefined });
         try {
-          const { service_radius_km } = get();
-          await updateProfessionalSettings(token, { service_radius_km });
+          const { service_radius_km, subcategories } = get();
+          await updateProfessionalSettings(token, { service_radius_km, subcategories });
           set({ loading: false });
         } catch (err: any) {
           console.warn('[SettingsStore] erro ao salvar configurações no servidor', err);
           set({ error: err?.message || 'save_error', loading: false });
         }
       },
-      clear: () => set({ service_radius_km: undefined, loading: false, error: undefined }),
+      clear: () => set({ service_radius_km: undefined, subcategories: undefined, loading: false, error: undefined }),
     }),
     {
       name: 'settings-storage',
