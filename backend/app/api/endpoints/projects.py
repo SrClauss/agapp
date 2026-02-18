@@ -238,13 +238,14 @@ async def read_nearby_combined(
     logging.info(f"read_nearby_combined called with latitude={latitude} longitude={longitude} radius_km={radius_km} subcategories={subcategories} current_user_id={(getattr(current_user,'id',None) if current_user else None)}")
     settings = None
     try:
+        # Load professional settings if user is authenticated and is a professional
+        if current_user and "professional" in getattr(current_user, 'roles', []):
+            user = await db.users.find_one({"_id": str(current_user.id)})
+            professional_info = user.get("professional_info", {})
+            settings = professional_info.get("settings", {})
+        
         if latitude is None or longitude is None or radius_km is None:
-            if current_user:
-                user = await db.users.find_one({"_id": str(current_user.id)})
-                professional_info = user.get("professional_info", {})
-                settings = professional_info.get("settings", {})
-
-                if settings:
+            if current_user and settings:
                     coords = settings.get("establishment_coordinates")
                     if coords and isinstance(coords, (list, tuple)) and len(coords) == 2:
                         longitude = coords[0]
@@ -253,9 +254,6 @@ async def read_nearby_combined(
                     else:
                         logging.warning(f"Professional {current_user.id} has no valid establishment coordinates; returning empty lists")
                         return NearbyResponse(all=[], non_remote=[])
-                else:
-                    logging.warning(f"Professional {current_user.id} has no professional settings; returning empty lists")
-                    return NearbyResponse(all=[], non_remote=[])
             else:
                 # No coords and no authenticated professional settings: nothing to search
                 logging.warning("Nearby search without coords and without authenticated professional settings; returning empty lists")
