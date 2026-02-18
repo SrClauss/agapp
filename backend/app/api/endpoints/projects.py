@@ -491,7 +491,8 @@ async def create_contact_on_project(
     project_id: str,
     contact: Dict[str, Any],
     current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    request: Request = None
 ):
     """Create a contact for a project (project-scoped endpoint)."""
     project = await get_project(db, project_id)
@@ -500,6 +501,31 @@ async def create_contact_on_project(
 
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="Only professionals can create contacts")
+
+    # Check for idempotency key to prevent duplicate requests
+    idempotency_key = None
+    if request:
+        idempotency_key = request.headers.get("X-Idempotency-Key")
+        if idempotency_key:
+            # Check if we've already processed this request
+            existing_transaction = await db.credit_transactions.find_one({
+                "user_id": str(current_user.id),
+                "metadata.idempotency_key": idempotency_key,
+                "transaction_type": "contact"
+            })
+            if existing_transaction:
+                # Return the existing contact for this idempotent request
+                logging.info(f"create_contact_on_project: duplicate request detected with idempotency_key={idempotency_key}, returning existing contact")
+                project_data = await db.projects.find_one({"_id": project_id})
+                if project_data and "contacts" in project_data:
+                    for idx, c in enumerate(project_data["contacts"]):
+                        if c.get("professional_id") == str(current_user.id):
+                            contact_dict = dict(c)
+                            contact_dict["id"] = f"{project_id}_{idx}"
+                            contact_dict["project_id"] = project_id
+                            return contact_dict
+                # Fallback: return 409 to indicate duplicate
+                raise HTTPException(status_code=409, detail="Contact already created with this idempotency key")
 
     existing = await db.projects.find_one({"_id": project_id, "contacts.professional_id": str(current_user.id)})
     if existing:
@@ -531,12 +557,21 @@ async def create_contact_on_project(
     contact_dict["id"] = f"{project_id}_{len(updated_project.contacts)-1}"
     contact_dict["project_id"] = project_id
 
+    # Prepare metadata with idempotency key if provided
+    transaction_metadata = {
+        "project_id": project_id,
+        "contact_id": contact_dict["id"],
+        "pricing_reason": pricing_reason
+    }
+    if idempotency_key:
+        transaction_metadata["idempotency_key"] = idempotency_key
+    
     await record_credit_transaction(
         db,
         user_id=str(current_user.id),
         credits=-credits_needed,
         transaction_type="contact",
-        metadata={"project_id": project_id, "contact_id": contact_dict["id"], "pricing_reason": pricing_reason}
+        metadata=transaction_metadata
     )
 
     # Send notification to client (best-effort)

@@ -142,6 +142,10 @@ export default function ProjectProfessionalsDetailScreen() {
     if (!projectId || creating) return;
 
     setCreating(true);
+    
+    // Generate a unique idempotency key for this contact creation
+    const idempotencyKey = `contact-${projectId}-${user?.id}-${Date.now()}`;
+    
     try {
       const contact = await createContactForProject(projectId, {
         contact_type: 'proposal',
@@ -149,7 +153,7 @@ export default function ProjectProfessionalsDetailScreen() {
           message,
           proposal_price: proposalPrice,
         },
-      });
+      }, idempotencyKey);
 
       // Refresh user credits
       try {
@@ -210,6 +214,23 @@ export default function ProjectProfessionalsDetailScreen() {
         } else {
           setSnackbarMessage(detail || 'Erro ao criar contato');
           setSnackbarVisible(true);
+        }
+      } else if (e?.response?.status === 409) {
+        // Idempotency: request was already processed
+        setSnackbarMessage('Contato já foi criado anteriormente');
+        setSnackbarVisible(true);
+        setConfirmVisible(false);
+        
+        // Try to fetch the existing contact ID and open chat
+        try {
+          const contacts = await getContactHistory('professional');
+          const existingContact = contacts.find(c => c.project_id === projectId);
+          if (existingContact) {
+            setExistingContactId(existingContact.id);
+            openChat(existingContact.id);
+          }
+        } catch (e) {
+          console.warn('[ProjectProfessionalsDetail] failed to fetch existing contact after 409', e);
         }
       } else if (!e?.response) {
         // Network error

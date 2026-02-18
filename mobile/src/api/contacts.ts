@@ -63,12 +63,22 @@ export async function getContactCostPreview(
  */
 export async function createContactForProject(
   projectId: string,
-  contactData: ContactCreate
+  contactData: ContactCreate,
+  idempotencyKey?: string
 ): Promise<Contact> {
   const token = useAuthStore.getState().token;
+  
+  // Generate idempotency key if not provided
+  const iKey = idempotencyKey || `${projectId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
   const config = token
-    ? { headers: { Authorization: `Bearer ${token}` } }
-    : undefined;
+    ? { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'X-Idempotency-Key': iKey
+        } 
+      }
+    : { headers: { 'X-Idempotency-Key': iKey } };
 
   const response = await client.post(`/projects/${projectId}/contacts`, contactData, config);
   return response.data;
