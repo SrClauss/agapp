@@ -3,6 +3,7 @@ import { View, FlatList, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Searchbar, Divider, ActivityIndicator, Text } from 'react-native-paper';
 import ProjectCard from '../components/ProjectCard';
+import LocationAvatar from '../components/LocationAvatar';
 import useAuthStore from '../stores/authStore';
 import useSettingsStore from '../stores/settingsStore';
 import { getProjects, Project } from '../api/projects';
@@ -73,11 +74,15 @@ export default function AllProjectsScreen() {
   );
 
   if (loading) return (
-    <View style={styles.loader}><ActivityIndicator animating size="large" /></View>
+    <View style={styles.container}>
+      <LocationAvatar />
+      <View style={styles.loader}><ActivityIndicator animating size="large" /></View>
+    </View>
   );
 
   return (
     <View style={styles.container}>
+      <LocationAvatar />
       <Searchbar placeholder="Buscar por descrição ou título..." value={query} onChangeText={setQuery} style={styles.search} />
       <Divider />
       {filtered.length === 0 ? (
@@ -95,7 +100,7 @@ export default function AllProjectsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: 50 },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   search: { margin: 12 },
   card: { marginBottom: 12 },
