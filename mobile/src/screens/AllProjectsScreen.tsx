@@ -15,6 +15,9 @@ export default function AllProjectsScreen() {
   const [query, setQuery] = useState<string>('');
 
   const route = useRoute();
+  const authUser = useAuthStore((s) => s.user);
+  const token = useAuthStore((s) => s.token);
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -30,9 +33,7 @@ export default function AllProjectsScreen() {
         if (routeParams?.subcategories) {
           params.subcategories = routeParams.subcategories;
         } else {
-          const user = useAuthStore.getState().user;
-          const token = useAuthStore.getState().token;
-          if (user && user.roles && user.roles.includes('professional') && token) {
+          if (authUser && authUser.roles && authUser.roles.includes('professional') && token) {
             try {
               // Ensure settingsStore is up-to-date on the server, then read cached subcategories
               await useSettingsStore.getState().loadFromServer(token);
@@ -56,7 +57,7 @@ export default function AllProjectsScreen() {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [route.params?.category, route.params?.subcategories, token, authUser?.id]);
 
   const filtered = useMemo(() => {
     const q = (query || '').trim().toLowerCase();

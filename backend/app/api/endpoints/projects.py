@@ -120,8 +120,10 @@ async def read_projects(
     radius_km: float = None,
     sort_by: str = Query("created_at", description="Sort field: created_at, featured, urgency"),
     sort_order: str = Query("desc", description="Sort order: asc or desc"),
+    request: Request = None,
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
+    # Build initial filter from query params
     filters = ProjectFilter(
         category=category,
         skills=skills,
@@ -133,6 +135,24 @@ async def read_projects(
         longitude=longitude,
         radius_km=radius_km
     )
+
+    # If no explicit subcategories were provided by the client, and the
+    # requester is an authenticated professional, use the professional's
+    # saved settings.subcategories as a sensible default. This makes the
+    # API more forgiving for clients that forget to pass subcategories.
+    if not filters.subcategories and request is not None:
+        try:
+            current_user = await get_current_user_from_request(request, db)
+            if current_user and 'professional' in getattr(current_user, 'roles', []):
+                user_doc = await db.users.find_one({"_id": str(current_user.id)})
+                professional_info = user_doc.get('professional_info', {}) if user_doc else {}
+                settings = professional_info.get('settings', {})
+                if settings and settings.get('subcategories'):
+                    filters.subcategories = settings.get('subcategories')
+        except Exception:
+            # If we can't determine the current user, ignore and proceed without defaults
+            pass
+
     projects = await get_projects(db, skip=skip, limit=limit, filters=filters)
     
     # Apply sorting
