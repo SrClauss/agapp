@@ -3,6 +3,7 @@ import { Text, KeyboardAvoidingView, Platform, ImageBackground, Image, View, Sty
 import { Button, TextInput, HelperText } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
+import useSettingsStore from '../stores/settingsStore';
 import { loginWithEmail, loginWithGoogle, fetchCurrentUser } from '../api/auth';
 import { useGoogleAuth } from '../services/googleAuth';
 import SocialButton from '../components/SocialButton';
@@ -203,6 +204,16 @@ export default function LoginScreen() {
       const user = data.user || (await fetchCurrentUser(data.token));
       setUser(user);
 
+      // Load professional settings (including subcategories) if user is a professional
+      if (user.roles && user.roles.includes('professional') && data.token) {
+        try {
+          await useSettingsStore.getState().loadFromServer(data.token);
+          console.log('[Login] Professional settings loaded successfully');
+        } catch (err) {
+          console.warn('[Login] Failed to load professional settings', err);
+        }
+      }
+
       // Register push token on successful login
       try {
         const pushToken = await NotificationsService.registerForPushNotificationsAsync();
@@ -288,6 +299,16 @@ export default function LoginScreen() {
       
       // Aguardar um pouco para garantir que o estado seja persistido
       await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Load professional settings (including subcategories) if user is a professional
+      if (user.roles && user.roles.includes('professional') && data.token) {
+        try {
+          await useSettingsStore.getState().loadFromServer(data.token);
+          console.log('[Login] Professional settings loaded successfully');
+        } catch (err) {
+          console.warn('[Login] Failed to load professional settings', err);
+        }
+      }
       
       // Register push token on successful Google login
       try {
