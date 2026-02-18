@@ -213,6 +213,17 @@ export default function LoginScreen() {
         console.warn('Failed to register push token', err);
       }
 
+      // Load professional settings (subcategories) if user is professional
+      if (user.roles && user.roles.includes('professional')) {
+        try {
+          const { loadFromServer } = await import('../stores/settingsStore');
+          const settingsStore = await import('../stores/settingsStore');
+          await settingsStore.useSettingsStore.getState().loadFromServer(data.token);
+        } catch (err) {
+          console.warn('Failed to load professional settings', err);
+        }
+      }
+
       try {
         await checkAdAndNavigate(user);
       } catch (navErr: any) {
@@ -297,6 +308,16 @@ export default function LoginScreen() {
         }
       } catch (err) {
         console.warn('Failed to register push token', err);
+      }
+
+      // Load professional settings (subcategories) if user is professional
+      if (user.roles && user.roles.includes('professional')) {
+        try {
+          const settingsStore = await import('../stores/settingsStore');
+          await settingsStore.useSettingsStore.getState().loadFromServer(data.token);
+        } catch (err) {
+          console.warn('Failed to load professional settings', err);
+        }
       }
 
       await checkAdAndNavigate(user);

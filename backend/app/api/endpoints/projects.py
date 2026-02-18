@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 import logging
 from typing import List, Any, Optional, Literal, Dict
 from pydantic import BaseModel
@@ -491,9 +491,10 @@ async def create_contact_on_project(
     project_id: str,
     contact: Dict[str, Any],
     current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key")
 ):
-    """Create a contact for a project (project-scoped endpoint)."""
+    """Create a contact for a project (project-scoped endpoint) with idempotency support."""
     project = await get_project(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -501,9 +502,28 @@ async def create_contact_on_project(
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="Only professionals can create contacts")
 
+    # Check for existing contact by professional_id OR idempotency_key
     existing = await db.projects.find_one({"_id": project_id, "contacts.professional_id": str(current_user.id)})
     if existing:
-        raise HTTPException(status_code=400, detail="Contact already exists for this project")
+        # Return existing contact instead of error (idempotent behavior)
+        for i, c in enumerate(existing.get("contacts", [])):
+            if c.get("professional_id") == str(current_user.id):
+                contact_dict = dict(c)
+                contact_dict["id"] = f"{project_id}_{i}"
+                contact_dict["project_id"] = project_id
+                return contact_dict
+    
+    # If idempotency_key provided, check for duplicate requests
+    if idempotency_key:
+        # Check if this idempotency key was already used
+        idempotent_request = await db.idempotent_requests.find_one({
+            "idempotency_key": idempotency_key,
+            "user_id": str(current_user.id),
+            "endpoint": f"/projects/{project_id}/contacts"
+        })
+        if idempotent_request:
+            # Return cached response
+            return idempotent_request.get("response")
 
     try:
         credits_needed, pricing_reason = await calculate_contact_cost(db, project_id, str(current_user.id))
@@ -554,6 +574,16 @@ async def create_contact_on_project(
                 )
     except Exception:
         pass
+
+    # Store idempotency key if provided
+    if idempotency_key:
+        await db.idempotent_requests.insert_one({
+            "idempotency_key": idempotency_key,
+            "user_id": str(current_user.id),
+            "endpoint": f"/projects/{project_id}/contacts",
+            "response": contact_dict,
+            "created_at": datetime.utcnow()
+        })
 
     return contact_dict
 

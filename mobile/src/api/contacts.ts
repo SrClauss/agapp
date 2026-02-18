@@ -66,8 +66,12 @@ export async function createContactForProject(
   contactData: ContactCreate
 ): Promise<Contact> {
   const token = useAuthStore.getState().token;
+  const userId = useAuthStore.getState().user?.id;
   const config = token
-    ? { headers: { Authorization: `Bearer ${token}` } }
+    ? { headers: { 
+        Authorization: `Bearer ${token}`,
+        'Idempotency-Key': `contact-${projectId}-${userId}`
+      } }
     : undefined;
 
   const response = await client.post(`/projects/${projectId}/contacts`, contactData, config);
