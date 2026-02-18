@@ -82,6 +82,8 @@ export interface Project {
   remote_execution: boolean;
   client_id: string;
   client_name?: string;
+  // Contacts array (project-scoped) — may be present when fetching a full project
+  contacts?: ContactSummary[];
   status: string;
   created_at: string;
   updated_at: string;
@@ -97,7 +99,7 @@ export interface Project {
   closed_by?: string;
   closed_by_name?: string;
   // Note: featured fields exist on backend but are omitted here for compatibility
-}
+} 
 
 /**
  * Create a new project
