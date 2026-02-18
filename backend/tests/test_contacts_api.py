@@ -155,7 +155,7 @@ async def test_mark_messages_as_read(async_client, test_professional, test_user,
 @pytest.mark.asyncio
 async def test_idempotency_key_in_contact_creation(async_client, test_professional, test_project, test_professional_jwt_token, db):
     """Test that idempotency key prevents duplicate contact creation"""
-    idempotency_key = f"test-key-{datetime.now(timezone.utc).timestamp()}"
+    idempotency_key = "test-stable-key-12345"
     
     contact_data = {
         "contact_type": "proposal",

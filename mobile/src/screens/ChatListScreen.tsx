@@ -33,7 +33,7 @@ export default function ChatListScreen() {
   const user = useAuthStore((s) => s.user);
   const userType = user?.roles?.includes('professional') ? 'professional' : 'client';
 
-  const loadContacts = async (showLoader = true) => {
+  const loadContacts = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
     try {
       const data = await getContactHistory(userType);
@@ -45,7 +45,7 @@ export default function ChatListScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [userType]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -55,7 +55,7 @@ export default function ChatListScreen() {
   useFocusEffect(
     useCallback(() => {
       loadContacts();
-    }, [userType])
+    }, [loadContacts])
   );
 
   useEffect(() => {

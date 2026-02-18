@@ -216,7 +216,6 @@ export default function LoginScreen() {
       // Load professional settings (subcategories) if user is professional
       if (user.roles && user.roles.includes('professional')) {
         try {
-          const { loadFromServer } = await import('../stores/settingsStore');
           const settingsStore = await import('../stores/settingsStore');
           await settingsStore.useSettingsStore.getState().loadFromServer(data.token);
         } catch (err) {

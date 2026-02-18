@@ -274,7 +274,7 @@ async def mark_contact_messages_as_read(
     now = datetime.now(timezone.utc)
     
     # Update messages in the contact's chat array
-    # We need to mark messages where sender_id != current_user.id and read_at is None
+    # We need to mark messages where sender_id != current_user.id and read_at is None or doesn't exist
     result = await db.projects.update_one(
         {
             "_id": project_id,
@@ -288,10 +288,7 @@ async def mark_contact_messages_as_read(
         array_filters=[
             {
                 "msg.sender_id": {"$ne": str(current_user.id)},
-                "$or": [
-                    {"msg.read_at": None},
-                    {"msg.read_at": {"$exists": False}}
-                ]
+                "msg.read_at": None
             }
         ]
     )

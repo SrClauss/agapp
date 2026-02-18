@@ -504,10 +504,10 @@ async def create_contact_on_project(
     existing = await db.projects.find_one({"_id": project_id, "contacts.professional_id": str(current_user.id)})
     if existing:
         # Return existing contact instead of error (idempotent behavior)
-        for i, c in enumerate(existing.get("contacts", [])):
+        for c in existing.get("contacts", []):
             if c.get("professional_id") == str(current_user.id):
                 contact_dict = dict(c)
-                contact_dict["id"] = f"{project_id}_{i}"
+                contact_dict["id"] = f"{project_id}_{str(current_user.id)}"
                 contact_dict["project_id"] = project_id
                 return contact_dict
     
@@ -546,7 +546,7 @@ async def create_contact_on_project(
 
     new_contact = updated_project.contacts[-1]
     contact_dict = new_contact.dict() if hasattr(new_contact, 'dict') else dict(new_contact)
-    contact_dict["id"] = f"{project_id}_{len(updated_project.contacts)-1}"
+    contact_dict["id"] = f"{project_id}_{str(current_user.id)}"
     contact_dict["project_id"] = project_id
 
     await record_credit_transaction(
