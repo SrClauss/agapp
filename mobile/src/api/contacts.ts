@@ -67,9 +67,10 @@ export async function createContactForProject(
   idempotencyKey?: string
 ): Promise<Contact> {
   const token = useAuthStore.getState().token;
+  const userId = useAuthStore.getState().user?.id;
   
-  // Generate idempotency key if not provided
-  const iKey = idempotencyKey || `${projectId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // Generate stable idempotency key if not provided (based on project and user, not timestamp)
+  const iKey = idempotencyKey || `contact-${projectId}-${userId}`;
   
   const config = token
     ? { 

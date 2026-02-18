@@ -143,8 +143,8 @@ export default function ProjectProfessionalsDetailScreen() {
 
     setCreating(true);
     
-    // Generate a unique idempotency key for this contact creation
-    const idempotencyKey = `contact-${projectId}-${user?.id}-${Date.now()}`;
+    // Generate a stable idempotency key based on user and project (without timestamp)
+    const idempotencyKey = `contact-${projectId}-${user?.id}`;
     
     try {
       const contact = await createContactForProject(projectId, {

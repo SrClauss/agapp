@@ -11,6 +11,7 @@ import { Text, Avatar, Badge, Searchbar, Divider } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getContactHistory, Contact } from '../api/contacts';
 import useAuthStore from '../stores/authStore';
+import useChatStore from '../stores/chatStore';
 import { colors } from '../theme/colors';
 import LocationAvatar from '../components/LocationAvatar';
 

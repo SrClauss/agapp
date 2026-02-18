@@ -29,17 +29,17 @@ const useChatStore = create<ChatState>((set) => ({
       const contacts = await getContactHistory(userType);
       
       // Count total unread messages
-      let total = 0;
+      let totalUnreadMessages = 0;
       for (const contact of contacts) {
         const chat = contact.chat || [];
         for (const msg of chat) {
           if (msg.sender_id !== user.id && !msg.read) {
-            total++;
+            totalUnreadMessages++;
           }
         }
       }
       
-      set({ unreadCount: total });
+      set({ unreadCount: totalUnreadMessages });
     } catch (error) {
       console.warn('[ChatStore] Failed to load unread count:', error);
     }

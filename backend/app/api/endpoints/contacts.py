@@ -67,7 +67,10 @@ async def get_contact_history(
         projects.extend(relevant_contacts)
     
     # Sort by most recent message
-    projects.sort(key=lambda x: x.get("updated_at", x.get("created_at", datetime.min)), reverse=True)
+    projects.sort(
+        key=lambda x: x.get("updated_at", x.get("created_at", datetime.min.replace(tzinfo=timezone.utc))), 
+        reverse=True
+    )
     
     return projects
 
