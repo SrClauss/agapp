@@ -61,6 +61,14 @@ export default function LocationAvatar({ backgroundUri }: Props) {
     }
   };
 
+  const openChatList = () => {
+    try {
+      navigation.navigate('ChatList' as never);
+    } catch (err) {
+      console.error('Failed to navigate to ChatList', err);
+    }
+  };
+
   const openProfile = () => {
     if (!user) {
       try { navigation.navigate('Login' as never); } catch (err) { }
@@ -113,6 +121,16 @@ export default function LocationAvatar({ backgroundUri }: Props) {
             style={{ margin: 0 }}
           />
           {notificationCount > 0 && <Badge style={styles.badge}>{notificationCount}</Badge>}
+        </View>
+
+        <View style={styles.notificationWrapper}>
+          <IconButton
+            icon={() => <MaterialCommunityIcons name="message-text" size={20} color="#fff" />}
+            size={20}
+            onPress={openChatList}
+            style={{ margin: 0 }}
+          />
+          {/* TODO: Add unread chat count badge here */}
         </View>
 
         <TouchableOpacity onPress={openProfile} style={styles.avatarWrapper}>
