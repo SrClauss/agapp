@@ -213,11 +213,24 @@ async def get_user_stats(db: AsyncIOMotorDatabase, user_id: str) -> dict:
     
     if subscription:
         stats["active_subscription"] = subscription
-        # Ensure total_credits set for display
+
+    # Preferir o campo `credits` do documento do usuário como fonte única de verdade
+    user_doc = await db.users.find_one({"_id": user_id})
+    if not user_doc and ObjectId.is_valid(user_id):
+        user_doc = await db.users.find_one({"_id": ObjectId(user_id)})
+
+    if user_doc:
         try:
-            stats["total_credits"] = int(subscription.get('credits', 0))
+            stats["total_credits"] = int(user_doc.get("credits", 0))
         except Exception:
             stats["total_credits"] = 0
+    else:
+        # Fallback: se não encontramos o documento do usuário, usar créditos da assinatura (se houver)
+        if subscription:
+            try:
+                stats["total_credits"] = int(subscription.get("credits", 0))
+            except Exception:
+                stats["total_credits"] = 0
     
     return stats
 async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> bool:

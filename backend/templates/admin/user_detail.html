@@ -72,6 +72,12 @@
                         <th>Créditos Disponíveis:</th>
                         <td>{{ stats.total_credits or 0 }}</td>
                     </tr>
+                    {% if stats.active_subscription %}
+                    <tr>
+                        <th>Créditos (assinatura):</th>
+                        <td>{{ stats.active_subscription.credits or 0 }}</td>
+                    </tr>
+                    {% endif %}
                 </table>
             </div>
         </div>
