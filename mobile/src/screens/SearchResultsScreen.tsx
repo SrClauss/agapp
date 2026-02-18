@@ -4,6 +4,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { getSubcategoriesWithParent } from '../api/categories';
 import { colors } from '../theme/colors';
 import { Divider, Button } from 'react-native-paper';
+import LocationAvatar from '../components/LocationAvatar';
 
 export default function SearchResultsScreen() {
   const route = useRoute();
@@ -54,10 +55,12 @@ export default function SearchResultsScreen() {
   };
 
   return (
-    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Resultados</Text>
-      
-      <Divider style={styles.divider} />
+    <View style={styles.outerContainer}>
+      <LocationAvatar />
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Resultados</Text>
+        
+        <Divider style={styles.divider} />
       
       <FlatList
         data={items}
@@ -94,11 +97,13 @@ export default function SearchResultsScreen() {
       >
         Voltar
       </Button>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: { flex: 1, paddingTop: 50 },
   scrollContainer: { flex: 1 },
   container: { 
     flexGrow: 1, 

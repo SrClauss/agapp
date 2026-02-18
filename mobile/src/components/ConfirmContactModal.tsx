@@ -23,10 +23,15 @@ export default function ConfirmContactModal({
   const [confirming, setConfirming] = useState(false);
 
   const handleConfirm = async () => {
+    if (confirming) return; // Prevent double-clicks
+    
     setConfirming(true);
     try {
       const price = proposalPrice ? parseFloat(proposalPrice) : undefined;
       await onConfirm(message || 'Olá! Tenho interesse neste projeto.', price);
+    } catch (error) {
+      // Error will be handled by parent component
+      throw error;
     } finally {
       setConfirming(false);
     }

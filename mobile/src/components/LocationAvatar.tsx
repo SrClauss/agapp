@@ -6,6 +6,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import useLocationStore from '../stores/locationStore';
 import useAuthStore from '../stores/authStore';
 import useNotificationStore from '../stores/notificationStore';
+import useChatStore from '../stores/chatStore';
 import { useProfilePhoto } from '../hooks/useProfilePhoto';
 import { useNavigation } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
@@ -22,6 +23,7 @@ export default function LocationAvatar({ backgroundUri }: Props) {
 
   const user = useAuthStore((state) => state.user);
   const notificationCount = useNotificationStore((s) => s.count);
+  const { unreadCount, loadUnreadCount } = useChatStore();
   const { localUri } = useProfilePhoto(user?.id || null, user?.avatar_url || null);
   const navigation = useNavigation();
 
@@ -53,11 +55,26 @@ export default function LocationAvatar({ backgroundUri }: Props) {
     }
   }, [locationText, locationLoading, fetchLocation]);
 
+  // Load unread message count
+  useEffect(() => {
+    if (user) {
+      loadUnreadCount().catch(() => {});
+    }
+  }, [user, loadUnreadCount]);
+
   const openNotifications = () => {
     try {
       navigation.navigate('Notifications' as never);
     } catch (err) {
       navigation.navigate('Profile' as never);
+    }
+  };
+
+  const openChatList = () => {
+    try {
+      navigation.navigate('ChatList' as never);
+    } catch (err) {
+      console.error('Failed to navigate to ChatList', err);
     }
   };
 
@@ -113,6 +130,16 @@ export default function LocationAvatar({ backgroundUri }: Props) {
             style={{ margin: 0 }}
           />
           {notificationCount > 0 && <Badge style={styles.badge}>{notificationCount}</Badge>}
+        </View>
+
+        <View style={styles.notificationWrapper}>
+          <IconButton
+            icon={() => <MaterialCommunityIcons name="message-text" size={20} color="#fff" />}
+            size={20}
+            onPress={openChatList}
+            style={{ margin: 0 }}
+          />
+          {unreadCount > 0 && <Badge style={styles.badge}>{unreadCount}</Badge>}
         </View>
 
         <TouchableOpacity onPress={openProfile} style={styles.avatarWrapper}>
