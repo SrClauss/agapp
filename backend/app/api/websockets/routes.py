@@ -71,6 +71,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     "sender_id": str(current_user.id),
                     "content": content,
                     "created_at": datetime.now(timezone.utc),
+                    "read": False,  # New field for unread tracking
                 }
 
                 # Adicionar mensagem ao chat do contato

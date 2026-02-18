@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.api.endpoints import auth, users, projects, subscriptions, uploads, documents, admin_api, system_config_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search
+from app.api.endpoints import auth, users, projects, subscriptions, uploads, documents, admin_api, system_config_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search, contacts
 from app.api.endpoints import professional_api
 from app.api.admin import router as admin_router
 from app.api.professional import router as professional_router
@@ -180,6 +180,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(projects.router, prefix="/projects", tags=["projects"])
+app.include_router(contacts.router, prefix="", tags=["contacts"])
 app.include_router(categories.router, prefix="/categories", tags=["categories"])
 app.include_router(search.router, prefix="/search", tags=["search"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
@@ -206,6 +207,7 @@ app.include_router(ads.mobile_router, prefix="/system-admin/api/public/ads")
 app.include_router(auth.router, prefix="/api/auth")
 app.include_router(users.router, prefix="/api/users")
 app.include_router(projects.router, prefix="/api/projects")
+app.include_router(contacts.router, prefix="/api", tags=["contacts"])
 app.include_router(payments.router, prefix="/api/payments")
 app.include_router(webhooks.router, prefix="/api/webhooks")
 app.include_router(admin_api.router, prefix="/api/admin")
