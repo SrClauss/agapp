@@ -299,7 +299,7 @@ export default function ProjectProfessionalsDetailScreen() {
         setSnackbarVisible(true);
       }
     } finally {
-      console.log('[ProjectProfectionalsDetail] Contact creation finished, resetting state');
+      console.log('[ProjectProfessionalsDetail] Contact creation finished, resetting state');
       setCreating(false);
       isCreatingRef.current = false;
     }
