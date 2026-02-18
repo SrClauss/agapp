@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Searchbar, Divider, ActivityIndicator, Text } from 'react-native-paper';
 import ProjectCard from '../components/ProjectCard';
 import useAuthStore from '../stores/authStore';
+import useSettingsStore from '../stores/settingsStore';
 import { getProjects, Project } from '../api/projects';
 import { useRoute } from '@react-navigation/native';
 
@@ -33,9 +34,10 @@ export default function AllProjectsScreen() {
           const token = useAuthStore.getState().token;
           if (user && user.roles && user.roles.includes('professional') && token) {
             try {
-              // Load professional settings (cached by settings store)
-              const settings = await (await import('../stores/settingsStore')).default.getState().loadFromServer(token).then(() => (await import('../stores/settingsStore')).default.getState());
-              const subs = settings?.subcategories;
+              // Ensure settingsStore is up-to-date on the server, then read cached subcategories
+              await useSettingsStore.getState().loadFromServer(token);
+              const settingsState = useSettingsStore.getState();
+              const subs = settingsState.subcategories;
               if (subs && Array.isArray(subs) && subs.length > 0) {
                 params.subcategories = subs;
               }
