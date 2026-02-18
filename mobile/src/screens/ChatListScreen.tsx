@@ -28,6 +28,7 @@ interface ChatItemData {
 export default function ChatListScreen() {
   const navigation = useNavigation();
   const { user } = useAuthStore();
+  const { loadUnreadCount } = useChatStore();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,6 +41,9 @@ export default function ChatListScreen() {
       const userType = user.roles.includes('professional') ? 'professional' : 'client';
       const data = await getContactHistory(userType);
       setContacts(data);
+      
+      // Also reload unread count
+      await loadUnreadCount();
     } catch (error) {
       console.error('[ChatListScreen] Failed to load contacts:', error);
     } finally {

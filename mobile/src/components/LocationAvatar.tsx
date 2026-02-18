@@ -6,6 +6,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import useLocationStore from '../stores/locationStore';
 import useAuthStore from '../stores/authStore';
 import useNotificationStore from '../stores/notificationStore';
+import useChatStore from '../stores/chatStore';
 import { useProfilePhoto } from '../hooks/useProfilePhoto';
 import { useNavigation } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
@@ -22,6 +23,7 @@ export default function LocationAvatar({ backgroundUri }: Props) {
 
   const user = useAuthStore((state) => state.user);
   const notificationCount = useNotificationStore((s) => s.count);
+  const { unreadCount, loadUnreadCount } = useChatStore();
   const { localUri } = useProfilePhoto(user?.id || null, user?.avatar_url || null);
   const navigation = useNavigation();
 
@@ -52,6 +54,13 @@ export default function LocationAvatar({ backgroundUri }: Props) {
       fetchLocation().catch(() => {});
     }
   }, [locationText, locationLoading, fetchLocation]);
+
+  // Load unread message count
+  useEffect(() => {
+    if (user) {
+      loadUnreadCount().catch(() => {});
+    }
+  }, [user, loadUnreadCount]);
 
   const openNotifications = () => {
     try {
@@ -130,7 +139,7 @@ export default function LocationAvatar({ backgroundUri }: Props) {
             onPress={openChatList}
             style={{ margin: 0 }}
           />
-          {/* TODO: Add unread chat count badge here */}
+          {unreadCount > 0 && <Badge style={styles.badge}>{unreadCount}</Badge>}
         </View>
 
         <TouchableOpacity onPress={openProfile} style={styles.avatarWrapper}>
