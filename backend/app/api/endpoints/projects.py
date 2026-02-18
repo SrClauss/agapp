@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 import logging
 from typing import List, Any, Optional, Literal, Dict
 from pydantic import BaseModel
@@ -238,13 +238,16 @@ async def read_nearby_combined(
     logging.info(f"read_nearby_combined called with latitude={latitude} longitude={longitude} radius_km={radius_km} subcategories={subcategories} current_user_id={(getattr(current_user,'id',None) if current_user else None)}")
     settings = None
     try:
-        if latitude is None or longitude is None or radius_km is None:
-            if current_user:
+        # Load professional settings only when needed (for coords or subcategories)
+        if current_user and "professional" in getattr(current_user, 'roles', []):
+            # Only load settings if we need to use them
+            if latitude is None or longitude is None or radius_km is None or subcategories is None:
                 user = await db.users.find_one({"_id": str(current_user.id)})
                 professional_info = user.get("professional_info", {})
                 settings = professional_info.get("settings", {})
-
-                if settings:
+        
+        if latitude is None or longitude is None or radius_km is None:
+            if current_user and settings:
                     coords = settings.get("establishment_coordinates")
                     if coords and isinstance(coords, (list, tuple)) and len(coords) == 2:
                         longitude = coords[0]
@@ -253,9 +256,6 @@ async def read_nearby_combined(
                     else:
                         logging.warning(f"Professional {current_user.id} has no valid establishment coordinates; returning empty lists")
                         return NearbyResponse(all=[], non_remote=[])
-                else:
-                    logging.warning(f"Professional {current_user.id} has no professional settings; returning empty lists")
-                    return NearbyResponse(all=[], non_remote=[])
             else:
                 # No coords and no authenticated professional settings: nothing to search
                 logging.warning("Nearby search without coords and without authenticated professional settings; returning empty lists")
@@ -491,9 +491,10 @@ async def create_contact_on_project(
     project_id: str,
     contact: Dict[str, Any],
     current_user: User = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key")
 ):
-    """Create a contact for a project (project-scoped endpoint)."""
+    """Create a contact for a project (project-scoped endpoint) with idempotency support."""
     project = await get_project(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -501,9 +502,28 @@ async def create_contact_on_project(
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="Only professionals can create contacts")
 
+    # Check for existing contact by professional_id OR idempotency_key
     existing = await db.projects.find_one({"_id": project_id, "contacts.professional_id": str(current_user.id)})
     if existing:
-        raise HTTPException(status_code=400, detail="Contact already exists for this project")
+        # Return existing contact instead of error (idempotent behavior)
+        for c in existing.get("contacts", []):
+            if c.get("professional_id") == str(current_user.id):
+                contact_dict = dict(c)
+                contact_dict["id"] = f"{project_id}_{str(current_user.id)}"
+                contact_dict["project_id"] = project_id
+                return contact_dict
+    
+    # If idempotency_key provided, check for duplicate requests
+    if idempotency_key:
+        # Check if this idempotency key was already used
+        idempotent_request = await db.idempotent_requests.find_one({
+            "idempotency_key": idempotency_key,
+            "user_id": str(current_user.id),
+            "endpoint": f"/projects/{project_id}/contacts"
+        })
+        if idempotent_request:
+            # Return cached response
+            return idempotent_request.get("response")
 
     try:
         credits_needed, pricing_reason = await calculate_contact_cost(db, project_id, str(current_user.id))
@@ -528,7 +548,7 @@ async def create_contact_on_project(
 
     new_contact = updated_project.contacts[-1]
     contact_dict = new_contact.dict() if hasattr(new_contact, 'dict') else dict(new_contact)
-    contact_dict["id"] = f"{project_id}_{len(updated_project.contacts)-1}"
+    contact_dict["id"] = f"{project_id}_{str(current_user.id)}"
     contact_dict["project_id"] = project_id
 
     await record_credit_transaction(
@@ -554,6 +574,16 @@ async def create_contact_on_project(
                 )
     except Exception:
         pass
+
+    # Store idempotency key if provided
+    if idempotency_key:
+        await db.idempotent_requests.insert_one({
+            "idempotency_key": idempotency_key,
+            "user_id": str(current_user.id),
+            "endpoint": f"/projects/{project_id}/contacts",
+            "response": contact_dict,
+            "created_at": datetime.utcnow()
+        })
 
     return contact_dict
 

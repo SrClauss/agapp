@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ImageBackground, ImageSourcePropType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconButton, Badge, ActivityIndicator } from 'react-native-paper';
@@ -7,7 +7,8 @@ import useLocationStore from '../stores/locationStore';
 import useAuthStore from '../stores/authStore';
 import useNotificationStore from '../stores/notificationStore';
 import { useProfilePhoto } from '../hooks/useProfilePhoto';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { getContactHistory } from '../api/contacts';
 import * as FileSystem from 'expo-file-system';
 
 interface Props {
@@ -26,6 +27,26 @@ export default function LocationAvatar({ backgroundUri }: Props) {
   const navigation = useNavigation();
 
   const [cachedPhotoUri, setCachedPhotoUri] = useState<string | null>(null);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+
+  // Load unread messages count
+  const loadUnreadCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const userType = user.roles?.includes('professional') ? 'professional' : 'client';
+      const contacts = await getContactHistory(userType);
+      const totalUnread = contacts.reduce((sum: number, contact: any) => sum + (contact.unread_count || 0), 0);
+      setUnreadMessagesCount(totalUnread);
+    } catch (error) {
+      console.warn('Failed to load unread messages count:', error);
+    }
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUnreadCount();
+    }, [loadUnreadCount])
+  );
 
   useEffect(() => {
     async function findCachedPhoto() {
@@ -58,6 +79,14 @@ export default function LocationAvatar({ backgroundUri }: Props) {
       navigation.navigate('Notifications' as never);
     } catch (err) {
       navigation.navigate('Profile' as never);
+    }
+  };
+
+  const openMessages = () => {
+    try {
+      (navigation as any).navigate('ChatList');
+    } catch (err) {
+      console.warn('Failed to navigate to ChatList:', err);
     }
   };
 
@@ -105,6 +134,16 @@ export default function LocationAvatar({ backgroundUri }: Props) {
       </TouchableOpacity>
 
       <View style={styles.rightSection}>
+        <View style={styles.notificationWrapper}>
+          <IconButton
+            icon={() => <MaterialCommunityIcons name="message-text-outline" size={20} color="#fff" />}
+            size={20}
+            onPress={openMessages}
+            style={{ margin: 0 }}
+          />
+          {unreadMessagesCount > 0 && <Badge style={styles.badge}>{unreadMessagesCount}</Badge>}
+        </View>
+
         <View style={styles.notificationWrapper}>
           <IconButton
             icon={() => <MaterialCommunityIcons name={notificationCount > 0 ? 'bell' : 'bell-outline'} size={20} color="#fff" />}
