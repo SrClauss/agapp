@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ScrollView, StyleSheet, ActivityIndicator, View, ImageBackground, Alert } from 'react-native';
 import { Text, Card, Avatar, Button, Snackbar } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -36,6 +36,11 @@ export default function ProjectProfessionalsDetailScreen() {
 
   const { user, setUser } = useAuthStore();
   const { openChat } = useChatStore();
+
+  // Refs for debounce mechanism to prevent multiple rapid button presses
+  const lastContactPressTime = useRef<number>(0);
+  const isCreatingRef = useRef<boolean>(false);
+  const DEBOUNCE_DELAY = 1000; // 1 second delay between button presses
 
   useEffect(() => {
     let mounted = true;
@@ -98,14 +103,43 @@ export default function ProjectProfessionalsDetailScreen() {
     loadPreview();
   }, [project, projectId, user]);
 
-  const handleContactButtonPress = () => {
+  const handleContactButtonPress = useCallback(() => {
+    console.log('[ProjectProfessionalsDetail] handleContactButtonPress called', {
+      timestamp: Date.now(),
+      costPreview: costPreview ? 'loaded' : 'null',
+      creating: creating,
+      isCreatingRef: isCreatingRef.current,
+    });
+
+    // Check debounce timing
+    const now = Date.now();
+    const timeSinceLastPress = now - lastContactPressTime.current;
+    if (timeSinceLastPress < DEBOUNCE_DELAY) {
+      console.log('[ProjectProfessionalsDetail] Button press ignored - debounce active', {
+        timeSinceLastPress,
+        debounceDelay: DEBOUNCE_DELAY,
+      });
+      return;
+    }
+    lastContactPressTime.current = now;
+
+    // Check if already creating (belt-and-suspenders approach)
+    if (creating || isCreatingRef.current) {
+      console.log('[ProjectProfessionalsDetail] Button press ignored - already creating contact');
+      return;
+    }
+
     if (!costPreview) {
+      console.log('[ProjectProfessionalsDetail] Button press ignored - no cost preview');
       setSnackbarMessage('Aguarde o carregamento das informações');
       setSnackbarVisible(true);
       return;
     }
 
     if (costPreview.reason === 'contact_already_exists') {
+      console.log('[ProjectProfessionalsDetail] Opening existing contact chat', {
+        existingContactId,
+      });
       // Open existing contact chat
       if (existingContactId && existingContactId !== 'existing') {
         openChat(existingContactId);
@@ -117,6 +151,10 @@ export default function ProjectProfessionalsDetailScreen() {
     }
 
     if (!costPreview.can_afford) {
+      console.log('[ProjectProfessionalsDetail] Insufficient credits', {
+        currentBalance: costPreview.current_balance,
+        cost: costPreview.credits_cost,
+      });
       Alert.alert(
         'Créditos Insuficientes',
         'Você não tem créditos suficientes para contatar este projeto. Deseja comprar mais créditos?',
@@ -135,14 +173,30 @@ export default function ProjectProfessionalsDetailScreen() {
       return;
     }
 
+    console.log('[ProjectProfessionalsDetail] Opening confirm modal');
     setConfirmVisible(true);
-  };
+  }, [costPreview, creating, existingContactId, openChat]);
 
-  const handleConfirmContact = async (message: string, proposalPrice?: number) => {
-    if (!projectId || creating) return;
+  const handleConfirmContact = useCallback(async (message: string, proposalPrice?: number) => {
+    console.log('[ProjectProfessionalsDetail] handleConfirmContact called', {
+      timestamp: Date.now(),
+      projectId,
+      creating,
+      isCreatingRef: isCreatingRef.current,
+    });
 
+    // Triple-check to prevent concurrent calls
+    if (!projectId || creating || isCreatingRef.current) {
+      console.log('[ProjectProfessionalsDetail] handleConfirmContact aborted - already creating or no projectId');
+      return;
+    }
+
+    console.log('[ProjectProfessionalsDetail] Starting contact creation...');
     setCreating(true);
+    isCreatingRef.current = true;
+
     try {
+      console.log('[ProjectProfessionalsDetail] Calling createContactForProject API...');
       const contact = await createContactForProject(projectId, {
         contact_type: 'proposal',
         contact_details: {
@@ -151,12 +205,20 @@ export default function ProjectProfessionalsDetailScreen() {
         },
       });
 
+      console.log('[ProjectProfessionalsDetail] Contact created successfully', {
+        contactId: contact.id,
+      });
+
       // Refresh user credits
       try {
+        console.log('[ProjectProfessionalsDetail] Refreshing user credits...');
         const creditsData = await getCreditsByProfessional();
         if (user) {
           setUser({ ...user, credits: creditsData.credits_available });
         }
+        console.log('[ProjectProfessionalsDetail] Credits refreshed', {
+          newBalance: creditsData.credits_available,
+        });
       } catch (e) {
         console.warn('[ProjectProfessionalsDetail] failed to refresh credits', e);
       }
@@ -165,15 +227,21 @@ export default function ProjectProfessionalsDetailScreen() {
       setSnackbarMessage('Contato criado com sucesso!');
       setSnackbarVisible(true);
 
+      console.log('[ProjectProfessionalsDetail] Opening chat with new contact...');
       // Open chat with new contact
       openChat(contact.id);
     } catch (e: any) {
-      console.error('[ProjectProfessionalsDetail] failed to create contact', e);
+      console.error('[ProjectProfessionalsDetail] failed to create contact', {
+        error: e,
+        status: e?.response?.status,
+        detail: e?.response?.data?.detail,
+      });
       
       if (e?.response?.status === 400) {
         const detail = e?.response?.data?.detail || '';
         
         if (detail.includes('already exists') || detail.includes('Contact already exists')) {
+          console.log('[ProjectProfessionalsDetail] Contact already exists error');
           setSnackbarMessage('Você já tem um contato com este projeto');
           setSnackbarVisible(true);
           setConfirmVisible(false);
@@ -193,6 +261,7 @@ export default function ProjectProfessionalsDetailScreen() {
             setExistingContactId('existing');
           }
         } else if (detail.includes('Insufficient credits')) {
+          console.log('[ProjectProfessionalsDetail] Insufficient credits error');
           Alert.alert(
             'Créditos Insuficientes',
             'Você não tem créditos suficientes. Deseja comprar mais créditos?',
@@ -213,6 +282,7 @@ export default function ProjectProfessionalsDetailScreen() {
         }
       } else if (!e?.response) {
         // Network error
+        console.log('[ProjectProfessionalsDetail] Network error');
         Alert.alert(
           'Erro de Conexão',
           'Não foi possível criar o contato. Verifique sua conexão e tente novamente.',
@@ -229,9 +299,11 @@ export default function ProjectProfessionalsDetailScreen() {
         setSnackbarVisible(true);
       }
     } finally {
+      console.log('[ProjectProfectionalsDetail] Contact creation finished, resetting state');
       setCreating(false);
+      isCreatingRef.current = false;
     }
-  };
+  }, [projectId, creating, user, setUser, openChat]);
   
   const handleGetMe = async () => {
     console.log("[ProjectProfessionalsDetail] handleGetMe called");
