@@ -84,7 +84,7 @@ export default function ChatListScreen() {
       <Card
         style={styles.card}
         onPress={() => {
-          (navigation as any).navigate('ContactDetail', { contactId: item.id });
+          navigation.navigate('ContactDetail', { contactId: item.id });
         }}
       >
         <Card.Title

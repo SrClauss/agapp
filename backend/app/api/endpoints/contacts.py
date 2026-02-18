@@ -273,9 +273,10 @@ async def mark_contact_messages_as_read(
     # Mark all messages from other user as read
     now = datetime.now(timezone.utc)
     
-    # Update messages in the contact's chat array
-    # We need to mark messages where sender_id != current_user.id and read_at is None or doesn't exist
-    result = await db.projects.update_one(
+    # Update messages in the contact's chat array using two separate updates
+    # MongoDB array filters don't support complex $or within the same filter object
+    # First, mark messages where read_at is null
+    result1 = await db.projects.update_one(
         {
             "_id": project_id,
             f"contacts.{contact_index}.professional_id": professional_id
@@ -293,4 +294,24 @@ async def mark_contact_messages_as_read(
         ]
     )
     
-    return {"message": "Messages marked as read", "modified_count": result.modified_count}
+    # Then, mark messages where read_at doesn't exist
+    result2 = await db.projects.update_one(
+        {
+            "_id": project_id,
+            f"contacts.{contact_index}.professional_id": professional_id
+        },
+        {
+            "$set": {
+                f"contacts.{contact_index}.chats.$[msg].read_at": now
+            }
+        },
+        array_filters=[
+            {
+                "msg.sender_id": {"$ne": str(current_user.id)},
+                "msg.read_at": {"$exists": False}
+            }
+        ]
+    )
+    
+    total_modified = result1.modified_count + result2.modified_count
+    return {"message": "Messages marked as read", "modified_count": total_modified}

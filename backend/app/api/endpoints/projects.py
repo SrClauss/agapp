@@ -238,11 +238,13 @@ async def read_nearby_combined(
     logging.info(f"read_nearby_combined called with latitude={latitude} longitude={longitude} radius_km={radius_km} subcategories={subcategories} current_user_id={(getattr(current_user,'id',None) if current_user else None)}")
     settings = None
     try:
-        # Load professional settings if user is authenticated and is a professional
+        # Load professional settings only when needed (for coords or subcategories)
         if current_user and "professional" in getattr(current_user, 'roles', []):
-            user = await db.users.find_one({"_id": str(current_user.id)})
-            professional_info = user.get("professional_info", {})
-            settings = professional_info.get("settings", {})
+            # Only load settings if we need to use them
+            if latitude is None or longitude is None or radius_km is None or subcategories is None:
+                user = await db.users.find_one({"_id": str(current_user.id)})
+                professional_info = user.get("professional_info", {})
+                settings = professional_info.get("settings", {})
         
         if latitude is None or longitude is None or radius_km is None:
             if current_user and settings:
