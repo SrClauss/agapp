@@ -22,7 +22,29 @@ export default function AllProjectsScreen() {
         const params = { limit: 100 } as any;
         const routeParams = (route as any).params;
         if (routeParams?.category) params.category = routeParams.category;
-        if (routeParams?.subcategories) params.subcategories = routeParams.subcategories;
+
+        // Prefer explicit route param subcategories, otherwise if the
+        // logged-in user is a professional and has saved subcategories,
+        // apply them so professionals only see relevant subcategories.
+        if (routeParams?.subcategories) {
+          params.subcategories = routeParams.subcategories;
+        } else {
+          const user = useAuthStore.getState().user;
+          const token = useAuthStore.getState().token;
+          if (user && user.roles && user.roles.includes('professional') && token) {
+            try {
+              // Load professional settings (cached by settings store)
+              const settings = await (await import('../stores/settingsStore')).default.getState().loadFromServer(token).then(() => (await import('../stores/settingsStore')).default.getState());
+              const subs = settings?.subcategories;
+              if (subs && Array.isArray(subs) && subs.length > 0) {
+                params.subcategories = subs;
+              }
+            } catch (e) {
+              console.warn('Could not load professional settings for subcategories', e);
+            }
+          }
+        }
+
         const res = await getProjects(params);
         if (mounted) setProjects(res);
       } catch (err) {
