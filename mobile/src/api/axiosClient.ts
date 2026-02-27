@@ -116,8 +116,37 @@ client.interceptors.response.use(
         const sentAuth = Boolean((originalRequest.headers as any)?.Authorization);
         if (sentAuth) {
           try {
-            // TODO: Implement token refresh logic here if you have a refresh endpoint
-            // For now, clear the token and let the user re-authenticate
+            // Silent refresh: try to get a new token using the current token
+            const currentToken = useAuthStore.getState().token;
+            if (currentToken) {
+              try {
+                // Use a direct fetch to avoid triggering this interceptor again (_retry guard)
+                const BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+                const refreshRes = await fetch(`${BASE}/auth/refresh`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${currentToken}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({}),
+                });
+                if (refreshRes.ok) {
+                  const refreshData = await refreshRes.json();
+                  const newAccessToken = refreshData?.access_token;
+                  if (newAccessToken) {
+                    await useAuthStore.getState().setToken(newAccessToken);
+                    // Retry original request with new token
+                    if (originalRequest.headers) {
+                      (originalRequest.headers as any).Authorization = `Bearer ${newAccessToken}`;
+                    }
+                    return client(originalRequest);
+                  }
+                }
+              } catch (refreshError) {
+                // Refresh failed - perform logout
+                console.log('[axios] Silent refresh failed, logging out');
+              }
+            }
             useAuthStore.getState().logout();
           } catch (refreshError) {
             console.error('Error handling 401:', refreshError);

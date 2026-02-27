@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, View, ImageBackground, Alert } from 'react-native';
-import { Text, Card, Avatar, Divider, IconButton, Button } from 'react-native-paper';
+import { ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, View, ImageBackground, Alert, Modal } from 'react-native';
+import { Text, Card, Avatar, Divider, IconButton, Button, RadioButton, TextInput } from 'react-native-paper';
 import { useRoute, useNavigation, NavigationProp } from '@react-navigation/native';
-import { getProject, Project, updateProject, deleteProject, getProjectContacts, ContactSummary } from '../api/projects';
+import { getProject, Project, updateProject, deleteProject, getProjectContacts, ContactSummary, closeProject } from '../api/projects';
+import { getFeaturedPricing, createFeaturedProjectPayment } from '../api/payments';
 import { getUserPublic } from '../api/users';
 import useAuthStore from '../stores/authStore';
 import { colors } from '../theme/colors';
 import ProjectContactsList from '../components/ProjectContactsList';
+import EvaluationModal from '../components/EvaluationModal';
+import { evaluateProject } from '../api/projects';
 
 // Tipagem da rota
 interface Params {
@@ -32,6 +35,19 @@ const ProjectClientDetailScreen: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(!project);
   const [contacts, setContacts] = useState<ContactSummary[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
+
+  // Close project modal state
+  const [closeModalVisible, setCloseModalVisible] = useState(false);
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
+  const [finalValue, setFinalValue] = useState('');
+  const [closingProject, setClosingProject] = useState(false);
+  const [evaluationVisible, setEvaluationVisible] = useState(false);
+
+  // Featured project modal state
+  const [featuredModalVisible, setFeaturedModalVisible] = useState(false);
+  const [featuredPricing, setFeaturedPricing] = useState<any[]>([]);
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+  const [featuring, setFeaturing] = useState(false);
 
   const { user } = useAuthStore();
 
@@ -199,6 +215,77 @@ const ProjectClientDetailScreen: React.FC = () => {
     }
   };
 
+  const handleOpenCloseModal = () => {
+    setSelectedProfessionalId(contacts.length > 0 ? contacts[0].professional_id : null);
+    setFinalValue('');
+    setCloseModalVisible(true);
+  };
+
+  const handleCloseProject = async () => {
+    if (!project) return;
+    setClosingProject(true);
+    try {
+      const finalValueNum = finalValue ? parseFloat(finalValue.replace(',', '.')) : undefined;
+      await closeProject(project._id, {
+        professional_id: selectedProfessionalId ?? undefined,
+        final_budget: finalValueNum,
+      });
+      setCloseModalVisible(false);
+      // Reload project
+      const updated = await getProject(project._id);
+      setProject(updated);
+      // Prompt for evaluation
+      setTimeout(() => setEvaluationVisible(true), 800);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.response?.data?.detail || 'Falha ao concluir projeto.');
+    } finally {
+      setClosingProject(false);
+    }
+  };
+
+  const handleSubmitEvaluation = async (rating: number, comment: string, wouldRecommend: boolean) => {
+    if (!project) return;
+    try {
+      await evaluateProject(project._id, { rating, comment, would_recommend: wouldRecommend });
+      setEvaluationVisible(false);
+      Alert.alert('Obrigado!', 'Sua avaliação foi enviada com sucesso.');
+    } catch (e: any) {
+      Alert.alert('Erro', e?.response?.data?.detail || 'Falha ao enviar avaliação.');
+    }
+  };
+
+  const handleOpenFeaturedModal = async () => {
+    try {
+      const pricing = await getFeaturedPricing();
+      setFeaturedPricing(pricing);
+      if (pricing.length > 0) setSelectedDuration(pricing[0].duration_days);
+    } catch (e) {
+      console.warn('[ProjectClientDetail] failed to load featured pricing', e);
+    }
+    setFeaturedModalVisible(true);
+  };
+
+  const handleFeatureProject = async () => {
+    if (!project || !selectedDuration) return;
+    setFeaturing(true);
+    try {
+      const result = await createFeaturedProjectPayment(project._id, selectedDuration, 'PIX');
+      setFeaturedModalVisible(false);
+      if (result.pix_payload) {
+        Alert.alert(
+          'QR Code PIX',
+          `Copie o código PIX:\n\n${result.pix_payload}\n\nSeu projeto será destacado após a confirmação do pagamento.`
+        );
+      } else {
+        Alert.alert('Sucesso', 'Destaque do projeto iniciado! Verifique o status do pagamento.');
+      }
+    } catch (e: any) {
+      Alert.alert('Erro', e?.response?.data?.detail || 'Falha ao destacar projeto.');
+    } finally {
+      setFeaturing(false);
+    }
+  };
+
   return (
     <View style={styles.safeArea}>
       <ImageBackground source={require('../../assets/background.jpg')} style={styles.headerBackground} imageStyle={{ borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
@@ -329,6 +416,26 @@ const ProjectClientDetailScreen: React.FC = () => {
         )}
 
         <View style={styles.actionsContainer}>
+          {project.status !== 'closed' && (
+            <Button
+              mode="contained"
+              buttonColor="#10B981"
+              textColor="#fff"
+              onPress={handleOpenCloseModal}
+              style={{ marginBottom: 8 }}
+              icon="check-circle"
+            >
+              Concluir Projeto
+            </Button>
+          )}
+          <Button
+            mode="outlined"
+            onPress={handleOpenFeaturedModal}
+            style={{ marginBottom: 8 }}
+            icon="star"
+          >
+            Destacar Projeto
+          </Button>
           <Button
             mode="contained"
             buttonColor={colors.error}
@@ -354,6 +461,129 @@ const ProjectClientDetailScreen: React.FC = () => {
             onPress={() => navigation.navigate('EditProject' as never, { project } as never)}
           >Editar</Button>
         </View>
+
+        {/* Close Project Modal */}
+        <Modal
+          visible={closeModalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setCloseModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Concluir Projeto</Text>
+              <Text style={styles.modalSubtitle}>
+                Selecione o profissional vencedor e informe o valor final (opcional).
+              </Text>
+              {contacts.length > 0 ? (
+                <RadioButton.Group
+                  value={selectedProfessionalId ?? ''}
+                  onValueChange={setSelectedProfessionalId}
+                >
+                  {contacts.map((c) => (
+                    <View key={c.id} style={styles.radioRow}>
+                      <RadioButton value={c.professional_id} color={colors.primary} />
+                      <Text style={styles.radioLabel}>{c.professional_name}</Text>
+                    </View>
+                  ))}
+                  <View style={styles.radioRow}>
+                    <RadioButton value="" color={colors.primary} />
+                    <Text style={styles.radioLabel}>Nenhum (sem selecionar profissional)</Text>
+                  </View>
+                </RadioButton.Group>
+              ) : (
+                <Text style={styles.noContactsText}>
+                  Nenhum profissional entrou em contato ainda.
+                </Text>
+              )}
+              <TextInput
+                label="Valor final (R$)"
+                value={finalValue}
+                onChangeText={setFinalValue}
+                keyboardType="numeric"
+                mode="outlined"
+                style={styles.finalValueInput}
+              />
+              <View style={styles.modalActions}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setCloseModalVisible(false)}
+                  disabled={closingProject}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleCloseProject}
+                  loading={closingProject}
+                  disabled={closingProject}
+                  buttonColor="#10B981"
+                >
+                  Confirmar
+                </Button>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Featured Project Modal */}
+        <Modal
+          visible={featuredModalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setFeaturedModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>⭐ Destacar Projeto</Text>
+              <Text style={styles.modalSubtitle}>
+                Projetos destacados aparecem no topo das buscas dos profissionais.
+              </Text>
+              {featuredPricing.map((option: any) => (
+                <View key={option.duration_days} style={styles.radioRow}>
+                  <RadioButton
+                    value={String(option.duration_days)}
+                    status={selectedDuration === option.duration_days ? 'checked' : 'unchecked'}
+                    onPress={() => setSelectedDuration(option.duration_days)}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.radioLabel}>
+                    {option.duration_days} dias —{' '}
+                    {(option.price ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </Text>
+                </View>
+              ))}
+              <View style={styles.modalActions}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setFeaturedModalVisible(false)}
+                  disabled={featuring}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleFeatureProject}
+                  loading={featuring}
+                  disabled={featuring || !selectedDuration}
+                  buttonColor="#F59E0B"
+                >
+                  Pagar via PIX
+                </Button>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Evaluation Modal after project close */}
+        {project && (
+          <EvaluationModal
+            visible={evaluationVisible}
+            onDismiss={() => setEvaluationVisible(false)}
+            onSubmit={handleSubmitEvaluation}
+            projectTitle={project.title}
+          />
+        )}
       </ScrollView>
     </View>
   );
@@ -524,6 +754,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   headerActionsRight: { flexDirection: 'row', alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalBox: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, width: '100%' },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 8 },
+  modalSubtitle: { fontSize: 13, color: '#6B7280', marginBottom: 16, lineHeight: 18 },
+  radioRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  radioLabel: { fontSize: 14, color: '#374151', flex: 1 },
+  noContactsText: { fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', marginBottom: 16 },
+  finalValueInput: { marginTop: 12, marginBottom: 16, backgroundColor: '#FFFFFF' },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 8 },
 });
 
 export default ProjectClientDetailScreen;

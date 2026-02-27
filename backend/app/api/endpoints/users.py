@@ -357,3 +357,95 @@ async def delete_user_admin(
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted successfully"}
+
+
+def _calculate_reputation(
+    total_evaluations: int,
+    average_rating: float,
+    total_contacts: int,
+    total_closed: int,
+) -> dict:
+    """Calcula o badge e nível de reputação do profissional.
+
+    Níveis:
+    - Iniciante: < 5 avaliações
+    - Bronze: 5+ avaliações, média >= 3.0
+    - Prata: 15+ avaliações, média >= 3.5, 5+ projetos fechados
+    - Ouro: 30+ avaliações, média >= 4.0, 10+ projetos fechados
+    - Diamante: 50+ avaliações, média >= 4.5, 20+ projetos fechados
+    """
+    if total_evaluations >= 50 and average_rating >= 4.5 and total_closed >= 20:
+        level = "diamond"
+        label = "Diamante"
+        color = "#60A5FA"
+        icon = "💎"
+    elif total_evaluations >= 30 and average_rating >= 4.0 and total_closed >= 10:
+        level = "gold"
+        label = "Ouro"
+        color = "#F59E0B"
+        icon = "🥇"
+    elif total_evaluations >= 15 and average_rating >= 3.5 and total_closed >= 5:
+        level = "silver"
+        label = "Prata"
+        color = "#9CA3AF"
+        icon = "🥈"
+    elif total_evaluations >= 5 and average_rating >= 3.0:
+        level = "bronze"
+        label = "Bronze"
+        color = "#B45309"
+        icon = "🥉"
+    else:
+        level = "newcomer"
+        label = "Iniciante"
+        color = "#6B7280"
+        icon = "🌱"
+
+    return {
+        "level": level,
+        "label": label,
+        "color": color,
+        "icon": icon,
+        "total_evaluations": total_evaluations,
+        "average_rating": average_rating,
+        "total_contacts": total_contacts,
+        "total_closed": total_closed,
+    }
+
+
+@router.get("/professionals/{user_id}/reputation")
+async def get_professional_reputation(
+    user_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    """Retorna o nível de reputação e badge de um profissional."""
+    user = await db.users.find_one({"_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    evaluations = user.get("evaluations", [])
+    total_evaluations = len(evaluations)
+    average_rating = user.get("average_rating", 0.0) or 0.0
+
+    total_contacts = await db.contacts.count_documents({"professional_id": user_id})
+    total_closed = await db.projects.count_documents({"closed_by": user_id, "status": "closed"})
+
+    return _calculate_reputation(total_evaluations, average_rating, total_contacts, total_closed)
+
+
+@router.get("/me/reputation")
+async def get_my_reputation(
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    """Retorna o nível de reputação e badge do profissional autenticado."""
+    user_id = str(current_user.id)
+    user = await db.users.find_one({"_id": user_id})
+
+    evaluations = user.get("evaluations", []) if user else []
+    total_evaluations = len(evaluations)
+    average_rating = float(getattr(current_user, "average_rating", 0) or 0)
+
+    total_contacts = await db.contacts.count_documents({"professional_id": user_id})
+    total_closed = await db.projects.count_documents({"closed_by": user_id, "status": "closed"})
+
+    return _calculate_reputation(total_evaluations, average_rating, total_contacts, total_closed)

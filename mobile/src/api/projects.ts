@@ -279,6 +279,22 @@ export async function evaluateProject(
 }
 
 /**
+ * Close a project, optionally selecting the winning professional and final value
+ */
+export async function closeProject(
+  projectId: string,
+  data: { professional_id?: string; final_budget?: number }
+): Promise<{ message: string }> {
+  const token = useAuthStore.getState().token;
+  const config = token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : undefined;
+
+  const response = await client.post(`/projects/${projectId}/close`, data, config);
+  return response.data;
+}
+
+/**
  * Contact summary for listing contacts in project details
  */
 export interface ContactSummary {

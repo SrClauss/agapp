@@ -14,6 +14,7 @@ from app.api.endpoints import professional_api
 from app.api.admin import router as admin_router
 from app.api.professional import router as professional_router
 from app.api.websockets.routes import router as websocket_router
+from app.core.logging_middleware import CriticalEndpointLoggingMiddleware
 
 # Tags metadata para organizar a documentação
 tags_metadata = [
@@ -153,6 +154,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+# Logging middleware para endpoints críticos
+app.add_middleware(CriticalEndpointLoggingMiddleware)
+
 # Configurar templates e static files
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -270,6 +274,10 @@ async def startup_event():
     await database.support_tickets.create_index("status")
     await database.support_tickets.create_index("category")
     await database.support_tickets.create_index("created_at")
+    await database.lead_events.create_index("project_id")
+    await database.lead_events.create_index("contact_id")
+    await database.lead_events.create_index("professional_id")
+    await database.lead_events.create_index("created_at")
     # A criação do admin é feita via script de inicialização do container (mongo-init)
     # Ensure system configuration singleton exists
     try:

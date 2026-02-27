@@ -91,6 +91,27 @@ async def send_contact_message(
                 {"$set": {"status": "in_conversation"}},
             )
 
+    # Track first_message_at in lead_events (best-effort)
+    try:
+        existing_event = await db.lead_events.find_one({"contact_id": contact_id})
+        if existing_event and not existing_event.get("first_message_at"):
+            first_msg_at = msg["created_at"]
+            contact_created_at = existing_event.get("contact_created_at")
+            minutes_to_first_message = None
+            if contact_created_at:
+                delta = (first_msg_at - contact_created_at).total_seconds() / 60
+                minutes_to_first_message = round(delta, 1)
+            await db.lead_events.update_one(
+                {"contact_id": contact_id},
+                {"$set": {
+                    "first_message_at": first_msg_at,
+                    "minutes_to_first_message": minutes_to_first_message,
+                    "updated_at": first_msg_at,
+                }},
+            )
+    except Exception as _lead_exc:
+        pass  # lead_events tracking is best-effort; errors logged at caller level
+
     # Send push notification to the OTHER participant
     recipient_id = client_id if user_id == professional_id else professional_id
     try:
