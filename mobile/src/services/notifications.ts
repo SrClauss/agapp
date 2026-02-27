@@ -1,14 +1,39 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 import { registerFcmToken } from '../api/auth';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import useChatStore from '../stores/chatStore';
+
+// Create Android notification channels required by FCM
+export async function setupAndroidNotificationChannels() {
+  if (Platform.OS !== 'android') return;
+
+  await Notifications.setNotificationChannelAsync('messages', {
+    name: 'Mensagens',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#3B82F6',
+    sound: 'default',
+    enableVibrate: true,
+    showBadge: true,
+  });
+
+  await Notifications.setNotificationChannelAsync('default', {
+    name: 'Notificações',
+    importance: Notifications.AndroidImportance.DEFAULT,
+    sound: 'default',
+  });
+}
 
 export async function registerForPushNotificationsAsync() {
   if (!Device.isDevice) {
     console.warn('Push notifications require a physical device');
     return null;
   }
+
+  // Setup Android notification channels before requesting permissions
+  await setupAndroidNotificationChannels();
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -87,4 +112,5 @@ export default {
   registerPushTokenOnServer,
   setupNotificationResponseListener,
   setupNotificationReceivedListener,
+  setupAndroidNotificationChannels,
 };

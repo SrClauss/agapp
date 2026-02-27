@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.api.endpoints import auth, users, projects, subscriptions, uploads, documents, admin_api, system_config_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search
+from app.api.endpoints import auth, users, projects, subscriptions, uploads, documents, admin_api, system_config_api, payments, webhooks, turnstile, categories, contract_templates, attendant_auth, support, ads, search, contacts
 from app.api.endpoints import professional_api
 from app.api.admin import router as admin_router
 from app.api.professional import router as professional_router
@@ -201,6 +201,7 @@ app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"
 app.include_router(ads.router, prefix="/ads", tags=["advertisements"])
 app.include_router(ads.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
 app.include_router(ads.mobile_router, prefix="/system-admin/api/public/ads")
+app.include_router(contacts.router, tags=["contacts"])
 
 # Expor rotas também sob o prefixo /api para compatibilidade com clientes e testes
 app.include_router(auth.router, prefix="/api/auth")
@@ -215,6 +216,7 @@ app.include_router(uploads.router, prefix="/api/uploads")
 app.include_router(documents.router, prefix="/api/documents")
 app.include_router(categories.router, prefix="/api/categories")
 app.include_router(contract_templates.router, prefix="/api/contract-templates")
+app.include_router(contacts.router, prefix="/api", tags=["contacts"])
 
 # Mount ad static files after including the ads router so the router's
 # dynamic endpoints are evaluated before the StaticFiles handler.
