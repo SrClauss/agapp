@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Animated } from 'react-native';
+import { Animated, ScrollView } from 'react-native';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { Card, Portal, Modal, Button, useTheme, IconButton, Divider, TextInput } from 'react-native-paper';
+import { Card, Portal, Modal, Button, useTheme, IconButton, Divider, TextInput, Chip } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import useSettingsStore from '../stores/settingsStore';
 import useAuthStore from '../stores/authStore';
@@ -22,6 +22,8 @@ export default function NearbySummary() {
   const loadFromServer = useSettingsStore((s) => s.loadFromServer);
   const saveToServer = useSettingsStore((s) => s.saveToServer);
   const setServiceRadiusKm = useSettingsStore((s) => s.setServiceRadiusKm);
+  const subcategories = useSettingsStore((s) => s.subcategories);
+  const setSubcategories = useSettingsStore((s) => s.setSubcategories);
   const token = useAuthStore((s) => s.token);
   const coords = useLocationStore((s) => s.coords);
 
@@ -110,6 +112,33 @@ export default function NearbySummary() {
 
     setVisible(false); // Fecha o modal apenas após salvar com sucesso
   }
+
+  /** Remove a specialty from the active filter and re-fetch projects */
+  async function removeSpecialty(sub: string) {
+    const updated = (subcategories || []).filter((s) => s !== sub);
+    setSubcategories(updated);
+    if (token) {
+      try {
+        await saveToServer(token);
+      } catch (err) {
+        console.warn('Erro ao salvar especialidades:', err);
+      }
+    }
+    // Re-fetch with updated subcategories (empty array = show all)
+    if (coords) {
+      await fetchProjectsNearby({
+        token: token ?? undefined,
+        latitude: coords[1],
+        longitude: coords[0],
+        subcategories: updated.length > 0 ? updated : undefined,
+      });
+    } else {
+      await fetchProjectsNearby({
+        token: token ?? undefined,
+        subcategories: updated.length > 0 ? updated : undefined,
+      });
+    }
+  }
   return (
 
     <Card style={styles.cardRoot} elevation={2}>
@@ -151,6 +180,42 @@ export default function NearbySummary() {
           <Text style={[styles.ctaText, styles.ctaSolidText]}>VISUALIZAR PROJETOS</Text>
           <DynamicIcon name='arrow-right' color='#fff' size={16} />
         </TouchableOpacity>
+
+        {/* Specialty filter section */}
+        <View style={styles.specialtySection}>
+          <View style={styles.specialtyHeader}>
+            <Text style={styles.specialtyLabel}>
+              {subcategories && subcategories.length > 0
+                ? `Filtrando por ${subcategories.length} especialidade${subcategories.length > 1 ? 's' : ''}`
+                : 'Sem filtro de especialidade (todos os projetos)'}
+            </Text>
+            <TouchableOpacity onPress={() => (navigation as any).navigate('EditProfessionalSettings')} style={styles.editLink}>
+              <Text style={styles.editLinkText}>Editar</Text>
+            </TouchableOpacity>
+          </View>
+
+          {subcategories && subcategories.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+              {subcategories.map((sub) => (
+                <Chip
+                  key={sub}
+                  onClose={() => removeSpecialty(sub)}
+                  style={styles.specialtyChip}
+                  textStyle={styles.specialtyChipText}
+                  compact
+                >
+                  {sub}
+                </Chip>
+              ))}
+            </ScrollView>
+          ) : (
+            <TouchableOpacity onPress={() => (navigation as any).navigate('EditProfessionalSettings')}>
+              <Text style={styles.addSpecialtiesHint}>
+                + Adicionar especialidades para filtrar projetos
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
       </Card.Content>
 
@@ -297,5 +362,40 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginLeft: 8,
+  },
+  specialtySection: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  specialtyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  specialtyLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  editLink: { paddingLeft: 8 },
+  editLinkText: { fontSize: 12, color: colors.primary, fontWeight: '700' },
+  chipsScroll: { flexDirection: 'row' },
+  specialtyChip: {
+    marginRight: 6,
+    backgroundColor: colors.primary + '12',
+    borderColor: colors.primary + '50',
+    borderWidth: 1,
+  },
+  specialtyChipText: { fontSize: 11, color: colors.primary },
+  addSpecialtiesHint: {
+    fontSize: 12,
+    color: colors.primary,
+    fontStyle: 'italic',
   },
 });
