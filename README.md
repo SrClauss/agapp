@@ -85,6 +85,7 @@ agapp/
 │   │   │   │   ├── auth.py         # Autenticação
 │   │   │   │   ├── users.py        # Usuários e perfis
 │   │   │   │   ├── projects.py     # Projetos
+│   │   │   │   ├── contacts.py     # Contatos, chat e push notifications
 │   │   │   │   ├── categories.py   # Categorias
 │   │   │   │   ├── search.py       # Busca inteligente
 │   │   │   │   ├── payments.py     # Pagamentos (Asaas)
@@ -305,12 +306,21 @@ Precificação inteligente baseada na **idade do projeto** e no **histórico de 
 - Status do contato: `pending` → `in_conversation` → `accepted` / `rejected` / `completed`
 - Mudança automática para `in_conversation` ao enviar a primeira mensagem
 
-### 5. Chat em Tempo Real
+### 5. Chat em Tempo Real + Push Notifications Android
 
 - **WebSocket** (`/ws/{user_id}?token=<JWT>`) para mensagens instantâneas
-- **REST fallback** — `GET/POST /contacts/{contact_id}/messages`
-- Marcar mensagens como lidas (`POST /contacts/{contact_id}/messages/mark-read`)
-- Push notifications bidirecionais (cliente ↔ profissional)
+- **REST API** completa para contatos e chat:
+  - `GET /contacts/history` — histórico de contatos do usuário
+  - `GET /contacts/{contact_id}` — detalhe de um contato com mensagens
+  - `POST /contacts/{contact_id}/messages` — enviar mensagem via REST (fallback ao WebSocket)
+  - `POST /contacts/{contact_id}/messages/mark-read` — marcar mensagens como lidas
+- **Push notifications bidirecionais** (cliente ↔ profissional) via Firebase Cloud Messaging (FCM):
+  - Disparo automático ao outro participante quando nova mensagem é recebida via WebSocket
+  - Disparo automático ao destinatário quando mensagem é enviada via REST
+  - Configuração de canal `messages` Android (alta prioridade, vibração e som)
+  - Usuário offline recebe notificação; ao tocar, abre o chat correspondente
+- Marcação automática de mensagens como lidas ao abrir o chat
+- Mudança de status `pending` → `in_conversation` na primeira mensagem
 - Chat global acessível via `ChatModal` (componente sobreposto em qualquer tela)
 
 ### 6. Avaliações e Ranking
@@ -436,11 +446,13 @@ Precificação inteligente baseada na **idade do projeto** e no **histórico de 
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/contacts/{project_id}` | Criar contato / enviar proposta |
-| GET | `/contacts/{project_id}/cost-preview` | Preview de custo em créditos |
-| GET | `/contacts/{contact_id}/messages` | Listar mensagens |
-| POST | `/contacts/{contact_id}/messages` | Enviar mensagem (REST) |
-| POST | `/contacts/{contact_id}/messages/mark-read` | Marcar como lidas |
+| POST | `/projects/{project_id}/contacts` | Criar contato / enviar proposta |
+| GET | `/projects/{project_id}/contact-cost-preview` | Preview de custo em créditos |
+| GET | `/projects/{project_id}/contacts` | Listar contatos do projeto (cliente) |
+| GET | `/contacts/history` | Histórico de contatos do usuário autenticado |
+| GET | `/contacts/{contact_id}` | Detalhe de um contato com mensagens |
+| POST | `/contacts/{contact_id}/messages` | Enviar mensagem (REST — fallback ao WebSocket) |
+| POST | `/contacts/{contact_id}/messages/mark-read` | Marcar mensagens como lidas |
 
 ### Pagamentos (`/api/payments`)
 
@@ -480,7 +492,7 @@ Tipos de mensagem suportados:
 | Tipo | Direção | Descrição |
 |------|---------|-----------|
 | `subscribe_projects` | cliente → servidor | Inscrever em atualizações de projetos |
-| `new_message` | bidirecional | Enviar/receber mensagem de chat |
+| `new_message` | bidirecional | Enviar/receber mensagem de chat + push FCM ao destinatário |
 | `contact_update` | servidor → cliente | Atualização de status de contato |
 
 ---
@@ -774,7 +786,6 @@ eas build --platform ios --profile production
 
 ### 🚧 Em Desenvolvimento
 
-- [ ] Mobile: UI de chat completa (lista de mensagens + timestamps)
 - [ ] Mobile: Tela de conclusão de projeto (seleção do profissional vencedor + valor final)
 - [ ] Mobile: Modal de avaliação integrado ao fechamento
 - [ ] Mobile: Tela "Meus Créditos" (saldo + histórico de transações)
@@ -790,6 +801,12 @@ eas build --platform ios --profile production
 - [ ] Backend: Middleware de log para endpoints críticos (auth, pagamentos, contatos)
 - [ ] Backend: Exportação de logs para S3
 - [ ] Backend: Silent refresh / logout automático quando token expirar
+
+### ✅ Recentemente Implementado
+
+- [x] **Push notifications Android para chat** — notificação FCM ao destinatário ao enviar mensagem via WebSocket ou REST
+- [x] **Canal Android `messages`** — alta prioridade, vibração e som configurados via `expo-notifications`
+- [x] **REST API completa de contatos** — `GET /contacts/history`, `GET /contacts/{id}`, `POST /contacts/{id}/messages`, `POST /contacts/{id}/messages/mark-read`
 
 ---
 

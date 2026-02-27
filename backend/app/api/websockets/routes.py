@@ -105,6 +105,31 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                 for rid in recipients:
                     await manager.send_personal_message(payload, rid)
 
+                # Enviar push notification para o outro participante (caso esteja offline)
+                sender_id = str(current_user.id)
+                professional_id_str = str(contact.get("professional_id"))
+                client_id_str = str(contact.get("client_id"))
+                other_id = client_id_str if sender_id == professional_id_str else professional_id_str
+                try:
+                    other_user = await db.users.find_one({"_id": other_id})
+                    if other_user and other_user.get("fcm_tokens"):
+                        from app.core.firebase import send_multicast_notification
+                        fcm_tokens = [t["token"] for t in other_user["fcm_tokens"] if "token" in t]
+                        if fcm_tokens:
+                            sender_name = current_user.full_name or "Usuário"
+                            await send_multicast_notification(
+                                fcm_tokens=fcm_tokens,
+                                title="Nova Mensagem",
+                                body=f"{sender_name}: {content[:100]}",
+                                data={
+                                    "type": "new_message",
+                                    "contact_id": contact_id,
+                                    "sender_id": sender_id,
+                                },
+                            )
+                except Exception:
+                    pass  # Push notifications são best-effort
+
             elif message.get("type") == "contact_update":
                 contact_id = message.get("contact_id")
                 status = message.get("status")

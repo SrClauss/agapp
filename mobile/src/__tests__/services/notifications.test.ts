@@ -3,11 +3,13 @@
  */
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 import {
   registerForPushNotificationsAsync,
   registerPushTokenOnServer,
   setupNotificationResponseListener,
   setupNotificationReceivedListener,
+  setupAndroidNotificationChannels,
 } from '../../services/notifications';
 import * as authApi from '../../api/auth';
 import useAuthStore from '../../stores/authStore';
@@ -16,6 +18,9 @@ import useChatStore from '../../stores/chatStore';
 // Mock dependencies
 jest.mock('expo-notifications');
 jest.mock('expo-device');
+jest.mock('react-native', () => ({
+  Platform: { OS: 'android' },
+}));
 jest.mock('../../api/auth');
 jest.mock('../../stores/authStore');
 jest.mock('../../stores/chatStore');
@@ -301,6 +306,28 @@ describe('Notifications Service', () => {
   describe('Notification handler configuration', () => {
     it('should configure notification handler', () => {
       expect(mockNotifications.setNotificationHandler).toHaveBeenCalled();
+    });
+  });
+
+  describe('setupAndroidNotificationChannels', () => {
+    it('should create messages and default channels on Android', async () => {
+      mockNotifications.setNotificationChannelAsync.mockResolvedValue(null as any);
+
+      await setupAndroidNotificationChannels();
+
+      expect(mockNotifications.setNotificationChannelAsync).toHaveBeenCalledWith(
+        'messages',
+        expect.objectContaining({
+          name: 'Mensagens',
+          importance: Notifications.AndroidImportance.HIGH,
+        })
+      );
+      expect(mockNotifications.setNotificationChannelAsync).toHaveBeenCalledWith(
+        'default',
+        expect.objectContaining({
+          name: 'Notificações',
+        })
+      );
     });
   });
 });
