@@ -807,6 +807,11 @@ eas build --platform ios --profile production
 - [x] **Push notifications Android para chat** — notificação FCM ao destinatário ao enviar mensagem via WebSocket ou REST
 - [x] **Canal Android `messages`** — alta prioridade, vibração e som configurados via `expo-notifications`
 - [x] **REST API completa de contatos** — `GET /contacts/history`, `GET /contacts/{id}`, `POST /contacts/{id}/messages`, `POST /contacts/{id}/messages/mark-read`
+- [x] **Lista de contatos por projeto (backend)** — `GET /projects/{project_id}/contacts` permite ao cliente ver todos os profissionais que contataram seu projeto, com preview da última mensagem, badge de não lidas e valor proposto
+- [x] **Componente ProjectContactsList (mobile)** — exibe contatos com avatar, badge de mensagens não lidas, preview de mensagem e navegação para o chat
+- [x] **Marcação automática de mensagens como lidas** — ao abrir o chat, `POST /contacts/{contact_id}/messages/mark-read` é chamado automaticamente em background
+- [x] **Tela Minhas Avaliações (mobile)** — `ProfileEvaluationsScreen` exibe avaliações recebidas pelo profissional com estrelas, comentário e data
+- [x] **API de avaliações do usuário (backend)** — `GET /users/me/evaluations` retorna avaliações recebidas pelo usuário autenticado, ordenadas por data
 
 ---
 
