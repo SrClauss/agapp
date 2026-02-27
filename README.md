@@ -1,25 +1,76 @@
-# AgApp - Marketplace de Serviços
+# AgApp — Marketplace de Serviços
 
-## 📋 Visão Geral
+**Agiliza Platform** conecta clientes com profissionais de serviços. Clientes publicam projetos e profissionais consomem créditos para obter leads e entrar em contato.
 
-AgApp é um marketplace que conecta clientes com profissionais de serviços. Clientes publicam projetos e profissionais usam créditos para obter leads e entrar em contato.
+---
+
+## 📋 Índice
+
+1. [Visão Geral](#-visão-geral)
+2. [Arquitetura](#-arquitetura)
+3. [Estrutura do Projeto](#-estrutura-do-projeto)
+4. [Fluxo da Aplicação](#-fluxo-da-aplicação)
+5. [Funcionalidades Implementadas](#-funcionalidades-implementadas)
+6. [API — Endpoints Principais](#-api--endpoints-principais)
+7. [Telas do App Mobile](#-telas-do-app-mobile)
+8. [Componentes Reutilizáveis](#-componentes-reutilizáveis)
+9. [Testes Automatizados](#-testes-automatizados)
+10. [Configuração](#-configuração)
+11. [Background Jobs](#-background-jobs)
+12. [Segurança](#-segurança)
+13. [Monitoramento e Logs](#-monitoramento-e-logs)
+14. [Deploy](#-deploy)
+15. [Documentação Adicional](#-documentação-adicional)
+16. [Roadmap](#-roadmap)
+
+---
+
+## 🌐 Visão Geral
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Backend API | FastAPI (Python 3.12) |
+| Banco de Dados | MongoDB + Motor (driver assíncrono) |
+| Autenticação | JWT + Google Sign-In + Cloudflare Turnstile |
+| Push Notifications | Firebase Cloud Messaging (FCM) |
+| Pagamentos | Asaas (PIX e Cartão de Crédito) |
+| Chat em tempo real | WebSockets (FastAPI) |
+| App Mobile | React Native + Expo |
+| Estado Global | Zustand |
+| Navegação | React Navigation |
+| UI Mobile | React Native Paper |
+| Mapas | React Native Maps |
+
+**URL de Produção:** https://agilizapro.cloud  
+**Documentação Interativa da API:** https://agilizapro.cloud/docs
+
+---
 
 ## 🏗️ Arquitetura
 
-### Backend
-- **Framework:** FastAPI (Python 3.12)
-- **Banco de Dados:** MongoDB com Motor (driver assíncrono)
-- **Autenticação:** JWT + Google Sign-In + Cloudflare Turnstile
-- **Push Notifications:** Firebase Cloud Messaging
-- **Pagamentos:** Asaas (PIX e Cartão)
-- **WebSockets:** Para chat em tempo real
+```
+┌──────────────────────────────┐
+│       App Mobile (Expo)      │
+│  React Native + Zustand      │
+└──────────────┬───────────────┘
+               │ HTTPS / WebSocket
+┌──────────────▼───────────────┐
+│     Backend (FastAPI)        │
+│  Python 3.12 + Motor         │
+├──────────────────────────────┤
+│  • REST API (/api/...)       │
+│  • WebSocket (/ws/{user_id}) │
+│  • Admin HTML (/system-admin)│
+│  • Professional Panel        │
+└──────────────┬───────────────┘
+               │
+       ┌───────┼──────────┐
+       ▼       ▼          ▼
+   MongoDB  Asaas      Firebase
+  (dados)  (pagtos)    (push)
+```
 
-### Mobile
-- **Framework:** React Native com Expo
-- **Estado:** Zustand
-- **Navegação:** React Navigation
-- **UI:** React Native Paper
-- **Mapas:** React Native Maps
+---
 
 ## 📂 Estrutura do Projeto
 
@@ -28,143 +79,465 @@ agapp/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── endpoints/     # Endpoints REST
-│   │   │   └── websockets/    # WebSocket routes
-│   │   ├── core/              # Config, segurança, database
-│   │   ├── crud/              # Operações de banco de dados
-│   │   ├── jobs/              # Background jobs (cron)
-│   │   ├── models/            # Modelos Pydantic
-│   │   ├── schemas/           # Schemas de validação
-│   │   ├── services/          # Serviços externos (Asaas, geocoding)
-│   │   └── utils/             # Utilitários
-│   ├── tests/                 # Testes automatizados
-│   ├── requirements.txt       # Dependências Python
-│   └── pytest.ini            # Configuração de testes
+│   │   │   ├── admin.py            # Painel admin HTML
+│   │   │   ├── professional.py     # Painel do profissional
+│   │   │   ├── endpoints/          # Endpoints REST
+│   │   │   │   ├── auth.py         # Autenticação
+│   │   │   │   ├── users.py        # Usuários e perfis
+│   │   │   │   ├── projects.py     # Projetos
+│   │   │   │   ├── categories.py   # Categorias
+│   │   │   │   ├── search.py       # Busca inteligente
+│   │   │   │   ├── payments.py     # Pagamentos (Asaas)
+│   │   │   │   ├── webhooks.py     # Webhooks Asaas
+│   │   │   │   ├── support.py      # Tickets de suporte (SAC)
+│   │   │   │   ├── ads.py          # Sistema de anúncios
+│   │   │   │   ├── uploads.py      # Upload de mídia
+│   │   │   │   ├── documents.py    # Documentos PDF
+│   │   │   │   ├── contract_templates.py
+│   │   │   │   ├── subscriptions.py
+│   │   │   │   ├── admin_api.py    # API administrativa JSON
+│   │   │   │   ├── professional_api.py
+│   │   │   │   ├── attendant_auth.py
+│   │   │   │   ├── turnstile.py
+│   │   │   │   └── system_config_api.py
+│   │   │   └── websockets/
+│   │   │       ├── manager.py      # Gerenciador de conexões WS
+│   │   │       └── routes.py       # Rotas WebSocket
+│   │   ├── core/                   # Config, segurança, database
+│   │   ├── crud/                   # Operações de banco de dados
+│   │   ├── jobs/                   # Background jobs (cron)
+│   │   │   └── expire_featured_projects.py
+│   │   ├── models/                 # Modelos Pydantic
+│   │   ├── schemas/                # Schemas de validação/resposta
+│   │   ├── services/               # Integrações externas
+│   │   │   ├── asaas.py            # Asaas (pagamentos)
+│   │   │   └── geocoding.py        # Google Maps geocoding
+│   │   └── utils/
+│   │       ├── credit_pricing.py   # Lógica de créditos dinâmicos
+│   │       ├── validators.py
+│   │       └── timezone.py
+│   ├── ads/                        # Conteúdo HTML/CSS/JS dos anúncios
+│   ├── static/                     # Assets estáticos
+│   ├── templates/                  # Templates Jinja2
+│   ├── logs/                       # Logs de anúncios
+│   ├── tests/                      # Testes automatizados
+│   ├── requirements.txt
+│   └── pytest.ini
 ├── mobile/
 │   ├── src/
-│   │   ├── api/              # Cliente HTTP
-│   │   ├── components/       # Componentes reutilizáveis
-│   │   ├── screens/          # Telas da aplicação
-│   │   ├── stores/           # Estado Zustand
-│   │   └── utils/            # Utilitários
-│   └── package.json          # Dependências Node
-└── docs/                     # Documentação
+│   │   ├── api/                    # Cliente HTTP (axios)
+│   │   ├── components/             # Componentes reutilizáveis
+│   │   ├── screens/                # Telas da aplicação
+│   │   ├── stores/                 # Estado Zustand
+│   │   ├── services/               # Notificações push
+│   │   ├── hooks/                  # Custom hooks
+│   │   ├── theme/                  # Cores e tema Paper
+│   │   ├── types/                  # Types TypeScript
+│   │   └── utils/                  # Utilitários
+│   ├── App.tsx                     # Entrada + navegação
+│   └── package.json
+└── docs/                           # Documentação técnica
     ├── implementation-plan.md
     ├── dynamic-credit-pricing.md
     ├── ads-routes.md
-    └── background-jobs.md
+    ├── background-jobs.md
+    ├── push-notifications-webhooks.md
+    ├── mobile-testing.md
+    └── API_REFERENCE.md
 ```
 
-## 🚀 Features Principais
+---
 
-### ✅ Implementadas
+## 🔄 Fluxo da Aplicação
 
-#### 1. Autenticação & Perfis
-- Login com e-mail/senha + Cloudflare Turnstile
-- Login com Google (GSI nativo)
-- Seleção de papel (cliente/profissional)
-- Tela de anúncios antes da home
+### Fluxo do Cliente
 
-#### 2. Cadastro de Clientes & Projetos
-- Fluxo de signup/complete-profile com CPF/telefone
-- Criação de projeto com:
-  - Título (limite 80 chars)
-  - Descrição
-  - Categoria e subcategorias
-  - Orçamento (min/max)
-  - Localização (mapa + geocoding automático)
-  - Opção de execução remota
+```
+Cadastro / Login
+      │
+      ▼
+Completar Perfil (CPF, telefone, endereço)
+      │
+      ▼
+Seleção de Papel (cliente / profissional)
+      │
+      ▼
+Tela de Anúncio (AdScreen — publi_screen_client)
+      │
+      ▼
+Home do Cliente (WelcomeCustomerScreen)
+  ├── Banner de anúncio (banner_client_home)
+  ├── Busca de categorias/subcategorias (com sugestões em tempo real)
+  ├── Grade de categorias (CategoryGrid)
+  └── Carrossel "Meus Projetos" (MyProjectsCarousel)
+        │
+        ▼
+  Criar Projeto (CreateProjectScreen)
+    • Título (máx 80 caracteres)
+    • Descrição
+    • Categoria + Subcategoria
+    • Orçamento mínimo / máximo
+    • Localização (mapa + geocoding automático)
+    • Opção de execução remota
+        │
+        ▼
+  Detalhe do Projeto — visão cliente (ProjectClientDetailScreen)
+    • Editar projeto (EditProjectScreen)
+    • Lista de profissionais que contataram (ProjectContactsList)
+    • Marcar como concluído + Avaliar profissional (EvaluationModal)
+        │
+        ▼
+  Chat com Profissional (ContactDetailScreen)
+    • Mensagens em tempo real (WebSocket / REST)
+    • Marcação automática de mensagens como lidas
+```
 
-#### 3. Descoberta de Projetos (Profissionais)
-- Listagem de projetos próximos (`/projects/nearby/combined`)
-- Filtro para remotos vs presenciais
-- **Ordenação:**
-  - Por data de criação
-  - Por destaque (featured first)
-  - Por urgência (deadline proximity)
+### Fluxo do Profissional
+
+```
+Login / Cadastro
+      │
+      ▼
+Completar Perfil + Seleção de Papel
+      │
+      ▼
+Tela de Anúncio (AdScreen — publi_screen_professional)
+      │
+      ▼
+Home do Profissional (WelcomeProfessionalScreen)
+  ├── Banner de anúncio (banner_professional_home)
+  ├── Card de estatísticas (ProfessionalStatsCard)
+  ├── Resumo de projetos próximos (NearbySummary)
+  └── Avatar com localização (LocationAvatar)
+        │
+        ├── Lista de Projetos Próximos (ProjectsListScreen)
+        │     • Filtro: todos / apenas presenciais
+        │     • Ordenação: data, destaque, urgência
+        │     • Badges: 🆕 novo · ⭐ destacado · ⏰ expirando
+        │
+        ├── Detalhe do Projeto — visão profissional (ProjectProfessionalsDetailScreen)
+        │     • Preview de custo em créditos antes de contatar
+        │     • Modal de confirmação (ConfirmContactModal)
+        │     • Proposta com mensagem e valor estimado
+        │
+        ├── Projetos Contatados (ContactedProjectsScreen)
+        │
+        ├── Chat com Cliente (ContactDetailScreen)
+        │
+        ├── Minhas Avaliações (ProfileEvaluationsScreen)
+        │
+        └── Editar Categorias de Atuação (EditProfessionalSettingsScreen)
+```
+
+### Fluxo de Autenticação
+
+```
+LoginScreen
+  ├── E-mail + Senha (com Cloudflare Turnstile anti-bot)
+  └── Google Sign-In (GSI nativo)
+        │
+        ▼
+  Verificar perfil completo
+  ├── Incompleto → CompleteProfileScreen (CPF, telefone, endereço)
+  └── Completo   → ProfileSelectionScreen (escolher papel ativo)
+        │
+        ▼
+  AdScreen → Home (cliente ou profissional)
+```
+
+---
+
+## ✅ Funcionalidades Implementadas
+
+### 1. Autenticação & Perfis
+
+- Login com e-mail/senha protegido por **Cloudflare Turnstile**
+- Login com **Google** (GSI — Google Sign-In nativo)
+- **Bypass automático** do Turnstile para re-login com token válido
+- Seleção de papel ativo (cliente / profissional) por sessão
+- Fluxo de **complete-profile** com CPF, telefone e endereço geocodificado
+- Bloqueio de alteração de CPF após cadastro
+- Refresh token e logout
+
+### 2. Projetos
+
+- Criação com título (máx 80 chars), descrição, categoria/subcategoria, orçamento, localização e flag de execução remota
+- Geocoding automático via Google Maps ao digitar endereço
+- Seleção de localização por mapa interativo (MapPinPicker)
+- Edição de projeto
+- Listagem com filtros: categoria, subcategorias, status, orçamento, geolocalização
+- **Ordenação:** por data de criação, por destaque (`is_featured`), por urgência (`deadline`)
 - **Badges dinâmicos:**
-  - 🆕 "new" - Projeto < 24h
-  - ⭐ "featured" - Projeto destacado ativo
-  - ⏰ "expiring_soon" - Destaque expira em < 24h
+  - 🆕 `new` — projeto criado há < 24h
+  - ⭐ `featured` — destaque ativo e dentro da validade
+  - ⏰ `expiring_soon` — destaque expira em < 24h
+- Busca de projetos próximos (`/projects/nearby/combined`) com fallback para configurações salvas do profissional
+- Filtro presencial vs remoto (`remote_execution`)
+- Fechamento de projeto pelo cliente (`/projects/{id}/close`)
+- Avaliação do profissional pelo cliente — 1 a 5 estrelas + comentário (`/projects/{id}/evaluate`)
+- Atualização automática do `average_rating` do profissional (média truncada com exclusão de 10% dos outliers se ≥ 20 avaliações)
 
-#### 4. Sistema de Créditos Dinâmico ⭐
-**Precificação inteligente baseada em idade do projeto:**
-- Projetos novos (0-24h): **3 créditos**
-- Projetos recentes (24-36h): **2 créditos**
-- Projetos antigos (36h+): **1 crédito**
-- Projetos com contatos existentes:
-  - 0-24h após primeiro contato: **2 créditos**
-  - 24h+ após primeiro contato: **1 crédito**
+### 3. Sistema de Créditos Dinâmico ⭐
 
-**Features técnicas:**
-- ✅ Locking atômico (MongoDB `find_one_and_update`)
-- ✅ Endpoint de preview de custo
-- ✅ Registro individual de transações
-- ✅ 9 testes unitários cobrindo todos os cenários
+Precificação inteligente baseada na **idade do projeto** e no **histórico de contatos**:
+
+| Situação | Créditos | Código de razão |
+|----------|----------|-----------------|
+| Projeto novo — 0 a 24h sem contatos | **3** | `new_project_0_24h` |
+| Projeto recente — 24 a 36h sem contatos | **2** | `new_project_24_36h` |
+| Projeto antigo — 36h+ sem contatos | **1** | `new_project_36h_plus` |
+| Com contatos — até 24h após 1º contato | **2** | `contacted_project_0_24h_after_first` |
+| Com contatos — 24h+ após 1º contato | **1** | `contacted_project_24h_plus_after_first` |
+
+**Mecanismos técnicos:**
+- Locking atômico via MongoDB `find_one_and_update` (evita race conditions)
+- Endpoint de preview de custo antes de confirmar (`GET /contacts/{project_id}/cost-preview`)
+- Registro de cada transação na coleção `credit_transactions` para auditoria completa
 
 📖 [Documentação completa](docs/dynamic-credit-pricing.md)
 
-#### 5. Chat em Tempo Real
-- WebSocket `/ws/{user_id}`
-- Endpoint REST alternativo `/contacts/{id}/messages`
-- **Auto-detecção de primeira mensagem:**
-  - Status muda para "in_conversation" automaticamente
-- Push notifications bidirecionais
+### 4. Contatos (Leads)
 
-#### 6. Conclusão e Avaliação
-- Endpoint `/projects/{id}/close` - Cliente marca como concluído
-- Endpoint `/projects/{id}/evaluate` - Cliente avalia profissional (1-5 estrelas)
-- **Atualização automática de ranking:**
-  - Média truncada (exclui 10% outliers se ≥20 avaliações)
-  - Armazenado em `user.average_rating`
+- Profissional envia proposta (mensagem + valor estimado) consumindo créditos
+- Validação de papel e saldo antes da criação
+- Notificação push ao cliente ao receber novo lead
+- Lista de contatos do projeto para o cliente (`GET /projects/{project_id}/contacts`)
+- Status do contato: `pending` → `in_conversation` → `accepted` / `rejected` / `completed`
+- Mudança automática para `in_conversation` ao enviar a primeira mensagem
 
-#### 7. Projetos Destacados
-- APIs `/api/payments/featured-project` (Asaas)
-- Opções: 7, 15 ou 30 dias
-- PIX ou Cartão de Crédito
-- **Background job automático:**
-  - Remove `is_featured` após `featured_until`
-  - Executar via cron a cada hora
+### 5. Chat em Tempo Real
+
+- **WebSocket** (`/ws/{user_id}?token=<JWT>`) para mensagens instantâneas
+- **REST fallback** — `GET/POST /contacts/{contact_id}/messages`
+- Marcar mensagens como lidas (`POST /contacts/{contact_id}/messages/mark-read`)
+- Push notifications bidirecionais (cliente ↔ profissional)
+- Chat global acessível via `ChatModal` (componente sobreposto em qualquer tela)
+
+### 6. Avaliações e Ranking
+
+- Profissional visualiza suas avaliações na tela **Minhas Avaliações** (estrelas, comentário, data)
+- `GET /users/me/evaluations` retorna avaliações do usuário autenticado
+- Ranking recalculado automaticamente a cada avaliação
+
+### 7. Projetos Destacados (Pagos)
+
+- Destaque via Asaas: opções de 7, 15 ou 30 dias
+- Pagamento por **PIX** ou **Cartão de Crédito**
+- Campos no projeto: `is_featured`, `featured_until`, `featured_purchased_at`, `featured_payment_id`
+- Background job automático remove o destaque após expirar
 
 📖 [Documentação de background jobs](docs/background-jobs.md)
 
-#### 8. Sistema de Anúncios
-- 4 slots fixos:
-  - `publi_screen_client` - Tela cheia para clientes
-  - `publi_screen_professional` - Tela cheia para profissionais
-  - `banner_client_home` - Banner home cliente
-  - `banner_professional_home` - Banner home profissional
-- Upload HTML/CSS/JS/imagens
-- Cache local no mobile
+### 8. Créditos, Pacotes e Assinaturas
+
+- Listagem de pacotes de créditos disponíveis (`GET /api/payments/credit-packages`)
+- Listagem de planos de assinatura (`GET /api/payments/plans`)
+- Compra via Asaas (PIX/cartão) com QR Code PIX retornado
+- Webhooks Asaas para confirmação automática de pagamentos
+- Histórico de transações de crédito por usuário
+
+### 9. Sistema de Anúncios
+
+**4 slots fixos:**
+
+| Slot | Onde aparece |
+|------|-------------|
+| `publi_screen_client` | Tela cheia — home do cliente |
+| `publi_screen_professional` | Tela cheia — home do profissional |
+| `banner_client_home` | Banner — home do cliente |
+| `banner_professional_home` | Banner — home do profissional |
+
+- Upload de conteúdo HTML/CSS/JS ou imagem via painel admin
+- Validação de proporção para banners (mín. 2,5:1; ideal 3:1)
+- Cache local no mobile para exibição offline
 - **Tracking real:**
   - Impressões: `POST /system-admin/api/public/ads/impression/{ad_type}`
-  - Clicks: `POST /system-admin/api/public/ads/click/{ad_type}`
+  - Cliques: `POST /system-admin/api/public/ads/click/{ad_type}`
   - Logs em `logs/ad_impressions.log` e `logs/ad_clicks.log`
 
 📖 [Documentação de rotas de ads](docs/ads-routes.md)
 
-#### 9. Suporte via Tickets
-- Backend `support.py` + WebSocket
-- Tickets com chat em tempo real
+### 10. Busca Inteligente
+
+- Sugestões em tempo real enquanto o usuário digita (`GET /search/suggestions?q=...`)
+- Busca por nome de categoria, nome de subcategoria e tags
+- Ordenação por relevância: match exato > match parcial > tag
+- Endpoint `/categories/search` para busca completa
+
+### 11. Suporte via Tickets (SAC)
+
+- Criação de ticket pelo cliente/profissional (`POST /support/tickets`)
+- Chat por ticket em tempo real (WebSocket)
+- Atribuição de atendentes a tickets
+- Atualização de status (aberto, em andamento, resolvido)
 - Rating pós-atendimento
 
-### 🚧 Em Desenvolvimento
+### 12. Upload e Documentos
 
-- [ ] Mobile: UI de chat completa
-- [ ] Mobile: Tela de conclusão de projeto
-- [ ] Mobile: Tela de avaliação
-- [ ] Mobile: Tela "Meus Créditos" (saldo + histórico)
-- [ ] Mobile: Loja de pacotes de créditos
-- [ ] Mobile: Gerenciamento de assinaturas
-- [ ] Mobile: Tela de suporte
-- [ ] Dashboard admin para analytics
-- [ ] Relatórios de ads (impressões/clicks)
-- [ ] Lead events tracking (timestamps de ações)
-- [ ] Reputation badges/níveis
-- [ ] Middleware de logging para endpoints críticos
-- [ ] Export de logs (S3)
+- Upload de imagens, vídeos e áudio (`/uploads`)
+- Upload e validação de documentos PDF com assinaturas digitais (`/documents`)
+- Templates de contratos (`/contract-templates`)
 
-## 🧪 Testes
+### 13. Painel Administrativo
+
+- Interface HTML completa em `/system-admin`
+- API JSON administrativa (`/api/admin`) para gerenciar usuários, projetos, contatos, assinaturas
+- Configuração do sistema via `/api/admin/system-config`
+- Gerenciamento de anúncios via `/ads-admin`
+
+### 14. Painel do Profissional
+
+- Dashboard com estatísticas em `/professional`
+- Mapa de projetos com geolocalização
+- Gerenciamento de perfil e configurações de atuação
+
+---
+
+## 🌐 API — Endpoints Principais
+
+> Documentação interativa completa disponível em `/docs` (Swagger UI) e `/redoc`.
+
+### Autenticação (`/auth`)
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/auth/register` | Cadastrar novo usuário |
+| POST | `/auth/login` | Login (e-mail + senha + Turnstile) |
+| POST | `/auth/refresh` | Renovar access token |
+| POST | `/auth/google-login` | Login via Google |
+| GET | `/auth/turnstile-verify` | Verificar token Turnstile |
+
+### Usuários (`/users`)
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/users/me` | Perfil do usuário autenticado |
+| PUT | `/users/me` | Atualizar perfil |
+| GET | `/users/me/evaluations` | Avaliações recebidas |
+| GET | `/users/professionals/nearby` | Profissionais próximos |
+| POST | `/users/me/fcm-token` | Registrar token FCM |
+| PUT | `/users/me/professional-settings` | Atualizar configurações do profissional |
+
+### Projetos (`/projects`)
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/projects/` | Criar projeto |
+| GET | `/projects/` | Listar projetos com filtros |
+| GET | `/projects/nearby/combined` | Projetos próximos (todos + presenciais) |
+| GET | `/projects/{id}` | Detalhe do projeto |
+| PUT | `/projects/{id}` | Editar projeto |
+| DELETE | `/projects/{id}` | Excluir projeto |
+| POST | `/projects/{id}/close` | Fechar projeto |
+| POST | `/projects/{id}/evaluate` | Avaliar profissional |
+| GET | `/projects/{id}/contacts` | Listar contatos do projeto (cliente) |
+
+### Contatos e Chat
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/contacts/{project_id}` | Criar contato / enviar proposta |
+| GET | `/contacts/{project_id}/cost-preview` | Preview de custo em créditos |
+| GET | `/contacts/{contact_id}/messages` | Listar mensagens |
+| POST | `/contacts/{contact_id}/messages` | Enviar mensagem (REST) |
+| POST | `/contacts/{contact_id}/messages/mark-read` | Marcar como lidas |
+
+### Pagamentos (`/api/payments`)
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/api/payments/plans` | Planos de assinatura |
+| GET | `/api/payments/credit-packages` | Pacotes de créditos |
+| GET | `/api/payments/featured-pricing` | Preços para destaque |
+| POST | `/api/payments/subscription` | Contratar assinatura |
+| POST | `/api/payments/credit-package` | Comprar créditos |
+| POST | `/api/payments/featured-project` | Destacar projeto |
+
+### Busca e Categorias
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/search/suggestions` | Sugestões em tempo real |
+| GET | `/categories` | Listar categorias |
+| GET | `/categories/search` | Buscar categorias |
+
+### Anúncios
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/system-admin/api/public/ads/{ad_type}` | Obter anúncio (mobile) |
+| POST | `/system-admin/api/public/ads/impression/{ad_type}` | Registrar impressão |
+| POST | `/system-admin/api/public/ads/click/{ad_type}` | Registrar clique |
+
+### WebSocket
+
+```
+ws://<host>/ws/{user_id}?token=<JWT>
+```
+
+Tipos de mensagem suportados:
+
+| Tipo | Direção | Descrição |
+|------|---------|-----------|
+| `subscribe_projects` | cliente → servidor | Inscrever em atualizações de projetos |
+| `new_message` | bidirecional | Enviar/receber mensagem de chat |
+| `contact_update` | servidor → cliente | Atualização de status de contato |
+
+---
+
+## 📱 Telas do App Mobile
+
+| Tela | Papel | Descrição |
+|------|-------|-----------|
+| `LoginScreen` | Todos | Login e-mail/senha ou Google |
+| `SignUpScreen` | Todos | Cadastro de conta |
+| `CompleteProfileScreen` | Todos | Completar CPF, telefone, endereço |
+| `ProfileSelectionScreen` | Todos | Escolher papel ativo (cliente/profissional) |
+| `AdScreen` | Todos | Tela cheia de anúncio antes da home |
+| `WelcomeCustomerScreen` | Cliente | Home do cliente — busca, categorias, projetos |
+| `CreateProjectScreen` | Cliente | Criar projeto com mapa e geocoding |
+| `EditProjectScreen` | Cliente | Editar projeto existente |
+| `ProjectClientDetailScreen` | Cliente | Detalhe do projeto + lista de contatos recebidos |
+| `SearchResultsScreen` | Cliente | Resultados de busca de categorias |
+| `AllProjectsScreen` | Cliente | Todos os projetos do cliente |
+| `WelcomeProfessionalScreen` | Profissional | Home — estatísticas, projetos próximos |
+| `ProjectsListScreen` | Profissional | Lista de projetos filtráveis |
+| `ProjectProfessionalsDetailScreen` | Profissional | Detalhe do projeto + proposta + custo em créditos |
+| `ContactedProjectsScreen` | Profissional | Projetos que o profissional já contatou |
+| `EditProfessionalSettingsScreen` | Profissional | Configurar categorias e raio de atuação |
+| `ProfileEvaluationsScreen` | Profissional | Avaliações recebidas (estrelas + comentário) |
+| `ContactDetailScreen` | Ambos | Chat com mensagens + marcação de leitura |
+
+---
+
+## 🧩 Componentes Reutilizáveis
+
+| Componente | Descrição |
+|-----------|-----------|
+| `BannerAd` | Exibe banner de anúncio com cache local |
+| `PubliScreenAd` | Tela cheia de anúncio HTML/CSS/JS |
+| `ChatModal` | Modal global de chat (sobrepõe qualquer tela) |
+| `ConfirmContactModal` | Modal de confirmação de contato (exibe custo em créditos) |
+| `EvaluationModal` | Modal de avaliação 1–5 estrelas + comentário |
+| `ProjectCard` | Card de projeto na listagem |
+| `ProjectContactsList` | Lista de profissionais que contataram um projeto |
+| `ProjectContatedCard` | Card de projeto já contatado pelo profissional |
+| `CategoryGrid` | Grade de categorias para seleção |
+| `MyProjectsCarousel` | Carrossel horizontal dos projetos do cliente |
+| `ProfessionalStatsCard` | Card de estatísticas do profissional |
+| `NearbySummary` | Resumo de projetos próximos |
+| `LocationAvatar` | Avatar com indicador de localização |
+| `MapPinPicker` | Picker de localização em mapa interativo |
+| `AddressAutocomplete` | Autocomplete de endereço via Google Maps |
+| `AddressSearch` | Busca de endereço simples |
+| `EditAddressModal` | Modal para editar endereço |
+| `ImageAdCarousel` | Carrossel de imagens de anúncio |
+| `DynamicIcon` | Ícone dinâmico por nome (Material Icons) |
+| `SocialButton` | Botão de ação social (Google, etc.) |
+
+---
+
+## 🧪 Testes Automatizados
 
 ### Backend
 
@@ -177,38 +550,57 @@ pip install -r requirements.txt
 # Rodar todos os testes
 pytest
 
-# Rodar testes específicos
+# Testes específicos com saída detalhada
 pytest tests/test_dynamic_credit_pricing.py -v
 
-# Rodar com coverage
+# Com cobertura de código
 pytest --cov=app --cov-report=html
-
-# Ver relatório de coverage
 open htmlcov/index.html
 ```
 
-### Testes Existentes
-- ✅ 9 testes de precificação dinâmica de créditos
-- ✅ Testes de admin grant
-- ✅ Testes de complete profile
-- ✅ Testes de contacted projects
-- ✅ Testes de filtros de projetos
-- ✅ Testes de geocoding
-- ✅ Testes de transações
+### Suites de Testes Existentes
 
-**Cobertura:** ~50% do código (configurado em pytest.ini)
+| Arquivo | Descrição |
+|---------|-----------|
+| `test_dynamic_credit_pricing.py` | 9 cenários de precificação dinâmica de créditos |
+| `test_admin_grant.py` | Concessão de permissões admin |
+| `test_auth_complete_profile.py` | Fluxo de complete-profile |
+| `test_contacted_projects.py` | Projetos contatados pelo profissional |
+| `test_contacts_integration.py` | Integração de contatos |
+| `test_complete_service_flow.py` | Fluxo completo cliente → profissional |
+| `test_e2e_flows.py` | Testes end-to-end |
+| `test_full_workflow_integration.py` | Integração do workflow completo |
+| `test_projects_filters.py` | Filtros de listagem de projetos |
+| `test_projects_geocode.py` | Geocoding automático |
+| `test_transactions.py` | Transações de crédito |
+| `test_professional_stats.py` | Estatísticas do profissional |
+| `test_user_stats.py` | Estatísticas do usuário |
+| `test_project_title_length.py` | Validação de título (máx 80 chars) |
+| `test_firebase_user.py` | Usuário Firebase |
+| `test_material_icons.py` | Validação de ícones |
+
+**Cobertura:** ~50% (configurado em `pytest.ini`)
+
+### Mobile (Jest)
+
+```bash
+cd mobile
+npm test
+```
+
+---
 
 ## 🔧 Configuração
 
 ### Backend
 
-1. **Instalar dependências:**
+**1. Instalar dependências:**
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-2. **Configurar variáveis de ambiente (.env):**
+**2. Configurar variáveis de ambiente (`.env`):**
 ```env
 # MongoDB
 MONGODB_URL=mongodb://localhost:27017
@@ -219,11 +611,19 @@ SECRET_KEY=your-secret-key-here
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
 
-# Firebase
-FIREBASE_CREDENTIALS_PATH=path/to/firebase-credentials.json
+# Firebase (Push Notifications)
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY_ID=your-private-key-id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk@your-project.iam.gserviceaccount.com
+FIREBASE_CLIENT_ID=your-client-id
+FIREBASE_CLIENT_X509_CERT_URL=https://...
 
-# Cloudflare Turnstile
+# Cloudflare Turnstile (anti-bot)
+# TURNSTILE_SECRET_KEY é confidencial — usado apenas no backend para verificação
 TURNSTILE_SECRET_KEY=your-turnstile-secret
+# TURNSTILE_SITE_KEY é público — usado no frontend/WebView para renderizar o widget
+TURNSTILE_SITE_KEY=your-turnstile-site-key
 
 # Google OAuth
 GOOGLE_CLIENT_ID=your-google-client-id
@@ -231,27 +631,33 @@ GOOGLE_CLIENT_ID=your-google-client-id
 # Asaas Payments
 ASAAS_API_KEY=your-asaas-api-key
 ASAAS_BASE_URL=https://sandbox.asaas.com/api/v3
+
+# Google Maps (Geocoding)
+GOOGLE_MAPS_API_KEY=your-google-maps-key
+
+# CORS
+CORS_ORIGINS=["http://localhost:3000","https://agilizapro.cloud"]
 ```
 
-3. **Rodar servidor:**
+**3. Iniciar servidor:**
 ```bash
 uvicorn app.main:app --reload
 ```
 
 ### Mobile
 
-1. **Instalar dependências:**
+**1. Instalar dependências:**
 ```bash
 cd mobile
 npm install
 ```
 
-2. **Configurar variáveis (.env):**
+**2. Configurar variáveis (`.env`):**
 ```env
 API_URL=http://localhost:8000
 ```
 
-3. **Rodar no emulador:**
+**3. Rodar no emulador:**
 ```bash
 # Android
 expo run:android
@@ -260,76 +666,83 @@ expo run:android
 expo run:ios
 ```
 
+---
+
 ## 📊 Background Jobs
 
-### Featured Projects Expiration
+### Expiração de Projetos Destacados
 
-Remove status de destaque de projetos expirados.
+Remove o status de destaque (`is_featured = false`) dos projetos cujo prazo (`featured_until`) já passou.
 
-**Manual:**
+**Execução manual:**
 ```bash
 cd backend
 python -m app.jobs.expire_featured_projects
 ```
 
-**Cron (recomendado):**
+**Cron (recomendado — executar a cada hora):**
 ```cron
 0 * * * * cd /path/to/backend && python -m app.jobs.expire_featured_projects
 ```
 
 📖 [Documentação completa de jobs](docs/background-jobs.md)
 
+---
+
 ## 🔒 Segurança
 
-### Implementado
-- ✅ JWT tokens com expiração
-- ✅ Cloudflare Turnstile (anti-bot)
-- ✅ Google OAuth
-- ✅ Rate limiting (SlowAPI)
-- ✅ Locking atômico para créditos
-- ✅ Validação de entrada (Pydantic)
-- ✅ CORS configurado
+| Mecanismo | Status |
+|-----------|--------|
+| JWT com expiração | ✅ |
+| Cloudflare Turnstile (anti-bot no login/cadastro) | ✅ |
+| Google OAuth | ✅ |
+| Rate limiting — SlowAPI (100 req/min por IP) | ✅ |
+| Locking atômico para dedução de créditos | ✅ |
+| Validação de entrada — Pydantic | ✅ |
+| CORS configurado por variável de ambiente | ✅ |
+| Senhas hasheadas com bcrypt | ✅ |
+| Tokens armazenados em secure storage (mobile) | ✅ |
+| HTTPS obrigatório em produção | ✅ |
+| Bloqueio de alteração de CPF após cadastro | ✅ |
+| Autorização por recurso (apenas dono acessa seus dados) | ✅ |
 
-### Boas Práticas
-- Senhas hasheadas com bcrypt
-- Tokens em secure storage (mobile)
-- Push tokens rotacionados
-- HTTPS obrigatório em produção
+---
 
-## 📈 Monitoramento
+## 📈 Monitoramento e Logs
 
 ### Logs Disponíveis
-- `logs/ad_clicks.log` - Clicks em anúncios
-- `logs/ad_impressions.log` - Impressões de anúncios
-- Application logs (stdout)
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `logs/ad_clicks.log` | Cliques em anúncios (JSON com timestamp) |
+| `logs/ad_impressions.log` | Impressões de anúncios (JSON com timestamp) |
+| stdout | Logs gerais da aplicação |
 
 ### Métricas Recomendadas
-- Taxa de conversão (leads → contratos)
-- CTR de anúncios
-- Distribuição de preços de créditos
-- Tempo médio de resposta de profissionais
+
+- Taxa de conversão: leads → contratos fechados
+- CTR de anúncios por slot
+- Distribuição de preços de créditos pagos (1 / 2 / 3)
+- Tempo médio de resposta de profissionais a novos leads
 - Taxa de conclusão de projetos
+- Erros de crédito insuficiente (tentativas falhas de contato)
+
+---
 
 ## 🚀 Deploy
 
 ### Backend (Docker)
 
-```dockerfile
-FROM python:3.12-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
 ```bash
+# Build e execução
 docker build -t agapp-backend .
 docker run -p 8000:8000 --env-file .env agapp-backend
+
+# Ou com docker-compose
+docker-compose up -d
 ```
+
+O `Dockerfile` e `docker-compose.yml` estão na raiz do repositório.
 
 ### Mobile (EAS Build)
 
@@ -341,24 +754,49 @@ eas build --platform android --profile production
 eas build --platform ios --profile production
 ```
 
+---
+
 ## 📖 Documentação Adicional
 
-- [Plano de Implementação](docs/implementation-plan.md) - Roadmap completo
-- [Precificação Dinâmica](docs/dynamic-credit-pricing.md) - Sistema de créditos
-- [Rotas de Anúncios](docs/ads-routes.md) - API de anúncios
-- [Background Jobs](docs/background-jobs.md) - Jobs automáticos
+| Documento | Descrição |
+|-----------|-----------|
+| [Plano de Implementação](docs/implementation-plan.md) | Roadmap completo com backlog |
+| [Precificação Dinâmica](docs/dynamic-credit-pricing.md) | Regras e arquitetura do sistema de créditos |
+| [Rotas de Anúncios](docs/ads-routes.md) | API completa de anúncios |
+| [Background Jobs](docs/background-jobs.md) | Jobs automáticos e configuração de cron |
+| [Push Notifications](docs/push-notifications-webhooks.md) | Configuração FCM e webhooks Asaas |
+| [Testes Mobile](docs/mobile-testing.md) | Guia de testes no app |
+| [Referência de API](docs/API_REFERENCE.md) | Referência completa de todos os endpoints |
 
-## 🤝 Contribuindo
+---
 
-1. Todos os testes devem passar: `pytest`
-2. Código deve seguir PEP 8 (Python) e ESLint (TypeScript)
-3. Adicionar testes para novas features
-4. Documentar mudanças em `/docs`
+## 🗺️ Roadmap
+
+### 🚧 Em Desenvolvimento
+
+- [ ] Mobile: UI de chat completa (lista de mensagens + timestamps)
+- [ ] Mobile: Tela de conclusão de projeto (seleção do profissional vencedor + valor final)
+- [ ] Mobile: Modal de avaliação integrado ao fechamento
+- [ ] Mobile: Tela "Meus Créditos" (saldo + histórico de transações)
+- [ ] Mobile: Loja de pacotes de créditos com QR Code PIX
+- [ ] Mobile: Tela de assinaturas (contratar, cancelar, status)
+- [ ] Mobile: Tela de suporte (listar tickets, abrir novo, chat com atendente)
+- [ ] Mobile: CTA "Destacar projeto" em criar/editar/detalhe
+- [ ] Mobile: Badge de mensagens não lidas na navegação
+- [ ] Backend: Dashboard admin com analytics de conversão
+- [ ] Backend: Relatórios de impressões/cliques de ads no admin
+- [ ] Backend: Registro de `lead_events` (timestamps de criação → contato → chat → conclusão)
+- [ ] Backend: Badges/níveis de reputação para profissionais
+- [ ] Backend: Middleware de log para endpoints críticos (auth, pagamentos, contatos)
+- [ ] Backend: Exportação de logs para S3
+- [ ] Backend: Silent refresh / logout automático quando token expirar
+
+---
 
 ## 📄 Licença
 
-Proprietary - Todos os direitos reservados
+Proprietário — Todos os direitos reservados.
 
-## 💬 Suporte
+## 💬 Suporte Técnico
 
-Para dúvidas técnicas, consulte a documentação em `/docs` ou abra uma issue no repositório.
+Para dúvidas, consulte a documentação em `/docs` ou abra uma issue no repositório.
