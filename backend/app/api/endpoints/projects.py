@@ -555,6 +555,35 @@ async def create_contact_on_project(
     except Exception:
         pass
 
+    # Register lead_event (best-effort)
+    try:
+        from ulid import new as new_ulid_event
+        now_utc = datetime.now(timezone.utc)
+        project_created = ensure_utc(project.created_at) if project.created_at else None
+        minutes_to_first_contact = None
+        if project_created:
+            delta = (now_utc - project_created).total_seconds() / 60
+            minutes_to_first_contact = round(delta, 1)
+        lead_event_doc = {
+            "_id": str(new_ulid_event()),
+            "project_id": project_id,
+            "contact_id": contact_dict.get("id", ""),
+            "professional_id": str(current_user.id),
+            "client_id": str(project.client_id),
+            "project_created_at": project_created,
+            "contact_created_at": now_utc,
+            "first_message_at": None,
+            "project_closed_at": None,
+            "minutes_to_first_contact": minutes_to_first_contact,
+            "minutes_to_first_message": None,
+            "minutes_to_close": None,
+            "created_at": now_utc,
+            "updated_at": now_utc,
+        }
+        await db.lead_events.insert_one(lead_event_doc)
+    except Exception as _lead_exc:
+        logging.debug(f"lead_events tracking failed: {_lead_exc}")  # best-effort
+
     return contact_dict
 
 @router.get("/{project_id}/contacts", response_model=List[dict])
@@ -699,38 +728,46 @@ async def close_project(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
-    Close project with final budget. Only the specified professional can close.
+    Close project. Client selects a winner professional (optional) and sets final value (optional).
     """
     # Get project
     project = await get_project(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    
-    # Fetch professional name
-    professional = await db.users.find_one({"_id": close_data.professional_id})
-    # Use full_name field consistently
-    professional_name = professional.get("full_name") if professional else None
+
+    # Only the client can close the project
+    if str(current_user.id) != str(project.client_id):
+        raise HTTPException(status_code=403, detail="Only the project owner can close it")
+
+    # Resolve professional from professional_id or skip if none provided
+    professional_id = close_data.professional_id
+    professional_name = None
+    if professional_id:
+        professional = await db.users.find_one({"_id": professional_id})
+        professional_name = professional.get("full_name") if professional else None
     
     # Update project directly in DB
     from datetime import datetime, timezone
     closed_event = {
-        "professional_id": close_data.professional_id,
+        "professional_id": professional_id,
         "professional_name": professional_name,
         "final_budget": close_data.final_budget,
         "closed_at": datetime.now(timezone.utc)
     }
 
+    update_fields = {
+        "status": "closed",
+        "final_budget": close_data.final_budget,
+        "closed_by": professional_id,
+        "closed_by_name": professional_name,
+        "closed_at": closed_event["closed_at"],
+        "updated_at": datetime.now(timezone.utc)
+    }
+
     result = await db.projects.update_one(
-        {"_id": project_id}, 
+        {"_id": project_id},
         {
-            "$set": {
-                "status": "closed",
-                "final_budget": close_data.final_budget,
-                "closed_by": close_data.professional_id,
-                "closed_by_name": professional_name,
-                "closed_at": closed_event["closed_at"],
-                "updated_at": datetime.now(timezone.utc)
-            },
+            "$set": update_fields,
             "$push": {"closed_by_history": closed_event}
         }
     )

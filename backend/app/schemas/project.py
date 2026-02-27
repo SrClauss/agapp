@@ -104,8 +104,9 @@ class ProjectFilter(BaseModel):
     radius_km: Optional[float] = None
 
 class ProjectClose(BaseModel):
-    final_budget: float = Field(..., gt=0)
-    professional_id: str  # Professional closing the project
+    final_budget: Optional[float] = None
+    professional_id: Optional[str] = None  # Professional selected as winner
+    contact_id: Optional[str] = None  # Alternative: contact reference (used from mobile)
 
 class EvaluationCreate(BaseModel):
     professional_id: str

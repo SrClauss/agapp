@@ -462,8 +462,11 @@ Precificação inteligente baseada na **idade do projeto** e no **histórico de 
 | GET | `/api/payments/credit-packages` | Pacotes de créditos |
 | GET | `/api/payments/featured-pricing` | Preços para destaque |
 | POST | `/api/payments/subscription` | Contratar assinatura |
-| POST | `/api/payments/credit-package` | Comprar créditos |
+| GET | `/api/payments/subscription/status` | Status da assinatura atual |
+| POST | `/api/payments/subscription/cancel` | Cancelar assinatura |
+| POST | `/api/payments/credits` | Comprar créditos |
 | POST | `/api/payments/featured-project` | Destacar projeto |
+| GET | `/api/payments/history` | Histórico de transações de crédito |
 
 ### Busca e Categorias
 
@@ -480,6 +483,21 @@ Precificação inteligente baseada na **idade do projeto** e no **histórico de 
 | GET | `/system-admin/api/public/ads/{ad_type}` | Obter anúncio (mobile) |
 | POST | `/system-admin/api/public/ads/impression/{ad_type}` | Registrar impressão |
 | POST | `/system-admin/api/public/ads/click/{ad_type}` | Registrar clique |
+
+### Usuários — Reputação
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/users/me/reputation` | Nível de reputação do profissional autenticado |
+| GET | `/users/professionals/{id}/reputation` | Nível de reputação de qualquer profissional |
+
+### Admin — Analytics
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/api/admin/analytics/conversion` | Dashboard de conversão (projetos → leads → conclusão) |
+| GET | `/api/admin/analytics/ads` | Relatório de impressões e cliques de anúncios |
+| POST | `/api/admin/analytics/export-logs-s3` | Exportar logs para S3 |
 
 ### WebSocket
 
@@ -506,10 +524,14 @@ Tipos de mensagem suportados:
 | `CompleteProfileScreen` | Todos | Completar CPF, telefone, endereço |
 | `ProfileSelectionScreen` | Todos | Escolher papel ativo (cliente/profissional) |
 | `AdScreen` | Todos | Tela cheia de anúncio antes da home |
+| `CreditsScreen` | Todos | Saldo de créditos + histórico de transações |
+| `CreditPackagesScreen` | Todos | Loja de pacotes de créditos com QR Code PIX |
+| `SubscriptionsScreen` | Todos | Assinaturas (contratar, cancelar, status) |
+| `SupportScreen` | Todos | Suporte: listar tickets, abrir novo, chat com atendente |
 | `WelcomeCustomerScreen` | Cliente | Home do cliente — busca, categorias, projetos |
 | `CreateProjectScreen` | Cliente | Criar projeto com mapa e geocoding |
 | `EditProjectScreen` | Cliente | Editar projeto existente |
-| `ProjectClientDetailScreen` | Cliente | Detalhe do projeto + lista de contatos recebidos |
+| `ProjectClientDetailScreen` | Cliente | Detalhe + conclusão de projeto + CTA "Destacar" + Avaliação |
 | `SearchResultsScreen` | Cliente | Resultados de busca de categorias |
 | `AllProjectsScreen` | Cliente | Todos os projetos do cliente |
 | `WelcomeProfessionalScreen` | Profissional | Home — estatísticas, projetos próximos |
@@ -784,26 +806,23 @@ eas build --platform ios --profile production
 
 ## 🗺️ Roadmap
 
-### 🚧 Em Desenvolvimento
-
-- [ ] Mobile: Tela de conclusão de projeto (seleção do profissional vencedor + valor final)
-- [ ] Mobile: Modal de avaliação integrado ao fechamento
-- [ ] Mobile: Tela "Meus Créditos" (saldo + histórico de transações)
-- [ ] Mobile: Loja de pacotes de créditos com QR Code PIX
-- [ ] Mobile: Tela de assinaturas (contratar, cancelar, status)
-- [ ] Mobile: Tela de suporte (listar tickets, abrir novo, chat com atendente)
-- [ ] Mobile: CTA "Destacar projeto" em criar/editar/detalhe
-- [ ] Mobile: Badge de mensagens não lidas na navegação
-- [ ] Backend: Dashboard admin com analytics de conversão
-- [ ] Backend: Relatórios de impressões/cliques de ads no admin
-- [ ] Backend: Registro de `lead_events` (timestamps de criação → contato → chat → conclusão)
-- [ ] Backend: Badges/níveis de reputação para profissionais
-- [ ] Backend: Middleware de log para endpoints críticos (auth, pagamentos, contatos)
-- [ ] Backend: Exportação de logs para S3
-- [ ] Backend: Silent refresh / logout automático quando token expirar
-
 ### ✅ Recentemente Implementado
 
+- [x] **Mobile: Tela de conclusão de projeto** — `CloseProjectModal` em `ProjectClientDetailScreen` permite selecionar profissional vencedor e informar valor final via `POST /projects/{id}/close`
+- [x] **Mobile: Modal de avaliação integrado ao fechamento** — `EvaluationModal` exibido automaticamente após concluir projeto
+- [x] **Mobile: Tela "Meus Créditos"** — `CreditsScreen` exibe saldo atual e histórico completo de transações
+- [x] **Mobile: Loja de pacotes de créditos com QR Code PIX** — `CreditPackagesScreen` com seleção de pacote, forma de pagamento (PIX/Cartão) e exibição do QR Code
+- [x] **Mobile: Tela de assinaturas** — `SubscriptionsScreen` com status atual, planos disponíveis, contratação via PIX e cancelamento
+- [x] **Mobile: Tela de suporte** — `SupportScreen` com listagem de tickets, abertura de novo ticket por categoria e chat em tempo real com atendente
+- [x] **Mobile: CTA "Destacar projeto"** — Botão "Destacar Projeto" em `ProjectClientDetailScreen` com seleção de duração e pagamento via PIX
+- [x] **Mobile: Badge de mensagens não lidas na navegação** — polling a cada 60s no `App.tsx` atualiza `useNotificationStore` com total de mensagens não lidas
+- [x] **Mobile: Silent refresh / logout automático** — `axiosClient` tenta renovar token via `POST /auth/refresh` antes de fazer logout; falha de refresh resulta em logout automático
+- [x] **Backend: Dashboard admin com analytics de conversão** — `GET /api/admin/analytics/conversion` retorna métricas de projetos criados, leads, taxa de conversão, projetos fechados e usuários novos
+- [x] **Backend: Relatórios de impressões/cliques de ads** — `GET /api/admin/analytics/ads` lê logs e retorna CTR por slot de anúncio
+- [x] **Backend: Exportação de logs para S3** — `POST /api/admin/analytics/export-logs-s3` + job `app/jobs/export_logs_to_s3.py` (requer variáveis AWS)
+- [x] **Backend: Registro de `lead_events`** — criação de evento ao gerar contato (`project_created_at`, `contact_created_at`) e atualização ao enviar primeira mensagem (`first_message_at`)
+- [x] **Backend: Badges/níveis de reputação para profissionais** — `GET /users/professionals/{id}/reputation` e `GET /users/me/reputation` retornam nível (Iniciante → Bronze → Prata → Ouro → Diamante)
+- [x] **Backend: Middleware de log para endpoints críticos** — `CriticalEndpointLoggingMiddleware` loga em JSON todas as requisições para `/auth/`, `/api/payments/`, `/contacts/` e outros endpoints sensíveis
 - [x] **Push notifications Android para chat** — notificação FCM ao destinatário ao enviar mensagem via WebSocket ou REST
 - [x] **Canal Android `messages`** — alta prioridade, vibração e som configurados via `expo-notifications`
 - [x] **REST API completa de contatos** — `GET /contacts/history`, `GET /contacts/{id}`, `POST /contacts/{id}/messages`, `POST /contacts/{id}/messages/mark-read`

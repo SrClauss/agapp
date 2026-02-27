@@ -506,3 +506,175 @@ async def delete_featured_pricing(
     success = await config_crud.delete_featured_pricing(db, pricing_id)
     if not success:
         raise HTTPException(status_code=404, detail="Preço não encontrado")
+
+
+# ==================== ANALYTICS ENDPOINTS ====================
+
+@router.get("/analytics/conversion")
+async def get_conversion_analytics(
+    days: int = Query(30, ge=1, le=365),
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Dashboard de analytics de conversão:
+    - Total projetos criados no período
+    - Total de contatos (leads) gerados
+    - Taxa de conversão projeto → lead
+    - Total de projetos concluídos (status closed)
+    - Taxa de conversão lead → conclusão
+    - Distribuição de status dos projetos
+    - Receita estimada de créditos consumidos
+    """
+    from datetime import datetime, timezone, timedelta
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    # Total projects in period
+    total_projects = await db.projects.count_documents({
+        "created_at": {"$gte": since}
+    })
+
+    # Projects with at least one contact (lead generated)
+    projects_with_leads = await db.projects.count_documents({
+        "created_at": {"$gte": since},
+        "contacts": {"$exists": True, "$ne": []}
+    })
+
+    # Closed projects
+    closed_projects = await db.projects.count_documents({
+        "created_at": {"$gte": since},
+        "status": "closed"
+    })
+
+    # Total contacts / leads in period
+    agg_contacts = await db.contacts.count_documents({
+        "created_at": {"$gte": since}
+    })
+
+    # Credits consumed in period (from credit_transactions)
+    credit_agg = await db.credit_transactions.aggregate([
+        {"$match": {"created_at": {"$gte": since}, "type": "usage"}},
+        {"$group": {"_id": None, "total_credits": {"$sum": "$credits"}}}
+    ]).to_list(length=1)
+    credits_consumed = abs(credit_agg[0]["total_credits"]) if credit_agg else 0
+
+    # Project status distribution
+    status_pipeline = [
+        {"$match": {"created_at": {"$gte": since}}},
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+    ]
+    status_dist_raw = await db.projects.aggregate(status_pipeline).to_list(length=None)
+    status_distribution = {doc["_id"]: doc["count"] for doc in status_dist_raw}
+
+    # Conversion rates
+    lead_rate = round((projects_with_leads / total_projects * 100), 1) if total_projects else 0
+    close_rate = round((closed_projects / projects_with_leads * 100), 1) if projects_with_leads else 0
+
+    # New users in period
+    new_users = await db.users.count_documents({"created_at": {"$gte": since}})
+
+    # Active subscriptions
+    active_subscriptions = await db.subscriptions.count_documents({"status": "active"})
+
+    return {
+        "period_days": days,
+        "since": since.isoformat(),
+        "projects": {
+            "total_created": total_projects,
+            "with_leads": projects_with_leads,
+            "closed": closed_projects,
+            "lead_conversion_rate_pct": lead_rate,
+            "close_conversion_rate_pct": close_rate,
+            "status_distribution": status_distribution,
+        },
+        "contacts": {
+            "total_leads": agg_contacts,
+            "credits_consumed": credits_consumed,
+        },
+        "users": {
+            "new_registrations": new_users,
+            "active_subscriptions": active_subscriptions,
+        }
+    }
+
+
+@router.get("/analytics/ads")
+async def get_ads_analytics(
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Relatório de impressões e cliques de anúncios.
+    Lê os arquivos de log de ads e retorna as métricas agregadas.
+    """
+    import os
+    import json
+    from collections import defaultdict
+
+    log_dir = "logs"
+    impressions_file = os.path.join(log_dir, "ad_impressions.log")
+    clicks_file = os.path.join(log_dir, "ad_clicks.log")
+
+    def parse_log(filepath: str):
+        events = []
+        if not os.path.exists(filepath):
+            return events
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        events.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        except OSError:
+            pass
+        return events
+
+    impressions = parse_log(impressions_file)
+    clicks = parse_log(clicks_file)
+
+    # Aggregate by ad_type
+    imp_by_type: dict = defaultdict(int)
+    clk_by_type: dict = defaultdict(int)
+
+    for ev in impressions:
+        ad_type = ev.get("ad_type", "unknown")
+        imp_by_type[ad_type] += 1
+
+    for ev in clicks:
+        ad_type = ev.get("ad_type", "unknown")
+        clk_by_type[ad_type] += 1
+
+    all_types = set(list(imp_by_type.keys()) + list(clk_by_type.keys()))
+    report = []
+    for ad_type in sorted(all_types):
+        imps = imp_by_type.get(ad_type, 0)
+        clks = clk_by_type.get(ad_type, 0)
+        ctr = round(clks / imps * 100, 2) if imps else 0
+        report.append({
+            "ad_type": ad_type,
+            "impressions": imps,
+            "clicks": clks,
+            "ctr_pct": ctr,
+        })
+
+    return {
+        "total_impressions": len(impressions),
+        "total_clicks": len(clicks),
+        "overall_ctr_pct": round(len(clicks) / len(impressions) * 100, 2) if impressions else 0,
+        "by_ad_type": report,
+    }
+
+
+@router.post("/analytics/export-logs-s3")
+async def trigger_s3_log_export(
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Exporta os arquivos de log para S3. Requer variáveis de ambiente AWS configuradas."""
+    from app.jobs.export_logs_to_s3 import export_logs_to_s3
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, export_logs_to_s3)
+    return result

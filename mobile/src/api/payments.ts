@@ -42,3 +42,21 @@ export const createCreditPackagePayment = async (packageId: string, billingType:
   });
   return response.data;
 };
+
+export const getFeaturedPricing = async () => {
+  const response = await client.get('/api/payments/featured-pricing');
+  return response.data;
+};
+
+export const createFeaturedProjectPayment = async (
+  projectId: string,
+  durationDays: number,
+  billingType: string
+) => {
+  const response = await client.post('/api/payments/featured-project', {
+    project_id: projectId,
+    duration_days: durationDays,
+    billing_type: billingType,
+  });
+  return response.data;
+};

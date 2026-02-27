@@ -19,9 +19,14 @@ import WelcomeProfessionalScreen from './src/screens/WelcomeProfessionalScreen';
 import ProjectsListScreen from './src/screens/ProjectsListScreen';
 import ContactDetailScreen from './src/screens/ContactDetailScreen';
 import ProfileEvaluationsScreen from './src/screens/ProfileEvaluationsScreen';
+import CreditsScreen from './src/screens/CreditsScreen';
+import CreditPackagesScreen from './src/screens/CreditPackagesScreen';
+import SubscriptionsScreen from './src/screens/SubscriptionsScreen';
+import SupportScreen from './src/screens/SupportScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
 import useChatStore from './src/stores/chatStore';
+import useNotificationStore from './src/stores/notificationStore';
 import { getRouteForRoles } from './src/utils/roles';
 import { fetchCurrentUser } from './src/api/auth';
 import { ChatModal } from './src/components/ChatModal';
@@ -31,6 +36,7 @@ import {
   setupNotificationResponseListener,
   setupNotificationReceivedListener,
 } from './src/services/notifications';
+import client from './src/api/axiosClient';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,8 +45,7 @@ export default function App() {
   const [initialRoute, setInitialRoute] = useState<string>('Login');
   const { token, setUser, isHydrated, activeRole } = useAuthStore();
   const { isChatOpen, activeContactId, closeChat } = useChatStore();
-
-  console.log(`[App] Componente App renderizado. isHydrated: ${isHydrated}, token: ${!!token}`);
+  const { setCount: setUnreadCount } = useNotificationStore();
 
   const checkAuth = async () => {
     try {
@@ -115,6 +120,31 @@ export default function App() {
     };
   }, [token]);
 
+  // Poll for unread message count every 60 seconds when logged in
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const userType = activeRole === 'professional' ? 'professional' : 'client';
+        const response = await client.get('/contacts/history', { params: { user_type: userType } });
+        const contacts: any[] = response.data || [];
+        const total = contacts.reduce((sum: number, c: any) => sum + (c.unread_count || 0), 0);
+        if (!cancelled) setUnreadCount(total);
+      } catch (e) {
+        // ignore silently
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [token, activeRole]);
+
   useEffect(() => {
     async function initializeApp() {
       console.log(`[App] Inicializando app...`);
@@ -164,13 +194,17 @@ export default function App() {
           <Stack.Screen name="ProjectProfessionalsDetail" component={ProjectProfessionalsDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="AllProjects" component={AllProjectsScreen} options={{ title: 'Todos os Projetos' }} />
           <Stack.Screen name="WelcomeProfessional" component={WelcomeProfessionalScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="EditProfessionalSettings" component={require('./src/screens/EditProfessionalSettingsScreen').default} options={{ title: 'Editar categorias' }} />
+          <Stack.Screen name="EditProfessionalSettings" component={require('./src/screens/EditProfessionalSettingsScreen').default} options={{ title: 'Minhas Especialidades' }} />
           <Stack.Screen name="ContactedProjects" component={require('./src/screens/ContactedProjectsScreen').default} options={{ title: 'Projetos Contatados' }} />
           <Stack.Screen name="ProjectsList" component={ProjectsListScreen} options={{ title: 'Projetos' }} />
           <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} options={{ title: 'Completar Perfil' }} />
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ContactDetail" component={ContactDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ProfileEvaluations" component={ProfileEvaluationsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Credits" component={CreditsScreen} options={{ title: 'Meus Créditos' }} />
+          <Stack.Screen name="CreditPackages" component={CreditPackagesScreen} options={{ title: 'Comprar Créditos' }} />
+          <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ title: 'Assinaturas' }} />
+          <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Suporte' }} />
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style="auto" />
