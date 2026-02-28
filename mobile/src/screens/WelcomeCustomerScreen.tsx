@@ -312,6 +312,14 @@ export default function WelcomeCustomerScreen() {
         >
           Sair
         </Button>
+        <Button
+          mode="outlined"
+          icon="message-text"
+          style={{ marginBottom: 24 }}
+          onPress={() => (navigation as any).navigate('ChatList')}
+        >
+          Minhas Conversas
+        </Button>
       </ScrollView>
     </SafeAreaView>
   );

@@ -490,16 +490,32 @@ async def project_contact_cost_preview(
 async def create_contact_on_project(
     project_id: str,
     contact: Dict[str, Any],
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    """Create a contact for a project (project-scoped endpoint)."""
+    """Create a contact for a project (project-scoped endpoint).
+
+    Accepts an optional ``X-Idempotency-Key`` request header. When present, the key is
+    stored after a successful creation so that an identical second request (e.g. from a
+    double-tap or network retry) is rejected with HTTP 409 instead of deducting credits
+    a second time.
+    """
     project = await get_project(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="Only professionals can create contacts")
+
+    # Idempotency: reject duplicate requests within the same session
+    idempotency_key = request.headers.get("X-Idempotency-Key")
+    if idempotency_key:
+        existing_idem = await db.idempotency_keys.find_one(
+            {"key": idempotency_key, "user_id": str(current_user.id)}
+        )
+        if existing_idem:
+            raise HTTPException(status_code=409, detail="Duplicate request: contact already created")
 
     existing = await db.projects.find_one({"_id": project_id, "contacts.professional_id": str(current_user.id)})
     if existing:
@@ -583,6 +599,18 @@ async def create_contact_on_project(
         await db.lead_events.insert_one(lead_event_doc)
     except Exception as _lead_exc:
         logging.debug(f"lead_events tracking failed: {_lead_exc}")  # best-effort
+
+    # Store idempotency key to prevent duplicate requests (best-effort)
+    if idempotency_key:
+        try:
+            await db.idempotency_keys.insert_one({
+                "key": idempotency_key,
+                "user_id": str(current_user.id),
+                "project_id": project_id,
+                "created_at": datetime.now(timezone.utc),
+            })
+        except Exception:
+            pass  # best-effort
 
     return contact_dict
 

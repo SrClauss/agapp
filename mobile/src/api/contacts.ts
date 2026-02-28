@@ -1,5 +1,6 @@
 import client from './axiosClient';
 import useAuthStore from '../stores/authStore';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface ContactDetails {
   message?: string;
@@ -28,6 +29,7 @@ export interface Contact {
   chat: ChatMessage[];
   created_at: string;
   updated_at: string;
+  unread_count?: number;
 }
 
 export interface ContactCreate {
@@ -66,11 +68,11 @@ export async function createContactForProject(
   contactData: ContactCreate
 ): Promise<Contact> {
   const token = useAuthStore.getState().token;
-  const config = token
-    ? { headers: { Authorization: `Bearer ${token}` } }
-    : undefined;
+  const idempotencyKey = uuidv4();
+  const headers: Record<string, string> = { 'X-Idempotency-Key': idempotencyKey };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const response = await client.post(`/projects/${projectId}/contacts`, contactData, config);
+  const response = await client.post(`/projects/${projectId}/contacts`, contactData, { headers });
   return response.data;
 }
 
