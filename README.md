@@ -322,8 +322,7 @@ Precificação inteligente baseada na **idade do projeto** e no **histórico de 
 - Marcação automática de mensagens como lidas ao abrir o chat
 - Mudança de status `pending` → `in_conversation` na primeira mensagem
 - Chat global acessível via `ChatModal` (componente sobreposto em qualquer tela)
-
-> ⚠️ **Em desenvolvimento (PRs #34/#36):** Contagem de mensagens não lidas no endpoint `GET /contacts/history` (campo `unread_count` ainda não calculado pelo backend), tela `ChatListScreen` para navegação entre conversas e idempotência na criação de contatos ainda não estão no `master`. O badge de não lidas na navegação exibe `0` até que esses PRs sejam mesclados.
+- Lista de conversas acessível via `ChatListScreen` (botão "Minhas Conversas" nas telas de boas-vindas)
 
 ### 6. Avaliações e Ranking
 
@@ -818,7 +817,7 @@ eas build --platform ios --profile production
 - [x] **Mobile: Tela de assinaturas** — `SubscriptionsScreen` com status atual, planos disponíveis, contratação via PIX e cancelamento
 - [x] **Mobile: Tela de suporte** — `SupportScreen` com listagem de tickets, abertura de novo ticket por categoria e chat em tempo real com atendente
 - [x] **Mobile: CTA "Destacar projeto"** — Botão "Destacar Projeto" em `ProjectClientDetailScreen` com seleção de duração e pagamento via PIX
-- [ ] **Mobile: Badge de mensagens não lidas na navegação** *(em desenvolvimento — PR #36)* — polling a cada 60s implementado no `App.tsx`, mas o campo `unread_count` ainda não é calculado pelo backend; badge sempre exibe `0` no `master`
+- [x] **Mobile: Badge de mensagens não lidas na navegação** — polling a cada 60s implementado no `App.tsx`; campo `unread_count` agora calculado pelo backend em `GET /contacts/history`
 - [x] **Mobile: Silent refresh / logout automático** — `axiosClient` tenta renovar token via `POST /auth/refresh` antes de fazer logout; falha de refresh resulta em logout automático
 - [x] **Backend: Dashboard admin com analytics de conversão** — `GET /api/admin/analytics/conversion` retorna métricas de projetos criados, leads, taxa de conversão, projetos fechados e usuários novos
 - [x] **Backend: Relatórios de impressões/cliques de ads** — `GET /api/admin/analytics/ads` lê logs e retorna CTR por slot de anúncio
@@ -828,12 +827,15 @@ eas build --platform ios --profile production
 - [x] **Backend: Middleware de log para endpoints críticos** — `CriticalEndpointLoggingMiddleware` loga em JSON todas as requisições para `/auth/`, `/api/payments/`, `/contacts/` e outros endpoints sensíveis
 - [x] **Push notifications Android para chat** — notificação FCM ao destinatário ao enviar mensagem via WebSocket ou REST
 - [x] **Canal Android `messages`** — alta prioridade, vibração e som configurados via `expo-notifications`
-- [x] **REST API completa de contatos** — `GET /contacts/history`, `GET /contacts/{id}`, `POST /contacts/{id}/messages`, `POST /contacts/{id}/messages/mark-read` *(nota: `unread_count` não calculado — em PR #36)*
+- [x] **REST API completa de contatos** — `GET /contacts/history` (com `unread_count` calculado), `GET /contacts/{id}`, `POST /contacts/{id}/messages`, `POST /contacts/{id}/messages/mark-read`
 - [x] **Lista de contatos por projeto (backend)** — `GET /projects/{project_id}/contacts` permite ao cliente ver todos os profissionais que contataram seu projeto, com preview da última mensagem, badge de não lidas e valor proposto
 - [x] **Componente ProjectContactsList (mobile)** — exibe contatos com avatar, badge de mensagens não lidas, preview de mensagem e navegação para o chat
 - [x] **Marcação automática de mensagens como lidas** — ao abrir o chat, `POST /contacts/{contact_id}/messages/mark-read` é chamado automaticamente em background
 - [x] **Tela Minhas Avaliações (mobile)** — `ProfileEvaluationsScreen` exibe avaliações recebidas pelo profissional com estrelas, comentário e data
 - [x] **API de avaliações do usuário (backend)** — `GET /users/me/evaluations` retorna avaliações recebidas pelo usuário autenticado, ordenadas por data
+- [x] **Backend: `POST /users/me/fcm-token` exposto** — decorador `@router.post` adicionado; registro de token FCM agora funcional no mobile
+- [x] **Mobile: `ChatListScreen`** — tela de lista de conversas em `src/screens/ChatListScreen.tsx`; acessível via botão "Minhas Conversas" em `WelcomeProfessionalScreen` e `WelcomeCustomerScreen`; registrada na stack de navegação
+- [x] **Backend: Idempotência na criação de contato** — header `X-Idempotency-Key` suportado em `POST /projects/{id}/contacts`; chaves armazenadas em `idempotency_keys`; mobile envia chave única por requisição
 
 ---
 

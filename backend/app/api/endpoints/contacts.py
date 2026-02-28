@@ -24,6 +24,11 @@ async def get_contact_history(
 
     for c in contacts:
         c["id"] = c.pop("_id", c.get("id", ""))
+        chat = c.get("chat", [])
+        c["unread_count"] = sum(
+            1 for msg in chat
+            if str(msg.get("sender_id", "")) != user_id and not msg.get("read_at")
+        )
     return contacts
 
 

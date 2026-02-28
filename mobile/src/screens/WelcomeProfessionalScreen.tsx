@@ -78,6 +78,7 @@ export default function WelcomeProfessionalScreen() {
             <ProfessionalStatsCard />
             <View style={{ marginTop: 10 }}>
               <Button mode="outlined" onPress={() => (navigation as any).navigate('ContactedProjects')}>Projetos que contatei</Button>
+              <Button mode="outlined" icon="message-text" onPress={() => (navigation as any).navigate('ChatList')}>Minhas Conversas</Button>
               <Button
                 mode="outlined"
                 icon="star"

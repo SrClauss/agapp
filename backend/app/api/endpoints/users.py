@@ -203,6 +203,7 @@ async def update_professional_settings(
     updated_user = await get_user(db, str(current_user.id))
     return updated_user
 
+@router.post("/me/fcm-token")
 async def register_fcm_token(
     token_data: FCMTokenRegister,
     current_user: User = Depends(get_current_user),

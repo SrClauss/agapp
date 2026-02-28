@@ -23,6 +23,7 @@ import CreditsScreen from './src/screens/CreditsScreen';
 import CreditPackagesScreen from './src/screens/CreditPackagesScreen';
 import SubscriptionsScreen from './src/screens/SubscriptionsScreen';
 import SupportScreen from './src/screens/SupportScreen';
+import ChatListScreen from './src/screens/ChatListScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
 import useChatStore from './src/stores/chatStore';
@@ -205,6 +206,7 @@ export default function App() {
           <Stack.Screen name="CreditPackages" component={CreditPackagesScreen} options={{ title: 'Comprar Créditos' }} />
           <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ title: 'Assinaturas' }} />
           <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Suporte' }} />
+          <Stack.Screen name="ChatList" component={ChatListScreen} options={{ title: 'Conversas' }} />
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style="auto" />
