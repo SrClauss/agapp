@@ -42,7 +42,26 @@ export default function LoginScreen() {
     };
   }, []);
 
-  const { signIn } = useGoogleAuth();
+  const { request, response, signIn } = useGoogleAuth();
+  // Ref para controlar se um login Google está em andamento
+  const googleLoginInProgressRef = useRef(false);
+
+  // Monitora a resposta do OAuth Google (expo-auth-session é assíncrono/reativo)
+  useEffect(() => {
+    if (!response || !googleLoginInProgressRef.current) return;
+
+    if (response.type === 'success') {
+      const { authentication } = response;
+      handleGoogleAuthSuccess(authentication);
+    } else if (response.type === 'error') {
+      setError('Erro ao fazer login com Google');
+      setLoading(false);
+      googleLoginInProgressRef.current = false;
+    } else if (response.type === 'dismiss' || response.type === 'cancel' || response.type === 'locked') {
+      setLoading(false);
+      googleLoginInProgressRef.current = false;
+    }
+  }, [response]);
 
   const checkAdAndNavigate = async (user: any) => {
     console.log('🔍 Verificando anúncios para usuário:', user.email, 'roles:', user.roles);
@@ -233,15 +252,11 @@ export default function LoginScreen() {
     }
   };
 
-  const onGoogleLogin = async () => {
-    setError(null);
-    setLoading(true);
+  // Processa a autenticação Google com sucesso (chamado pelo useEffect que monitora response)
+  const handleGoogleAuthSuccess = async (authentication: any) => {
     try {
-      // Fazer login nativo com Google
-      const signInResult: any = await signIn();
-      const idToken = signInResult?.idToken;
-      const accessToken = signInResult?.accessToken;
-      const profile = signInResult?.userInfo;
+      const idToken = authentication?.idToken;
+      const accessToken = authentication?.accessToken;
 
       if (!idToken) {
         throw new Error('Não foi possível obter o token do Google');
@@ -249,47 +264,34 @@ export default function LoginScreen() {
 
       console.log('Enviando token para o backend...');
       const data = await loginWithGoogle(idToken);
-      
+
       console.log('✅ Login com Google bem-sucedido');
-      console.log('🔍 data.token:', data.token ? 'Existe ✓' : 'NULL ✗');
-      console.log('🔍 data.user:', data.user ? 'Existe ✓' : 'NULL ✗');
-      
+
       await setToken(data.token);
       let user = data.user || (await fetchCurrentUser(data.token));
       console.log('👤 User recebido:', user ? user.email : 'NULL');
-      
-      // If backend didn't return avatar_url, try to get from Google profile or accessToken
-      if (user && (!user.avatar_url || user.avatar_url === '')) {
-        // Try to use profile returned from native GoogleSignIn
-        const pictureFromProfile = profile?.user?.photo || profile?.user?.photoUrl || profile?.user?.photoURL || profile?.photo || profile?.picture;
-        if (pictureFromProfile) {
-          user = { ...user, avatar_url: pictureFromProfile };
-        } else if (accessToken) {
-          // Fallback: fetch from Google Userinfo endpoint using accessToken
-          try {
-            const { data: googleProfile } = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            });
-            if (googleProfile?.picture) {
-              user = { ...user, avatar_url: googleProfile.picture };
-            }
-          } catch (err) {
-            console.warn('Erro ao buscar foto do Google via API userinfo', err);
+
+      // Se backend não retornou avatar_url, buscar via Google userinfo
+      if (user && (!user.avatar_url || user.avatar_url === '') && accessToken) {
+        try {
+          const { data: googleProfile } = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          if (googleProfile?.picture) {
+            user = { ...user, avatar_url: googleProfile.picture };
           }
+        } catch (err) {
+          console.warn('Erro ao buscar foto do Google via API userinfo', err);
         }
       }
       setUser(user);
-      
-      console.log('💾 Token e User salvos no store');
-      console.log('🔑 Token salvo:', data.token ? 'SIM ✓' : 'NÃO ✗');
-      console.log('👤 User salvo:', user ? user.email : 'NULL');
-      
+
       // Aguardar um pouco para garantir que o estado seja persistido
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Register push token on successful Google login
+
+      // Registrar push token após login com Google
       try {
         const pushToken = await NotificationsService.registerForPushNotificationsAsync();
         if (pushToken) {
@@ -305,7 +307,15 @@ export default function LoginScreen() {
       setError(e.message || 'Erro ao fazer login com Google');
     } finally {
       setLoading(false);
+      googleLoginInProgressRef.current = false;
     }
+  };
+
+  const onGoogleLogin = () => {
+    setError(null);
+    setLoading(true);
+    googleLoginInProgressRef.current = true;
+    signIn();
   };
 
   return (
@@ -460,7 +470,7 @@ export default function LoginScreen() {
             label="Continuar com Google"
             onPress={onGoogleLogin}
             loading={loading}
-            disabled={loading}
+            disabled={!request || loading}
             iconName="google"
             iconColor="#DB4437"
             mode="contained"
