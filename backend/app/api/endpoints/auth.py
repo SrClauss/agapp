@@ -198,10 +198,14 @@ _BACKEND_BASE = os.getenv("BACKEND_PUBLIC_URL", "https://agilizapro.cloud")
 @router.get("/google/start")
 async def google_oauth_start(return_url: str):
     """Inicia o fluxo OAuth server-side. O app passa seu deep link como return_url."""
+    import logging
+    logger = logging.getLogger(__name__)
+
     if not _GOOGLE_CLIENT_SECRET:
         raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_SECRET_WEB não configurado")
 
     redirect_uri = f"{_BACKEND_BASE}/auth/google/callback"
+    logger.info("Google OAuth start — redirect_uri enviado ao Google: %s", redirect_uri)
     state = urllib.parse.quote(return_url, safe="")
 
     params = urllib.parse.urlencode({
@@ -216,8 +220,30 @@ async def google_oauth_start(return_url: str):
 
 
 @router.get("/google/callback")
-async def google_oauth_callback(code: str, state: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def google_oauth_callback(
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    code: str = None,
+    state: str = None,
+    error: str = None,
+    error_description: str = None,
+):
     """Recebe o code do Google, troca por tokens, cria usuário e redireciona para o app."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info("Google callback recebido: code=%s state=%s error=%s", bool(code), bool(state), error)
+
+    # Se o Google retornou um erro, redireciona para o app com a mensagem
+    if error or not code:
+        msg = error_description or error or "google_auth_failed"
+        logger.error("Google OAuth erro: %s - %s", error, error_description)
+        # tenta redirecionar para o app se tiver state
+        if state:
+            return_url = urllib.parse.unquote(state)
+            separator = "&" if "?" in return_url else "?"
+            return RedirectResponse(f"{return_url}{separator}error={urllib.parse.quote(msg)}")
+        raise HTTPException(status_code=400, detail=f"Google OAuth error: {msg}")
+
     if not _GOOGLE_CLIENT_SECRET:
         raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_SECRET_WEB não configurado")
 
