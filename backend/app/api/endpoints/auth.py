@@ -206,6 +206,7 @@ async def google_oauth_start(return_url: str):
         raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_SECRET_WEB não configurado")
 
     redirect_uri = f"{_BACKEND_BASE}/auth/google/callback"
+    logger.info("Google OAuth start — return_url recebido: %s", return_url)
     logger.info("Google OAuth start — redirect_uri enviado ao Google: %s", redirect_uri)
     state = urllib.parse.quote(return_url, safe="")
 
@@ -217,7 +218,9 @@ async def google_oauth_start(return_url: str):
         "state": state,
         "access_type": "online",
     })
-    return RedirectResponse(f"https://accounts.google.com/o/oauth2/v2/auth?{params}")
+    full = f"https://accounts.google.com/o/oauth2/v2/auth?{params}"
+    logger.info("Google OAuth start — URL completa para Google: %s", full)
+    return RedirectResponse(full)
 
 
 @router.get("/google/callback")
