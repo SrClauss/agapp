@@ -75,7 +75,8 @@ class LoginRequest(BaseModel):
     turnstile_token: Optional[str] = None
 
 class GoogleLoginRequest(BaseModel):
-    idToken: str
+    idToken: Optional[str] = None
+    accessToken: Optional[str] = None
 
 class ProfessionalSettings(BaseModel):
     """Configurações específicas do prestador de serviços"""

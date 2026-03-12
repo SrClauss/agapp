@@ -44,3 +44,4 @@ Dockerfile_dev
 
 # Examples folder
 examples/
+client_secret_*

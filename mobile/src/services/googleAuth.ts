@@ -1,108 +1,86 @@
-// @ts-ignore - Dynamic import to handle CommonJS/ES module compatibility
-let GoogleSignin: any = null;
-
-const loadGoogleSignin = async () => {
-  if (!GoogleSignin) {
-    const module = await import('@react-native-google-signin/google-signin');
-    GoogleSignin = module.GoogleSignin;
-  }
-  return GoogleSignin;
-};
-
 import { useEffect } from 'react';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 
-// Configuração do Google OAuth usando variáveis de ambiente
+// Este arquivo foi reescrito para utilizar o fluxo Web OAuth em vez do SDK nativo
+// o que permite que o app funcione dentro do Expo Go sem módulos nativos.
+
+WebBrowser.maybeCompleteAuthSession();
+
 const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
-
-console.log('=== DEBUG googleAuth.ts ===');
-console.log('GOOGLE_CLIENT_ID_WEB:', GOOGLE_CLIENT_ID_WEB);
-console.log('process.env:', Object.keys(process.env));
+// o client secret não é usado no fluxo público do cliente (expo-auth-session) porque
+// o código roda no dispositivo e não deve expor segredos. Caso você precise trocar
+// o código no backend, configure a variável abaixo e faça a troca no servidor.
+const GOOGLE_CLIENT_SECRET_WEB = process.env.GOOGLE_CLIENT_SECRET_WEB;
 
 if (!GOOGLE_CLIENT_ID_WEB) {
   console.error('ERRO: EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB não está configurado!');
-  // Não lançar erro para não travar o app
 }
 
-// Configurar o Google Sign-In
-const configureGoogleSignin = async () => {
-  try {
-    const GoogleSigninModule = await loadGoogleSignin();
-    GoogleSigninModule.configure({
-      webClientId: GOOGLE_CLIENT_ID_WEB, // Do Google Cloud Console (Web Client)
-      offlineAccess: true,
-      scopes: ['openid', 'profile', 'email'],
-      forceCodeForRefreshToken: true, // Força refresh token
-      // O google-services.json automaticamente configura o androidClientId
-      // Não é necessário especificar manualmente
-    });
-    console.log('Google Sign-In configurado com sucesso');
-    console.log('Web Client ID:', GOOGLE_CLIENT_ID_WEB);
-  } catch (error) {
-    console.error('Erro ao configurar Google Sign-In:', error);
-  }
-};
 
-// Chamar configuração (não bloqueia a renderização)
-configureGoogleSignin();
+// Configuração do discovery para o fluxo OAuth do Google
+const discovery = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+};
 
 export function useGoogleAuth() {
   useEffect(() => {
-    console.log('=== Google Sign-In NATIVO configurado ===');
+    console.log('=== Google Web OAuth configurado ===');
     console.log('Web Client ID:', GOOGLE_CLIENT_ID_WEB);
   }, []);
 
+  // URI fixo do proxy Expo baseado no app.json (owner + slug)
+  const redirectUri = 'https://auth.expo.io/@clausemberg/agapp';
+
+  console.log('🔗 REDIRECT URI GERADO:', redirectUri);
+  console.log('👆 Copie este URI e adicione no Google Cloud Console!');
+
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: GOOGLE_CLIENT_ID_WEB!,
+      redirectUri,
+      scopes: ['openid', 'profile', 'email'],
+      responseType: AuthSession.ResponseType.Token,
+      // IdToken exige nonce; usamos Token + userinfo endpoint para evitar o 400
+    },
+    discovery
+  );
+
+  // opcional: lidar com o response automático se necessário
+  useEffect(() => {
+    if (response?.type === 'success') {
+      console.log('Resposta do OAuth', response.params);
+    }
+  }, [response]);
+
   return {
     signIn: async () => {
-      try {
-        console.log('Iniciando Google Sign-In nativo...');
+      const result = await promptAsync();
+      if (result?.type === 'success') {
+        const { params } = result;
+        const accessToken = params.access_token;
 
-        const GoogleSigninModule = await loadGoogleSignin();
+        // Busca informações do usuário via userinfo endpoint
+        const userInfoResp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const userInfo = await userInfoResp.json();
 
-        // Fazer logout silencioso primeiro para forçar escolha de conta
-        try {
-          await GoogleSigninModule.signOut();
-        } catch (e) {
-          // Ignora erro se não estava logado
-        }
-
-        // Verificar se Google Play Services está disponível
-        await GoogleSigninModule.hasPlayServices();
-
-        // Fazer login - agora vai mostrar a tela de escolha de conta
-        const userInfo = await GoogleSigninModule.signIn();
-
-        console.log('Login bem-sucedido!', userInfo);
-
-        // Tentar pegar o usuário atual para verificar se está logado
-        try {
-          const currentUser = await GoogleSigninModule.getCurrentUser();
-          console.log('Usuário atual do Google:', currentUser ? 'Encontrado' : 'Não encontrado');
-        } catch (error) {
-          console.warn('Erro ao verificar usuário atual:', error);
-        }
-
-        // Pegar o ID Token
-        const tokens = await GoogleSigninModule.getTokens();
-        const idToken = tokens.idToken;
-        const accessToken = tokens.accessToken;
-
-        console.log('ID Token obtido:', idToken ? 'Token encontrado ✓' : 'Token não encontrado ✗');
-
-        // return idToken + parsed userInfo and accessToken for fallback
-        return { idToken, accessToken, userInfo };
-      } catch (error: any) {
-        console.error('Erro no Google Sign-In:', error);
-        throw error;
+        return {
+          idToken: null,
+          accessToken,
+          userInfo,
+        };
       }
+      if (result?.type === 'error') {
+        throw new Error(result.error || 'Erro no login do Google');
+      }
+      throw new Error('Login cancelado');
     },
     signOut: async () => {
-      try {
-        const GoogleSigninModule = await loadGoogleSignin();
-        await GoogleSigninModule.signOut();
-        console.log('Logout bem-sucedido');
-      } catch (error) {
-        console.error('Erro no logout:', error);
-      }
-    }
+      // fluxo web não exige signOut nativo; apenas limpar estado local
+      console.log('Logout web - limpar tokens se necessário');
+    },
   };
 }

@@ -52,9 +52,9 @@ export async function signUpWithEmail(signUpData: SignUpData) {
   }
 }
 
-export async function loginWithGoogle(idToken: string) {
+export async function loginWithGoogle(idToken: string | null, accessToken?: string | null) {
   try {
-    const { data } = await client.post('/auth/google', { idToken });
+    const { data } = await client.post('/auth/google', { idToken, accessToken });
     console.log('📦 Resposta do backend /auth/google:', JSON.stringify(data, null, 2));
     console.log('🔑 access_token:', data.access_token ? 'Existe ✓' : 'NULL ✗');
     console.log('👤 user:', data.user ? 'Existe ✓' : 'NULL ✗');

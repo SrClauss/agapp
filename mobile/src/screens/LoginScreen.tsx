@@ -239,16 +239,16 @@ export default function LoginScreen() {
     try {
       // Fazer login nativo com Google
       const signInResult: any = await signIn();
-      const idToken = signInResult?.idToken;
-      const accessToken = signInResult?.accessToken;
+      const idToken = signInResult?.idToken ?? null;
+      const accessToken = signInResult?.accessToken ?? null;
       const profile = signInResult?.userInfo;
 
-      if (!idToken) {
+      if (!idToken && !accessToken) {
         throw new Error('Não foi possível obter o token do Google');
       }
 
       console.log('Enviando token para o backend...');
-      const data = await loginWithGoogle(idToken);
+      const data = await loginWithGoogle(idToken, accessToken);
       
       console.log('✅ Login com Google bem-sucedido');
       console.log('🔍 data.token:', data.token ? 'Existe ✓' : 'NULL ✗');

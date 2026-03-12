@@ -28,15 +28,13 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.agilizapro.agapp",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.agilizapro.agapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-secure-store",
-      "@react-native-google-signin/google-signin",
       [
         "expo-notifications",
         {

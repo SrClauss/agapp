@@ -115,25 +115,34 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
     Se o usuário não existe, cria uma nova conta automaticamente.
     """
     try:
-        # Verificar o token ID do Google
-        # GOOGLE_AUDIENCE_CLIENT_IDS deve ser uma string com os IDs separados por vírgula
-        # ex: "id_web.apps...,id_android.apps...,id_ios.apps..."
-        audience_str = os.getenv("GOOGLE_AUDIENCE_CLIENT_IDS", "")
-        if not audience_str:
-            raise HTTPException(
-                status_code=500, 
-                detail="GOOGLE_AUDIENCE_CLIENT_IDS não configurado no backend."
+        # Suporta dois fluxos:
+        # 1. idToken  - verificado via google.oauth2.id_token (fluxo nativo)
+        # 2. accessToken - verificado chamando o userinfo endpoint do Google (fluxo web/Expo)
+        if google_data.idToken:
+            audience_str = os.getenv("GOOGLE_AUDIENCE_CLIENT_IDS", "")
+            if not audience_str:
+                raise HTTPException(
+                    status_code=500,
+                    detail="GOOGLE_AUDIENCE_CLIENT_IDS não configurado no backend."
+                )
+            valid_audience = [client_id.strip() for client_id in audience_str.split(',')]
+            idinfo = id_token.verify_oauth2_token(
+                google_data.idToken,
+                requests.Request(),
+                audience=valid_audience
             )
-
-        # A biblioteca do Google espera uma lista de IDs de cliente como 'audience'
-        valid_audience = [client_id.strip() for client_id in audience_str.split(',')]
-
-        # Verificar o token ID com o Google
-        idinfo = id_token.verify_oauth2_token(
-            google_data.idToken,
-            requests.Request(),
-            audience=valid_audience
-        )
+        elif google_data.accessToken:
+            import httpx
+            async with httpx.AsyncClient() as http:
+                resp = await http.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {google_data.accessToken}"},
+                )
+            if resp.status_code != 200:
+                raise HTTPException(status_code=401, detail="accessToken do Google inválido ou expirado")
+            idinfo = resp.json()
+        else:
+            raise HTTPException(status_code=400, detail="Forneça idToken ou accessToken")
 
         # Extrair informações do usuário do token
         google_email = idinfo.get('email')
