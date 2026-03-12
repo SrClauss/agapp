@@ -89,30 +89,36 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 
 @router.post("/login-with-turnstile", response_model=Token)
 async def login_with_turnstile(login_data: LoginRequest, request: Request, db: AsyncIOMotorDatabase = Depends(get_database)):
-    # debug: log incoming request details
     logger = logging.getLogger(__name__)
-    logger.info("login_with_turnstile called: headers=%s", dict(request.headers))
-    try:
-        body = await request.json()
-        logger.info("login_with_turnstile body: %s", body)
-    except Exception:
-        logger.warning("login_with_turnstile could not parse body as json")
+    logger.warning("=== LOGIN_WITH_TURNSTILE START === username=%s has_token=%s", login_data.username, bool(login_data.turnstile_token))
 
     # Verify Turnstile token
     if login_data.turnstile_token:
-        await verify_turnstile_token(login_data.turnstile_token)
+        logger.warning("Verifying turnstile token...")
+        try:
+            await verify_turnstile_token(login_data.turnstile_token)
+            logger.warning("Turnstile token verified OK")
+        except HTTPException as e:
+            logger.error("Turnstile verification failed: %s", e.detail)
+            raise
 
+    logger.warning("Looking up user: %s", login_data.username)
     user = await get_user_by_email(db, login_data.username)
+    logger.warning("User found: %s", bool(user))
+    
     if not user or not verify_password(login_data.password, user.hashed_password):
+        logger.warning("Authentication failed: user_exists=%s password_valid=%s", bool(user), bool(user and verify_password(login_data.password, user.hashed_password)))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    logger.warning("Creating tokens for user %s", user.id)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = create_refresh_token(subject=str(user.id))
 
+    logger.warning("Login successful for user %s", user.id)
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 @router.post("/refresh", response_model=Token)
