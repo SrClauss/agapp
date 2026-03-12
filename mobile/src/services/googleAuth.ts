@@ -1,86 +1,71 @@
 import { useEffect } from 'react';
-import * as AuthSession from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
-
-// Este arquivo foi reescrito para utilizar o fluxo Web OAuth em vez do SDK nativo
-// o que permite que o app funcione dentro do Expo Go sem módulos nativos.
 
 WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
-// o client secret não é usado no fluxo público do cliente (expo-auth-session) porque
-// o código roda no dispositivo e não deve expor segredos. Caso você precise trocar
-// o código no backend, configure a variável abaixo e faça a troca no servidor.
-const GOOGLE_CLIENT_SECRET_WEB = process.env.GOOGLE_CLIENT_SECRET_WEB;
 
 if (!GOOGLE_CLIENT_ID_WEB) {
   console.error('ERRO: EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB não está configurado!');
 }
 
-
-// Configuração do discovery para o fluxo OAuth do Google
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-};
-
 export function useGoogleAuth() {
+  // useIdTokenAuthRequest usa ResponseType.IdToken e adiciona nonce automaticamente.
+  // Isso resolve o erro 400 "invalid_request" que ocorre quando o nonce está ausente.
+  // webClientId = usado pelo Expo Go. O redirect URI será: https://auth.expo.io/@clausemberg/agapp
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    webClientId: GOOGLE_CLIENT_ID_WEB!,
+  });
+
   useEffect(() => {
-    console.log('=== Google Web OAuth configurado ===');
+    console.log('=== Google OAuth (useIdTokenAuthRequest) ===');
     console.log('Web Client ID:', GOOGLE_CLIENT_ID_WEB);
-  }, []);
+    console.log('Redirect URI:', request?.redirectUri);
+  }, [request]);
 
-  // URI fixo do proxy Expo baseado no app.json (owner + slug)
-  const redirectUri = 'https://auth.expo.io/@clausemberg/agapp';
-
-  console.log('🔗 REDIRECT URI GERADO:', redirectUri);
-  console.log('👆 Copie este URI e adicione no Google Cloud Console!');
-
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: GOOGLE_CLIENT_ID_WEB!,
-      redirectUri,
-      scopes: ['openid', 'profile', 'email'],
-      responseType: AuthSession.ResponseType.Token,
-      // IdToken exige nonce; usamos Token + userinfo endpoint para evitar o 400
-    },
-    discovery
-  );
-
-  // opcional: lidar com o response automático se necessário
   useEffect(() => {
     if (response?.type === 'success') {
-      console.log('Resposta do OAuth', response.params);
+      console.log('✅ OAuth OK - id_token presente:', !!response.params?.id_token);
+    } else if (response?.type === 'error') {
+      console.error('❌ Erro OAuth:', response.error);
     }
   }, [response]);
 
   return {
     signIn: async () => {
       const result = await promptAsync();
+
       if (result?.type === 'success') {
-        const { params } = result;
-        const accessToken = params.access_token;
+        const idToken    = result.params?.id_token    ?? null;
+        const accessToken = result.params?.access_token ?? null;
 
-        // Busca informações do usuário via userinfo endpoint
-        const userInfoResp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        const userInfo = await userInfoResp.json();
+        console.log('idToken:', idToken ? 'OK' : 'NULL');
+        console.log('accessToken:', accessToken ? 'OK' : 'NULL');
 
-        return {
-          idToken: null,
-          accessToken,
-          userInfo,
-        };
+        let userInfo = null;
+        if (accessToken) {
+          try {
+            const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            userInfo = await resp.json();
+          } catch (err) {
+            console.warn('Erro ao buscar userinfo:', err);
+          }
+        }
+
+        return { idToken, accessToken, userInfo };
       }
+
       if (result?.type === 'error') {
-        throw new Error(result.error || 'Erro no login do Google');
+        throw new Error(result.error?.message ?? 'Erro no login do Google');
       }
+
       throw new Error('Login cancelado');
     },
     signOut: async () => {
-      // fluxo web não exige signOut nativo; apenas limpar estado local
-      console.log('Logout web - limpar tokens se necessário');
+      console.log('Logout - limpar tokens locais');
     },
   };
 }
