@@ -210,6 +210,12 @@ async def google_oauth_start(return_url: str):
     logger.info("Google OAuth start — redirect_uri enviado ao Google: %s", redirect_uri)
     state = urllib.parse.quote(return_url, safe="")
 
+    # Adding prompt=select_account forces Google to show the account chooser
+    # which helps avoid rare situations where a cached OAuth session with a
+    # previously mis‑configured redirect URI produces a "redirect_uri_mismatch"
+    # error. The error itself originates on Google's side and cannot be seen by
+    # our server (it occurs before the /callback is invoked), but prompting for
+    # account re‑selection minimizes reuse of stale requests.
     params = urllib.parse.urlencode({
         "client_id": _GOOGLE_CLIENT_ID,
         "redirect_uri": redirect_uri,
@@ -217,6 +223,7 @@ async def google_oauth_start(return_url: str):
         "scope": "openid email profile",
         "state": state,
         "access_type": "online",
+        "prompt": "select_account",
     })
     full = f"https://accounts.google.com/o/oauth2/v2/auth?{params}"
     logger.info("Google OAuth start — URL completa para Google: %s", full)
