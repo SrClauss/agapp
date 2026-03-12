@@ -176,7 +176,12 @@ app.add_middleware(
 # Exception handler for 401 redirects
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
+    # log every HTTPException; especially watch for 401 so we know what
+    # endpoint triggered the redirect
+    logger = logging.getLogger(__name__)
+    logger.warning("http_exception_handler caught %s for %s %s", exc.status_code, request.method, request.url)
     if exc.status_code == 401:
+        logger.warning("redirecting to /login due to 401")
         return RedirectResponse(url="/login", status_code=302)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
