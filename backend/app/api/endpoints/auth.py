@@ -78,7 +78,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Usuário ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -110,7 +110,7 @@ async def login_with_turnstile(login_data: LoginRequest, request: Request, db: A
         logger.warning("Authentication failed: user_exists=%s password_valid=%s", bool(user), bool(user and verify_password(login_data.password, user.hashed_password)))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Usuário ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
