@@ -182,8 +182,12 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     logger = logging.getLogger(__name__)
     logger.warning("http_exception_handler caught %s for %s %s", exc.status_code, request.method, request.url)
     if exc.status_code == 401:
-        logger.warning("redirecting to /login due to 401")
-        return RedirectResponse(url="/login", status_code=302)
+          # API clients expect JSON, not a redirect, especially under /auth
+          if request.url.path.startswith("/auth"):
+              logger.warning("returning JSON 401 for API route %s", request.url.path)
+              return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+          logger.warning("redirecting to /login due to 401")
+          return RedirectResponse(url="/login", status_code=302)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 # Include routers

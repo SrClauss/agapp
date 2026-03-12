@@ -36,6 +36,16 @@ export async function loginWithEmail(email: string, password: string, turnstileT
   } catch (error) {
     const axiosError = error as AxiosError<{ detail?: string }>;
     console.error('[auth] loginWithEmail error', axiosError.toJSON(), axiosError.response?.data);
+
+    // Provide a user-friendly message for 401 responses.
+    if (axiosError.response) {
+      if (axiosError.response.status === 401) {
+        // backend now returns Portuguese message or default
+        const msg = axiosError.response.data?.detail || 'Usuário ou senha incorretos';
+        throw new Error(msg);
+      }
+    }
+
     throw new Error(axiosError.response?.data?.detail || 'Login failed');
   }
 }
