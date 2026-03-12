@@ -15,6 +15,7 @@ import os
 import uuid
 import urllib.parse
 import httpx
+import logging
 
 router = APIRouter()
 
