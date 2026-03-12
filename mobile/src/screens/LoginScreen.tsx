@@ -242,6 +242,18 @@ export default function LoginScreen() {
       const idToken = signInResult?.idToken ?? null;
       const accessToken = signInResult?.accessToken ?? null;
       const profile = signInResult?.userInfo;
+      const serverToken = signInResult?.serverToken ?? null;
+
+      // Fluxo server-side: o backend já autenticou com o Google e retornou o JWT diretamente
+      if (serverToken) {
+        console.log('✅ Login Google server-side concluído, buscando usuário...');
+        await setToken(serverToken);
+        const user = await fetchCurrentUser(serverToken);
+        if (!user) throw new Error('Usuário não encontrado após login Google');
+        setUser(user);
+        await checkAdAndNavigate(user);
+        return;
+      }
 
       if (!idToken && !accessToken) {
         throw new Error('Não foi possível obter o token do Google');

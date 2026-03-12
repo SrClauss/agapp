@@ -1,5 +1,6 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.database import get_database
 from app.core.security import create_access_token, create_refresh_token, verify_password, get_current_user, get_current_user_from_token
@@ -12,6 +13,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 import os
 import uuid
+import urllib.parse
+import httpx
 
 router = APIRouter()
 
@@ -176,6 +179,109 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Fluxo OAuth server-side para Expo Go (sem proxy auth.expo.io, sem módulos nativos)
+# ---------------------------------------------------------------------------
+# Passo 1: app abre /auth/google/start?return_url=<deep_link>
+# Passo 2: backend redireciona para Google com redirect_uri = este servidor
+# Passo 3: Google chama /auth/google/callback?code=...&state=...
+# Passo 4: backend troca code por token, cria usuário, redireciona para return_url?token=JWT
+# ---------------------------------------------------------------------------
+
+_GOOGLE_CLIENT_ID  = "36227471485-8bogr7vvdga110v3c9ha29gu3khom83c.apps.googleusercontent.com"
+_GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET_WEB", "")
+_BACKEND_BASE = os.getenv("BACKEND_PUBLIC_URL", "https://agilizapro.cloud")
+
+
+@router.get("/google/start")
+async def google_oauth_start(return_url: str):
+    """Inicia o fluxo OAuth server-side. O app passa seu deep link como return_url."""
+    if not _GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_SECRET_WEB não configurado")
+
+    redirect_uri = f"{_BACKEND_BASE}/api/auth/google/callback"
+    state = urllib.parse.quote(return_url, safe="")
+
+    params = urllib.parse.urlencode({
+        "client_id": _GOOGLE_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+    })
+    return RedirectResponse(f"https://accounts.google.com/o/oauth2/v2/auth?{params}")
+
+
+@router.get("/google/callback")
+async def google_oauth_callback(code: str, state: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+    """Recebe o code do Google, troca por tokens, cria usuário e redireciona para o app."""
+    if not _GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_SECRET_WEB não configurado")
+
+    return_url = urllib.parse.unquote(state)
+    redirect_uri = f"{_BACKEND_BASE}/api/auth/google/callback"
+
+    # Trocar code por tokens
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": code,
+                "client_id": _GOOGLE_CLIENT_ID,
+                "client_secret": _GOOGLE_CLIENT_SECRET,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            },
+        )
+
+    if token_resp.status_code != 200:
+        raise HTTPException(status_code=400, detail=f"Erro ao trocar code: {token_resp.text}")
+
+    token_data = token_resp.json()
+    access_token_google = token_data.get("access_token")
+
+    # Buscar perfil do usuário
+    async with httpx.AsyncClient() as client:
+        userinfo_resp = await client.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {access_token_google}"},
+        )
+
+    if userinfo_resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Erro ao buscar perfil do Google")
+
+    userinfo = userinfo_resp.json()
+    google_email   = userinfo.get("email")
+    google_name    = userinfo.get("name", "")
+    google_picture = userinfo.get("picture", "")
+
+    if not google_email:
+        raise HTTPException(status_code=400, detail="Google não retornou email")
+
+    # Criar ou encontrar usuário
+    existing = await get_user_by_email(db, google_email)
+    if existing:
+        user = existing
+    else:
+        user_create = UserCreate(
+            email=google_email,
+            full_name=google_name,
+            cpf="000.000.000-00",
+            password=str(uuid.uuid4()),
+            turnstile_token=None,
+        )
+        user = await create_user(db, user_create)
+
+    # Gerar JWT da aplicação
+    app_token = create_access_token(subject=str(user.id))
+
+    # Redirecionar de volta para o deep link do app com o token
+    separator = "&" if "?" in return_url else "?"
+    final_url = f"{return_url}{separator}token={app_token}&email={urllib.parse.quote(google_email)}"
+    return RedirectResponse(final_url)
 
 
 from fastapi import Request
