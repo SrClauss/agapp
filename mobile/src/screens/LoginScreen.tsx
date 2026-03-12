@@ -185,6 +185,7 @@ export default function LoginScreen() {
 
     let token = payload;
 
+    console.log('[Login] onTurnstileMessage full payload:', payload);
     console.log('[Login] onTurnstileMessage received token/evt (first30):', token && token.slice ? token.slice(0,30) : token, 'parsedType=', parsed?.type);
     setShowTurnstile(false);
     setLoading(true);
@@ -197,7 +198,14 @@ export default function LoginScreen() {
         throw new Error(parsed.error || 'Erro na verificação anti-bot');
       }
 
+      // if for some reason token is falsy, abort early with message
+      if (!token) {
+        console.warn('[Login] turnstile message produced empty token, aborting');
+        setError('Token anti-bot inválido, tente novamente');
+        throw new Error('Turnstile token missing');
+      }
       // Directly use the token in the login request and let the backend verify it once
+      console.log('[Login] calling loginWithEmail', {email, token: token.slice ? token.slice(0,30) : token});
       const data = await loginWithEmail(email, password, token);
       await setToken(data.token);
       const user = data.user || (await fetchCurrentUser(data.token));

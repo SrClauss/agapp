@@ -88,7 +88,16 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 @router.post("/login-with-turnstile", response_model=Token)
-async def login_with_turnstile(login_data: LoginRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def login_with_turnstile(login_data: LoginRequest, request: Request, db: AsyncIOMotorDatabase = Depends(get_database)):
+    # debug: log incoming request details
+    logger = logging.getLogger(__name__)
+    logger.info("login_with_turnstile called: headers=%s", dict(request.headers))
+    try:
+        body = await request.json()
+        logger.info("login_with_turnstile body: %s", body)
+    except Exception:
+        logger.warning("login_with_turnstile could not parse body as json")
+
     # Verify Turnstile token
     if login_data.turnstile_token:
         await verify_turnstile_token(login_data.turnstile_token)

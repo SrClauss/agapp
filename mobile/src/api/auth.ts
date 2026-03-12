@@ -12,21 +12,18 @@ export interface SignUpData {
 
 export async function loginWithEmail(email: string, password: string, turnstileToken?: string, authToken?: string) {
   try {
-    const params = new URLSearchParams({
-      username: email,
-      password: password,
-    });
-
+    // use JSON endpoint that accepts turnstile_token field directly
+    const body: any = { username: email, password };
     if (turnstileToken) {
-      params.append('turnstile_token', turnstileToken);
+      body.turnstile_token = turnstileToken;
     }
-
-    const headers: any = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    console.log('[auth] loginWithEmail baseURL', client.defaults.baseURL);
+    const headers: any = { 'Content-Type': 'application/json' };
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`;
     }
 
-    const { data } = await client.post('/auth/login', params, {
+    const { data } = await client.post('/auth/login-with-turnstile', body, {
       headers,
     });
 
@@ -38,6 +35,7 @@ export async function loginWithEmail(email: string, password: string, turnstileT
     return { token: data.access_token, user: data.user };
   } catch (error) {
     const axiosError = error as AxiosError<{ detail?: string }>;
+    console.error('[auth] loginWithEmail error', axiosError.toJSON(), axiosError.response?.data);
     throw new Error(axiosError.response?.data?.detail || 'Login failed');
   }
 }

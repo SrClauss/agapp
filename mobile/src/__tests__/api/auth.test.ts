@@ -41,10 +41,10 @@ describe('Auth API', () => {
       const result = await loginWithEmail('test@example.com', 'password123');
 
       expect(mockClient.post).toHaveBeenCalledWith(
-        '/auth/login',
-        expect.any(URLSearchParams),
+        '/auth/login-with-turnstile',
+        expect.objectContaining({ username: 'test@example.com', password: 'password123' }),
         expect.objectContaining({
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: { 'Content-Type': 'application/json' },
         })
       );
       expect(result.token).toBe('token-123');
@@ -70,8 +70,8 @@ describe('Auth API', () => {
 
       await loginWithEmail('test@example.com', 'password', 'turnstile-token');
 
-      const params = mockClient.post.mock.calls[0][1] as URLSearchParams;
-      expect(params.get('turnstile_token')).toBe('turnstile-token');
+      const body = mockClient.post.mock.calls[0][1] as any;
+      expect(body.turnstile_token).toBe('turnstile-token');
     });
   });
 

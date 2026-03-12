@@ -38,8 +38,14 @@ const getAuthToken = async (): Promise<string | null> => {
   }
 };
 
-// Get base URL from environment
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+// Get base URL from environment. In development we often forget to set
+// EXPO_PUBLIC_API_URL, which would leave a localhost fallback that isn't
+// reachable from a physical device. Default to the real backend to avoid
+// silent 404s.
+let BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://agilizapro.cloud';
+if (!process.env.EXPO_PUBLIC_API_URL) {
+  console.warn('[axios] EXPO_PUBLIC_API_URL not set, defaulting to', BASE_URL);
+}
 
 // Create axios instance
 const client = axios.create({
