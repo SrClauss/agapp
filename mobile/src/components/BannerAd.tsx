@@ -9,7 +9,7 @@ interface BannerAdProps {
   adType: AdType;
   minHeight?: number;
   maxHeight?: number;
-  onPress?: () => void;
+  onLongPress?: () => void;
 }
 
 /**
@@ -19,10 +19,10 @@ interface BannerAdProps {
  * @example
  * ```tsx
  * // Na tela home
- * <BannerAd adType="banner_client" minHeight={100} maxHeight={200} />
+ * <BannerAd adType="banner_client" minHeight={100} maxHeight={200} onLongPress={() => console.log('long press')} />
  * ```
  */
-export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: BannerAdProps) {
+export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onLongPress }: BannerAdProps) {
   const { adHtml, images, loading, exists } = useAd(adType);
   const { width: screenWidth } = useWindowDimensions();
   const flatListRef = useRef<FlatList<any> | null>(null);
@@ -43,16 +43,6 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
     const ratio = imgHeight / imgWidth;
     const calculatedHeight = containerWidth * ratio;
     return Math.max(minHeight, Math.min(maxHeight, calculatedHeight));
-  };
-
-  const handleMessage = (event: any) => {
-    const message = event.nativeEvent.data;
-
-    // Rastrear cliques
-    if (message === 'click') {
-      onPress?.();
-      // Aqui você pode enviar analytics
-    }
   };
 
   // Não mostrar se não existir
@@ -95,11 +85,11 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
               <TouchableOpacity
                 style={[styles.itemContainer, { width: containerWidth }]}
                 activeOpacity={0.8}
-                onPress={() => {
+                onLongPress={() => {
                   if (item.link) {
                     Linking.openURL(item.link).catch(() => {});
                   }
-                  onPress?.();
+                  onLongPress?.();
                 }}
               >
                 <Image
@@ -136,12 +126,10 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
         <WebView
           source={{ html: adHtml || '' }}
           style={styles.webview}
-          onMessage={handleMessage}
           scrollEnabled={false}
           showsVerticalScrollIndicator={false}
           javaScriptEnabled
           domStorageEnabled
-          // Evitar que o WebView intercepte gestos de scroll da tela
           bounces={false}
           overScrollMode="never"
         />

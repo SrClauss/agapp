@@ -12,6 +12,7 @@ import {
   Linking,
   useWindowDimensions,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
@@ -33,6 +34,7 @@ interface PubliScreenAdProps {
  * ```
  */
 export function PubliScreenAd({ userType, onClose, autoShow = true }: PubliScreenAdProps) {
+  const navigation = useNavigation();
   const adType = userType === 'client' ? 'publi_client' : 'publi_professional';
   const { adHtml, images, loading, exists } = useAd(adType);
   const { width } = useWindowDimensions();
@@ -46,17 +48,35 @@ export function PubliScreenAd({ userType, onClose, autoShow = true }: PubliScree
   };
 
   const handleMessage = (event: any) => {
-    const message = event.nativeEvent.data;
-
-    // O HTML pode enviar mensagem para fechar
-    if (message === 'close') {
-      handleClose();
+    const raw = event.nativeEvent.data;
+    let msg: any;
+    try {
+      msg = JSON.parse(raw);
+    } catch (e) {
+      msg = { cmd: raw };
     }
 
-    // Rastrear cliques
-    if (message === 'click') {
-      console.log('Usuário clicou no anúncio PubliScreen');
-      // Aqui você pode enviar analytics
+    switch (msg.cmd) {
+      case 'close':
+        handleClose();
+        break;
+      case 'click':
+        console.log('Usuário clicou no anúncio PubliScreen');
+        break;
+      case 'action1':
+      case 'action2':
+      case 'action3':
+        if (msg.type === 'url' && msg.value) {
+          Linking.openURL(msg.value).catch(() => {});
+        } else if (msg.type === 'screen' && msg.value) {
+          // navegue usando React Navigation
+          // caso você use uma ref global, por exemplo NavigationService
+          // @ts-ignore
+          navigation.navigate(msg.value);
+        }
+        break;
+      default:
+        console.log('Mensagem desconhecida do ad:', msg);
     }
   };
 

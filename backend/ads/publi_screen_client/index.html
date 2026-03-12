@@ -179,6 +179,7 @@
     <div class="ad-container">
 
         <img src="./ichigo-vs-yusuke-who-wins-v0-8naawear6xm91.webp" alt="AgilizaPro Logo" style="width: 100px; margin-bottom: 20px;">
+        <!-- close handled by helper below -->
         <button class="close-button" onclick="closeAd()">✕</button>
 
         <div class="badge">🎉 OFERTA ESPECIAL</div>
@@ -186,6 +187,10 @@
         <h1>Transforme seu <span class="highlight">Negócio</span> Hoje!</h1>
 
         <p>Conecte-se com os melhores profissionais e clientes. Aumente sua produtividade em até 300%!</p>
+        <!-- example action buttons -->
+        <button class="cta-button" onclick="action1('url','https://www.google.com')">Visitar Google</button>
+        <button class="cta-button" onclick="action1('screen','WelcomeCustomerScreen')">Ir para tela interna</button>
+        <button class="cta-button" onclick="action2('url','https://www.github.com')">Outro link</button>
 
         <div class="features">
             <div class="feature">
@@ -206,41 +211,29 @@
             </div>
         </div>
 
-        <button class="cta-button" onclick="trackClick()">
-            Começar Agora
-        </button>
+        <button class="cta-button" onclick="action1('url','https://www.google.com')">Visitar Google</button>
+        <button class="cta-button" onclick="action1('screen','WelcomeCustomerScreen')">Ir para tela interna</button>
+        <button class="cta-button" onclick="action2('url','https://www.github.com')">Outro link</button>
+        <button class="cta-button" onclick="closeAd()">Fechar anúncio</button>
     </div>
 
     <script>
-        // Função para fechar o anúncio
-        function closeAd() {
-            // Envia mensagem para o React Native
+        // helper que envía um objeto JSON para o app
+        function post(cmd, payload={}) {
+            const msg = JSON.stringify({ cmd, ...payload });
             if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage('close');
+                window.ReactNativeWebView.postMessage(msg);
+            } else if (window.parent !== window) {
+                window.parent.postMessage(msg, '*');
             } else {
-                // Para teste em navegador
-                if (window.parent !== window) {
-                    window.parent.postMessage('close', '*');
-                }
-                console.log('Anúncio fechado');
+                console.log('OUT msg', msg);
             }
         }
 
-        // Função para rastrear cliques
-        function trackClick() {
-            // Envia mensagem para o React Native
-            if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage('click');
-            } else {
-                console.log('Clique rastreado');
-            }
-
-            // Aqui você pode adicionar lógica adicional
-            alert('Obrigado pelo interesse! Em breve você será redirecionado.');
-
-            // Fechar após o clique (opcional)
-            setTimeout(closeAd, 2000);
-        }
+        function closeAd() { post('close'); }
+        function action1(type, value) { post('action1', { type, value }); }
+        function action2(type, value) { post('action2', { type, value }); }
+        function action3(type, value) { post('action3', { type, value }); }
 
         // Prevenir zoom no mobile
         document.addEventListener('gesturestart', function (e) {
