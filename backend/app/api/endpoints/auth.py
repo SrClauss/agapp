@@ -201,7 +201,7 @@ async def google_oauth_start(return_url: str):
     if not _GOOGLE_CLIENT_SECRET:
         raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_SECRET_WEB não configurado")
 
-    redirect_uri = f"{_BACKEND_BASE}/api/auth/google/callback"
+    redirect_uri = f"{_BACKEND_BASE}/auth/google/callback"
     state = urllib.parse.quote(return_url, safe="")
 
     params = urllib.parse.urlencode({
@@ -222,7 +222,7 @@ async def google_oauth_callback(code: str, state: str, db: AsyncIOMotorDatabase 
         raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_SECRET_WEB não configurado")
 
     return_url = urllib.parse.unquote(state)
-    redirect_uri = f"{_BACKEND_BASE}/api/auth/google/callback"
+    redirect_uri = f"{_BACKEND_BASE}/auth/google/callback"
 
     # Trocar code por tokens
     async with httpx.AsyncClient() as client:

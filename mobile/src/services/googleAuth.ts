@@ -20,7 +20,7 @@ export function useGoogleAuth() {
       const returnUrl = Linking.createURL('auth/google/callback');
       console.log('Return URL (deep link):', returnUrl);
 
-      const startUrl = `${BACKEND_URL}/api/auth/google/start?return_url=${encodeURIComponent(returnUrl)}`;
+      const startUrl = `${BACKEND_URL}/auth/google/start?return_url=${encodeURIComponent(returnUrl)}`;
       console.log('Abrindo:', startUrl);
 
       // Abre o browser. Ele fecha automaticamente quando detectar um redirect para returnUrl
