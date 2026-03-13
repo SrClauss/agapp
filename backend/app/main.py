@@ -224,11 +224,6 @@ app.include_router(banners.admin_router, prefix="/ads-admin", tags=["advertiseme
 app.include_router(publi_screen.router, prefix="/system-admin/api/public/ads")
 app.include_router(publi_screen.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
 
-# ensure collection exists on startup
-@app.on_event("startup")
-async def ensure_collections():
-    db = await get_database()
-    await db.create_collection('publi_screen_ads', capped=False)
 app.include_router(contacts.router, tags=["contacts"])
 
 # Expor rotas também sob o prefixo /api para compatibilidade com clientes e testes
@@ -309,6 +304,13 @@ async def startup_event():
         await config_crud.get_system_config(database)
     except Exception:
         pass
+
+    # Ensure ad collections exist (ignore error if already created)
+    for col in ('ad_contents', 'publi_screen_ads'):
+        try:
+            await database.create_collection(col)
+        except Exception:
+            pass  # already exists
 
 @app.get("/")
 async def root():
