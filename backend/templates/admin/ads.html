@@ -312,13 +312,13 @@
           <!-- Image file -->
           <div class="mb-3">
             <label class="form-label fw-semibold">
-              <i class="fas fa-image me-1"></i>Imagem do Banner <span class="text-danger">*</span>
+              <i class="fas fa-image me-1"></i>Imagens do Banner <span class="text-danger">*</span>
             </label>
             <input type="file" class="form-control" id="banner-image"
-                   accept=".png,.jpg,.jpeg,.gif,.webp,.svg" required>
+                   accept=".png,.jpg,.jpeg,.gif,.webp,.svg" multiple required>
             <div class="form-text">
-              Proporção mínima: <strong>2.5:1 (largura ÷ altura)</strong>. Ideal: <strong>3:1</strong>.
-              Formatos: PNG, JPG, JPEG, GIF, WebP, SVG. Máx 10 MB.
+              Você pode enviar várias imagens de uma vez. Proporção mínima: <strong>2.5:1 (largura ÷ altura)</strong>. Ideal: <strong>3:1</strong>.
+              Formatos: PNG, JPG, JPEG, GIF, WebP, SVG. Máx 10 MB por arquivo.
             </div>
           </div>
 
@@ -750,76 +750,76 @@ function updateBannerActionValueGroup() {
   }
 }
 
-// Show local preview as soon as user picks an image
-document.getElementById('banner-image').addEventListener('change', function () {
-  const file = this.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('banner-modal-img').src = e.target.result;
-    document.getElementById('banner-modal-preview').style.display = '';
-  };
-  reader.readAsDataURL(file);
-});
+// Show local preview as soon as user picks images
+  document.getElementById('banner-image').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('banner-modal-img').src = e.target.result;
+      document.getElementById('banner-modal-preview').style.display = '';
+    };
+    reader.readAsDataURL(file);
+  });
 
-async function submitBanner() {
-  const location    = _bannerLocation;
-  const imgInput    = document.getElementById('banner-image');
-  const actionType  = document.getElementById('banner-action-type').value;
-  const actionValueInput = document.getElementById('banner-action-value').value.trim();
-  const actionValueSelect = document.getElementById('banner-action-value-select').value;
-  const actionValue = (actionType === 'internal') ? actionValueSelect : actionValueInput;
-  const btn         = document.getElementById('btn-banner-submit');
-  const progress    = document.getElementById('banner-progress');
+  async function submitBanner() {
+    const location    = _bannerLocation;
+    const imgInput    = document.getElementById('banner-image');
+    const actionType  = document.getElementById('banner-action-type').value;
+    const actionValueInput = document.getElementById('banner-action-value').value.trim();
+    const actionValueSelect = document.getElementById('banner-action-value-select').value;
+    const actionValue = (actionType === 'internal') ? actionValueSelect : actionValueInput;
+    const btn         = document.getElementById('btn-banner-submit');
+    const progress    = document.getElementById('banner-progress');
 
-  if (!imgInput.files.length) {
-    showAlert('Selecione uma imagem para o banner.', 'warning');
-    return;
-  }
-
-  if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
-    showAlert('Selecione ou informe o destino para a ação.', 'warning');
-    return;
-  }
-
-  const fd = new FormData();
-  fd.append('file', imgInput.files[0]);
-  fd.append('action_type', actionType);
-  fd.append('action_value', actionValue);
-
-  btn.disabled = true;
-  progress.style.display = '';
-
-  try {
-    const res = await fetch(`/ads-admin/upload-banner/${location}`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: authHeaders(),
-      body: fd
-    });
-
-    const json = await res.json();
-
-    if (!res.ok) {
-      const detail = json.detail;
-      let msg = 'Erro no upload';
-      if (typeof detail === 'object' && detail.message) {
-        msg = detail.message;
-        if (detail.details && detail.details.suggestion) msg += ` — ${detail.details.suggestion}`;
-      } else if (typeof detail === 'string') {
-        msg = detail;
-      }
-      showAlert(`Erro: ${msg}`, 'danger');
+    if (!imgInput.files.length) {
+      showAlert('Selecione ao menos uma imagem para o banner.', 'warning');
       return;
     }
 
-    // Success: close modal, show alert, reload state
-    bootstrap.Modal.getInstance(document.getElementById('modalBanner')).hide();
-    showAlert('Banner configurado com sucesso!', 'success');
+    if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
+      showAlert('Selecione ou informe o destino para a ação.', 'warning');
+      return;
+    }
 
-    // Show browser alert with action info (works outside webview)
-    const actLabel = actionLabel(json.action);
-    alert(`✅ Banner cadastrado!\n\nAção configurada: ${actLabel}`);
+    btn.disabled = true;
+    progress.style.display = '';
+
+    try {
+      const promises: Promise<Response>[] = [];
+      for (let i = 0; i < imgInput.files.length; i++) {
+        const fd = new FormData();
+        fd.append('file', imgInput.files[i]);
+        fd.append('action_type', actionType);
+        fd.append('action_value', actionValue);
+        promises.push(fetch(`/ads-admin/upload-banner/${location}`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: authHeaders(),
+          body: fd
+        }));
+      }
+
+      const responses = await Promise.all(promises);
+      for (const res of responses) {
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          const detail = (json as any).detail;
+          let msg = 'Erro no upload';
+          if (typeof detail === 'object' && detail.message) {
+            msg = detail.message;
+            if (detail.details && detail.details.suggestion) msg += ` — ${detail.details.suggestion}`;
+          } else if (typeof detail === 'string') {
+            msg = detail;
+          }
+          showAlert(`Erro: ${msg}`, 'danger');
+          return;
+        }
+      }
+
+      // Success: close modal, show alert, reload state
+      bootstrap.Modal.getInstance(document.getElementById('modalBanner')).hide();
+      showAlert('Banner(s) configurado(s) com sucesso!', 'success');
 
     await loadState(location);
 
