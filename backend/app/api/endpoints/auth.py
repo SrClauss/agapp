@@ -280,18 +280,19 @@ async def google_oauth_start(request: Request, redirect_uri: str | None = None, 
     if not client_id:
         raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID não configurado no backend.")
 
-    # Build redirect_uri to our backend callback (HTTPS forçado)
-    redirect_uri = "https://agilizapro.cloud/auth/google/callback"
-    
-    scope = "openid email profile"
-    # Store app redirect URI in state para usar depois no callback
+    # Store app redirect URI in state BEFORE overwriting the parameter
     state_target = redirect_uri or next or ""
     state = urllib.parse.quote_plus(state_target)
+    
+    # Build redirect_uri to our backend callback (HTTPS forçado)
+    backend_redirect_uri = "https://agilizapro.cloud/auth/google/callback"
+    
+    scope = "openid email profile"
     
     params = {
         "response_type": "code",
         "client_id": client_id,
-        "redirect_uri": redirect_uri,
+        "redirect_uri": backend_redirect_uri,
         "scope": scope,
         "access_type": "offline",
         "include_granted_scopes": "true",
@@ -339,7 +340,7 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
 
     try:
         # redirect_uri usado no /start (sempre o backend callback)
-        redirect_uri = "https://agilizapro.cloud/auth/google/callback"
+        backend_redirect_uri = "https://agilizapro.cloud/auth/google/callback"
         
         print(f"[OAuth Callback] Exchanging code for tokens...")
 
@@ -349,7 +350,7 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
                 "code": code,
                 "client_id": client_id,
                 "client_secret": client_secret,
-                "redirect_uri": redirect_uri,
+                "redirect_uri": backend_redirect_uri,
                 "grant_type": "authorization_code",
             }, headers={"Accept": "application/json"})
             resp.raise_for_status()
