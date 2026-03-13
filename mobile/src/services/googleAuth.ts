@@ -1,12 +1,11 @@
 import { useState } from 'react';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 // Permite que o Expo Go complete o redirect de autenticação OAuth
 WebBrowser.maybeCompleteAuthSession();
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
-const POLLING_INTERVAL_MS = 2000;
-const POLLING_TIMEOUT_MS = 60000;
 
 interface AuthResponse {
   type: 'success' | 'error' | 'dismiss' | 'cancel';
@@ -38,26 +37,25 @@ export function useGoogleAuth() {
   const [response, setResponse] = useState<AuthResponse | null>(null);
   const [isReady, setIsReady] = useState(true);
 
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const signIn = async () => {
+    try {
+      setResponse(null);
 
-  const pollSession = async (sessionId: string) => {
-    const startTime = Date.now();
+      const redirectUri = Linking.createURL('auth/callback');
+      const authUrl = `${BACKEND_URL}/auth/google/start?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    while (Date.now() - startTime < POLLING_TIMEOUT_MS) {
-      const statusRes = await fetch(`${BACKEND_URL}/auth/google/session/${sessionId}`);
-      if (!statusRes.ok) {
-        throw new Error('Falha ao consultar status do login Google');
-      }
+      console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
 
-      const statusData = await statusRes.json();
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-      if (statusData.status === 'authorized') {
-        const accessToken = statusData.access_token;
-        const refreshToken = statusData.refresh_token;
-        const tokenType = statusData.token_type || 'bearer';
+      if (result.type === 'success' && result.url) {
+        const parsed = Linking.parse(result.url);
+        const accessToken = parsed.queryParams?.token as string | undefined;
+        const refreshToken = parsed.queryParams?.refresh_token as string | undefined;
+        const tokenType = (parsed.queryParams?.token_type as string | undefined) || 'bearer';
 
-        if (!accessToken || !refreshToken) {
-          throw new Error('Sessão autorizada sem tokens válidos');
+        if (!accessToken) {
+          throw new Error('Token não retornado no callback OAuth');
         }
 
         setResponse({
@@ -71,53 +69,12 @@ export function useGoogleAuth() {
         return;
       }
 
-      if (statusData.status === 'expired' || statusData.status === 'failed') {
-        throw new Error('Sessão de login expirou. Tente novamente.');
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        setResponse({ type: result.type });
+        return;
       }
 
-      await sleep(POLLING_INTERVAL_MS);
-    }
-
-    throw new Error('Tempo de login excedido (60s). Tente novamente.');
-  };
-
-  const signIn = async () => {
-    try {
-      setResponse(null);
-
-      const sessionRes = await fetch(`${BACKEND_URL}/auth/google/session`, {
-        method: 'POST',
-      });
-
-      if (!sessionRes.ok) {
-        throw new Error('Falha ao iniciar sessão de login Google');
-      }
-
-      const sessionData = await sessionRes.json();
-      const authUrl = sessionData.auth_url;
-      const sessionId = sessionData.session_id;
-
-      if (!authUrl || !sessionId) {
-        throw new Error('Resposta inválida ao iniciar sessão de login');
-      }
-
-      console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
-
-      // Inicia polling em paralelo ao navegador para não depender de fechamento manual.
-      const pollingPromise = pollSession(sessionId);
-      const browserPromise = WebBrowser.openBrowserAsync(authUrl);
-
-      await pollingPromise;
-
-      // Tenta fechar o navegador automaticamente após autorização.
-      try {
-        await WebBrowser.dismissBrowser();
-      } catch {
-        // Em alguns ambientes/plataformas o dismiss pode ser ignorado.
-      }
-
-      // Consome resultado do browser para evitar promise pendente.
-      await browserPromise;
+      setResponse({ type: 'error' });
     } catch (error) {
       console.error('[GoogleAuth] Erro ao abrir autenticação:', error);
       setResponse({ type: 'error' });
