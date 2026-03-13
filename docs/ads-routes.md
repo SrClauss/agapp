@@ -2,6 +2,19 @@
 
 This document describes the advertisement system routes in AgApp and how to use them.
 
+## Admin UI (`/ads-admin`)
+
+The admin interface is a modal-driven HTML page (rebuilt in PR #45) with four section cards — one per ad location. Each card shows a status badge (`Configurado` / `Vazio`) and two action buttons:
+
+- **Configurar** — opens the upload modal for that location type:
+  - *PubliScreen*: accepts a `.zip` archive + action selector (`none` / `external URL` / `internal Stack`). After upload, a sandboxed 9:16 iframe previews the content.
+  - *Banner*: accepts an image file + action selector. A `FileReader` preview is shown before upload; after upload the image is rendered in the card.
+- **Limpar** — calls `DELETE /ads-admin/delete-all/{location}` to reset the location.
+
+All four cards are refreshed on page load via `reloadAll()`.
+
+---
+
 ## Route Structure
 
 The advertisement system has three main route groups:
@@ -13,10 +26,12 @@ Used by system administrators to manage advertisements.
 
 Endpoints:
 - `GET /ads-admin/locations` - List all ad locations
-- `POST /ads-admin/upload/{location}` - Upload ad files (HTML, CSS, JS, images)
+- `POST /ads-admin/upload-zip/{location}` - Upload a `.zip` with HTML/CSS/JS assets for a PubliScreen location (max 20MB); stores action in `meta.json`; validates against path traversal
+- `POST /ads-admin/upload-banner/{location}` - Upload a banner image for a Banner location (max 10MB, min 2.5:1 aspect ratio); stores action metadata and returns base64 preview
+- `GET /ads-admin/state/{location}` - Get current configuration state for a location (`{ configured, has_html, images[], action }`)
 - `DELETE /ads-admin/delete-all/{location}` - Delete all files for a location
 - `DELETE /ads-admin/delete-file/{location}/{filename}` - Delete specific file
-- `GET /ads-admin/preview/{location}` - Preview ad content
+- `GET /ads-admin/preview-html/{location}` - Preview HTML ad content in iframe
 
 ### 2. Static File Serving
 **Prefix:** `/ads`
