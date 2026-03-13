@@ -33,40 +33,7 @@
                 <small>Tela cheia exibida após login do cliente</small>
             </div>
             <div class="card-body">
-                <!-- File upload (static/legacy) -->
-                <form id="form-publi-client" class="upload-form" data-ad-type="publi_client">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Arquivos do Anúncio</label>
-                            <input type="file" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.svg,.webp">
-                            <div class="form-text">Imagens apenas (png/jpg/jpeg/webp/svg/gif). Máx 5MB por arquivo.</div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-upload me-1"></i>Fazer Upload
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('publi_client')">
-                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('publi_client')">
-                            <i class="fas fa-desktop me-1"></i>Preview Desktop
-                        </button>
-                    </div>
-                </form>
-
-                <hr class="my-3">
-
-                <div class="file-list" id="files-publi-client">
-                    <small class="text-muted">Carregando arquivos...</small>
-                </div>
-
-                <div class="mt-3 text-center">
-                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="publi_client">
-                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
-                    </button>
-                </div>
-
                 <!-- ZIP package (DB-backed) -->
-                <hr class="my-3">
                 <div class="p-3 rounded" style="background:#eef2ff;">
                     <label class="form-label fw-bold"><i class="fas fa-file-archive me-1"></i>Pacote ZIP (HTML/CSS/JS/Imagens)</label>
                     <input type="file" id="zip-publi-client" class="form-control mb-2" accept=".zip">
@@ -90,40 +57,7 @@
                 <small>Tela cheia exibida após login do profissional</small>
             </div>
             <div class="card-body">
-                <!-- File upload (static/legacy) -->
-                <form id="form-publi-professional" class="upload-form" data-ad-type="publi_professional">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Arquivos do Anúncio</label>
-                            <input type="file" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.svg,.webp">
-                            <div class="form-text">Imagens apenas (png/jpg/jpeg/webp/svg/gif). Máx 5MB por arquivo.</div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-upload me-1"></i>Fazer Upload
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('publi_professional')">
-                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('publi_professional')">
-                            <i class="fas fa-desktop me-1"></i>Preview Desktop
-                        </button>
-                    </div>
-                </form>
-
-                <hr class="my-3">
-
-                <div class="file-list" id="files-publi-professional">
-                    <small class="text-muted">Carregando arquivos...</small>
-                </div>
-
-                <div class="mt-3 text-center">
-                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="publi_professional">
-                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
-                    </button>
-                </div>
-
                 <!-- ZIP package (DB-backed) -->
-                <hr class="my-3">
                 <div class="p-3 rounded" style="background:#ecfdf5;">
                     <label class="form-label fw-bold"><i class="fas fa-file-archive me-1"></i>Pacote ZIP (HTML/CSS/JS/Imagens)</label>
                     <input type="file" id="zip-publi-professional" class="form-control mb-2" accept=".zip">
