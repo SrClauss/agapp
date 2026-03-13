@@ -12,6 +12,7 @@ from app.core.database import get_database
 from app.models.user import User
 from app.crud import banner_ad as banner_crud
 from app.crud import adscreen_ad as adscreen_crud
+from app.core.ads_stacks import get_stacks_for_target, validate_stack_for_target
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter()
@@ -123,6 +124,41 @@ def validate_minimum_aspect_ratio(width: int, height: int) -> None:
 
 
 # ============================================================================
+# ADMIN ENDPOINTS - STACKS CONFIGURATION
+# ============================================================================
+
+@admin_router.get("/stacks/{target}")
+async def get_available_stacks(
+    target: str,
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """
+    Get available navigation stacks for a target.
+    Used by admin UI to populate stack selector dropdown.
+    """
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can access stacks configuration"
+        )
+    
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    stacks = get_stacks_for_target(target)
+    return {
+        "target": target,
+        "stacks": [
+            {"name": name, "description": desc}
+            for name, desc in stacks.items()
+        ]
+    }
+
+
+# ============================================================================
 # ADMIN ENDPOINTS - BANNER ADS (MongoDB Storage)
 # ============================================================================
 
@@ -150,6 +186,19 @@ async def upload_banner_images(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Target must be 'client' or 'professional'"
         )
+    
+    # Validate stack if action_type is internal
+    if action_type == "internal" and action_value:
+        if not validate_stack_for_target(target, action_value):
+            valid_stacks = list(get_stacks_for_target(target).keys())
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "invalid_stack",
+                    "message": f"Stack '{action_value}' não é válida para target '{target}'",
+                    "valid_stacks": valid_stacks
+                }
+            )
     
     # Ensure banner exists
     await banner_crud.get_or_create_banner(db, target, current_user.id)
@@ -317,6 +366,73 @@ async def delete_banner_image(
     }
 
 
+@admin_router.put("/banner/{target}/image/{filename}/action")
+async def update_banner_image_action(
+    target: str,
+    filename: str,
+    action_type: str = Form(...),
+    action_value: str = Form(""),
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Update action for a specific banner image.
+    Allows individual editing of each image's action without re-uploading.
+    """
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can update banner image actions"
+        )
+    
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    if action_type not in ["none", "external", "internal"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="action_type must be 'none', 'external', or 'internal'"
+        )
+    
+    # Validate stack if action_type is internal
+    if action_type == "internal" and action_value:
+        if not validate_stack_for_target(target, action_value):
+            valid_stacks = list(get_stacks_for_target(target).keys())
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "invalid_stack",
+                    "message": f"Stack '{action_value}' não é válida para target '{target}'",
+                    "valid_stacks": valid_stacks
+                }
+            )
+    
+    result = await banner_crud.update_image_action(
+        db,
+        target,
+        filename,
+        action_type,
+        action_value if action_value else None,
+        current_user.id
+    )
+    
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Image '{filename}' not found in banner '{target}'"
+        )
+    
+    return {
+        "message": f"Action for image '{filename}' updated successfully",
+        "action_type": action_type,
+        "action_value": action_value,
+        "version": result.version
+    }
+
+
 @admin_router.delete("/banner/{target}")
 async def clear_banner(
     target: str,
@@ -374,6 +490,19 @@ async def upload_adscreen_zip(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Target must be 'client' or 'professional'"
         )
+    
+    # Validate stack if action_type is internal
+    if action_type == "internal" and action_value:
+        if not validate_stack_for_target(target, action_value):
+            valid_stacks = list(get_stacks_for_target(target).keys())
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "invalid_stack",
+                    "message": f"Stack '{action_value}' não é válida para target '{target}'",
+                    "valid_stacks": valid_stacks
+                }
+            )
     
     # Validate file type
     fname = file.filename or ""

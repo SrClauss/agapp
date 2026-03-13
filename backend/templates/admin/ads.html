@@ -43,7 +43,7 @@
       </div>
       <div class="col-md-6 col-lg-3 mb-3">
         <label class="form-label fw-semibold">Ação ao clicar</label>
-        <select class="form-select" id="banner-action-type">
+        <select class="form-select" id="banner-action-type" onchange="toggleBannerStackSelect()">
           <option value="none">Nenhuma</option>
           <option value="external">Link Externo</option>
           <option value="internal">Navegação Interna</option>
@@ -52,7 +52,10 @@
       <div class="col-md-12 col-lg-6 mb-3">
         <label class="form-label fw-semibold">Valor da ação</label>
         <input type="text" class="form-control" id="banner-action-value" 
-               placeholder="URL ou nome da tela (ex: HomeStack)">
+               placeholder="URL externa (ex: https://exemplo.com)">
+        <select class="form-select d-none" id="banner-stack-select">
+          <option value="">Selecione uma tela...</option>
+        </select>
       </div>
     </div>
 
@@ -113,7 +116,7 @@
       </div>
       <div class="col-md-6 col-lg-3 mb-3">
         <label class="form-label fw-semibold">Ação ao clicar</label>
-        <select class="form-select" id="adscreen-action-type">
+        <select class="form-select" id="adscreen-action-type" onchange="toggleAdscreenStackSelect()">
           <option value="none">Nenhuma</option>
           <option value="external">Link Externo</option>
           <option value="internal">Navegação Interna</option>
@@ -122,7 +125,10 @@
       <div class="col-md-12 col-lg-6 mb-3">
         <label class="form-label fw-semibold">Valor da ação</label>
         <input type="text" class="form-control" id="adscreen-action-value" 
-               placeholder="URL ou nome da tela (ex: HomeStack)">
+               placeholder="URL externa (ex: https://exemplo.com)">
+        <select class="form-select d-none" id="adscreen-stack-select">
+          <option value="">Selecione uma tela...</option>
+        </select>
       </div>
     </div>
 
@@ -187,12 +193,102 @@ function reloadAllMongoDB() {
   loadAdScreenStateMongoDB();
 }
 
+// ── Stack Cache ───────────────────────────────────────────────
+
+let stacksCache = { client: [], professional: [] };
+
+async function loadStacksForTarget(target) {
+  if (stacksCache[target].length > 0) return stacksCache[target];
+  
+  try {
+    const res = await fetch(`/ads-admin/stacks/${target}`, {
+      credentials: 'include',
+      headers: authHeaders()
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      stacksCache[target] = data.stacks || [];
+      return stacksCache[target];
+    }
+  } catch (e) {
+    console.error('Erro ao carregar stacks:', e);
+  }
+  return [];
+}
+
+function populateStackSelect(selectId, stacks, selectedValue = '') {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">Selecione uma tela...</option>';
+  stacks.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.name;
+    opt.textContent = `${s.name} - ${s.description}`;
+    if (s.name === selectedValue) opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+async function toggleBannerStackSelect() {
+  const actionType = document.getElementById('banner-action-type').value;
+  const textInput = document.getElementById('banner-action-value');
+  const stackSelect = document.getElementById('banner-stack-select');
+  
+  if (actionType === 'internal') {
+    textInput.classList.add('d-none');
+    stackSelect.classList.remove('d-none');
+    
+    const target = document.getElementById('banner-target').value;
+    const stacks = await loadStacksForTarget(target);
+    populateStackSelect('banner-stack-select', stacks);
+  } else {
+    textInput.classList.remove('d-none');
+    stackSelect.classList.add('d-none');
+  }
+}
+
+async function toggleAdscreenStackSelect() {
+  const actionType = document.getElementById('adscreen-action-type').value;
+  const textInput = document.getElementById('adscreen-action-value');
+  const stackSelect = document.getElementById('adscreen-stack-select');
+  
+  if (actionType === 'internal') {
+    textInput.classList.add('d-none');
+    stackSelect.classList.remove('d-none');
+    
+    const target = document.getElementById('adscreen-target').value;
+    const stacks = await loadStacksForTarget(target);
+    populateStackSelect('adscreen-stack-select', stacks);
+  } else {
+    textInput.classList.remove('d-none');
+    stackSelect.classList.add('d-none');
+  }
+}
+
+function getBannerActionValue() {
+  const actionType = document.getElementById('banner-action-type').value;
+  if (actionType === 'internal') {
+    return document.getElementById('banner-stack-select').value;
+  }
+  return document.getElementById('banner-action-value').value;
+}
+
+function getAdscreenActionValue() {
+  const actionType = document.getElementById('adscreen-action-type').value;
+  if (actionType === 'internal') {
+    return document.getElementById('adscreen-stack-select').value;
+  }
+  return document.getElementById('adscreen-action-value').value;
+}
+
 // ── Banner Functions ──────────────────────────────────────────
 
 async function uploadBannerMongoDB() {
   const target = document.getElementById('banner-target').value;
   const actionType = document.getElementById('banner-action-type').value;
-  const actionValue = document.getElementById('banner-action-value').value;
+  const actionValue = getBannerActionValue();
   const filesInput = document.getElementById('banner-images');
   
   if (!filesInput.files.length) {
@@ -219,7 +315,12 @@ async function uploadBannerMongoDB() {
     
     if (!res.ok) {
       const error = await res.json();
-      showAlert(error.detail || 'Erro ao fazer upload', 'danger');
+      const detail = error.detail;
+      if (typeof detail === 'object' && detail.message) {
+        showAlert(detail.message, 'danger');
+      } else {
+        showAlert(detail || 'Erro ao fazer upload', 'danger');
+      }
       return;
     }
     
@@ -235,6 +336,9 @@ async function uploadBannerMongoDB() {
 
 async function loadBannerStateMongoDB() {
   const target = document.getElementById('banner-target').value;
+  
+  // Load stacks for this target (for editing actions)
+  await loadStacksForTarget(target);
   
   try {
     const res = await fetch(`/ads-admin/banner/${target}`, {
@@ -258,13 +362,22 @@ async function loadBannerStateMongoDB() {
       document.getElementById('banner-updated-at').textContent = 
         new Date(data.updated_at).toLocaleString('pt-BR');
       
-      // Render images grid
+      // Render images grid with editable actions
       const grid = document.getElementById('banner-images-grid');
       grid.innerHTML = '';
+      
+      const stacks = stacksCache[target] || [];
       
       data.images.forEach((img, idx) => {
         const col = document.createElement('div');
         col.className = 'col-md-6 col-lg-4';
+        
+        // Build stack options HTML
+        let stackOptionsHtml = '<option value="">Selecione...</option>';
+        stacks.forEach(s => {
+          const selected = s.name === img.action_value ? 'selected' : '';
+          stackOptionsHtml += `<option value="${s.name}" ${selected}>${s.name}</option>`;
+        });
         
         col.innerHTML = `
           <div class="card">
@@ -272,15 +385,41 @@ async function loadBannerStateMongoDB() {
                  class="card-img-top" alt="${img.filename}"
                  style="height:150px; object-fit:cover;">
             <div class="card-body">
-              <p class="card-text small mb-1">
+              <p class="card-text small mb-2">
                 <strong>${img.filename}</strong><br>
-                Tamanho: ${(img.size / 1024).toFixed(1)} KB<br>
-                Ação: ${img.action_type}
+                Tamanho: ${(img.size / 1024).toFixed(1)} KB
               </p>
-              <button class="btn btn-danger btn-sm w-100" 
-                      onclick="deleteBannerImageMongoDB('${target}', '${img.filename}')">
-                <i class="fas fa-trash me-1"></i>Remover
-              </button>
+              
+              <!-- Action Editor -->
+              <div class="mb-2">
+                <label class="form-label small mb-1">Ação:</label>
+                <select class="form-select form-select-sm mb-1" 
+                        id="action-type-${idx}" 
+                        onchange="toggleImageActionValue(${idx})">
+                  <option value="none" ${img.action_type === 'none' ? 'selected' : ''}>Nenhuma</option>
+                  <option value="external" ${img.action_type === 'external' ? 'selected' : ''}>Link Externo</option>
+                  <option value="internal" ${img.action_type === 'internal' ? 'selected' : ''}>Navegação Interna</option>
+                </select>
+                <input type="text" class="form-control form-control-sm ${img.action_type !== 'external' ? 'd-none' : ''}" 
+                       id="action-value-${idx}" 
+                       value="${img.action_type === 'external' ? (img.action_value || '') : ''}"
+                       placeholder="URL externa">
+                <select class="form-select form-select-sm ${img.action_type !== 'internal' ? 'd-none' : ''}" 
+                        id="action-stack-${idx}">
+                  ${stackOptionsHtml}
+                </select>
+              </div>
+              
+              <div class="d-flex gap-1">
+                <button class="btn btn-primary btn-sm flex-grow-1" 
+                        onclick="updateBannerImageAction('${target}', '${img.filename}', ${idx})">
+                  <i class="fas fa-save me-1"></i>Salvar
+                </button>
+                <button class="btn btn-danger btn-sm" 
+                        onclick="deleteBannerImageMongoDB('${target}', '${img.filename}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </div>
           </div>
         `;
@@ -292,6 +431,64 @@ async function loadBannerStateMongoDB() {
       document.getElementById('banner-images-grid').innerHTML = 
         '<div class="col-12 text-muted text-center py-4">Nenhuma imagem configurada</div>';
     }
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'danger');
+    console.error(e);
+  }
+}
+
+function toggleImageActionValue(idx) {
+  const actionType = document.getElementById(`action-type-${idx}`).value;
+  const textInput = document.getElementById(`action-value-${idx}`);
+  const stackSelect = document.getElementById(`action-stack-${idx}`);
+  
+  if (actionType === 'external') {
+    textInput.classList.remove('d-none');
+    stackSelect.classList.add('d-none');
+  } else if (actionType === 'internal') {
+    textInput.classList.add('d-none');
+    stackSelect.classList.remove('d-none');
+  } else {
+    textInput.classList.add('d-none');
+    stackSelect.classList.add('d-none');
+  }
+}
+
+async function updateBannerImageAction(target, filename, idx) {
+  const actionType = document.getElementById(`action-type-${idx}`).value;
+  let actionValue = '';
+  
+  if (actionType === 'external') {
+    actionValue = document.getElementById(`action-value-${idx}`).value;
+  } else if (actionType === 'internal') {
+    actionValue = document.getElementById(`action-stack-${idx}`).value;
+  }
+  
+  const formData = new FormData();
+  formData.append('action_type', actionType);
+  formData.append('action_value', actionValue);
+  
+  try {
+    const res = await fetch(`/ads-admin/banner/${target}/image/${encodeURIComponent(filename)}/action`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: authHeaders(),
+      body: formData
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      const detail = error.detail;
+      if (typeof detail === 'object' && detail.message) {
+        showAlert(detail.message, 'danger');
+      } else {
+        showAlert(detail || 'Erro ao atualizar ação', 'danger');
+      }
+      return;
+    }
+    
+    const result = await res.json();
+    showAlert(`${result.message}`, 'success');
   } catch (e) {
     showAlert('Erro de conexão: ' + e.message, 'danger');
     console.error(e);
@@ -353,7 +550,7 @@ async function clearBannerMongoDB() {
 async function uploadAdScreenMongoDB() {
   const target = document.getElementById('adscreen-target').value;
   const actionType = document.getElementById('adscreen-action-type').value;
-  const actionValue = document.getElementById('adscreen-action-value').value;
+  const actionValue = getAdscreenActionValue();
   const fileInput = document.getElementById('adscreen-zip');
   
   if (!fileInput.files.length) {
@@ -377,7 +574,12 @@ async function uploadAdScreenMongoDB() {
     
     if (!res.ok) {
       const error = await res.json();
-      showAlert(error.detail || 'Erro ao fazer upload', 'danger');
+      const detail = error.detail;
+      if (typeof detail === 'object' && detail.message) {
+        showAlert(detail.message, 'danger');
+      } else {
+        showAlert(detail || 'Erro ao fazer upload', 'danger');
+      }
       return;
     }
     
@@ -454,8 +656,21 @@ async function clearAdScreenMongoDB() {
 // ── Event Listeners ───────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('banner-target')?.addEventListener('change', loadBannerStateMongoDB);
-  document.getElementById('adscreen-target')?.addEventListener('change', loadAdScreenStateMongoDB);
+  document.getElementById('banner-target')?.addEventListener('change', async () => {
+    // Reset action type and reload stacks when target changes
+    document.getElementById('banner-action-type').value = 'none';
+    document.getElementById('banner-action-value').classList.remove('d-none');
+    document.getElementById('banner-stack-select').classList.add('d-none');
+    await loadBannerStateMongoDB();
+  });
+  
+  document.getElementById('adscreen-target')?.addEventListener('change', async () => {
+    // Reset action type and reload stacks when target changes
+    document.getElementById('adscreen-action-type').value = 'none';
+    document.getElementById('adscreen-action-value').classList.remove('d-none');
+    document.getElementById('adscreen-stack-select').classList.add('d-none');
+    await loadAdScreenStateMongoDB();
+  });
   
   // Load initial state
   loadBannerStateMongoDB();

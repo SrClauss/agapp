@@ -170,3 +170,34 @@ async def update_banner_images(
     if result:
         return BannerAd(**result)
     return None
+
+
+async def update_image_action(
+    db: AsyncIOMotorDatabase,
+    target: str,
+    filename: str,
+    action_type: str,
+    action_value: Optional[str] = None,
+    user_id: Optional[str] = None
+) -> Optional[BannerAd]:
+    """Update action for a specific image in banner and increment version"""
+    result = await db.banner_ads.find_one_and_update(
+        {
+            "target": target,
+            "images.filename": filename
+        },
+        {
+            "$set": {
+                "images.$.action_type": action_type,
+                "images.$.action_value": action_value,
+                "updated_at": datetime.utcnow(),
+                "updated_by": user_id
+            },
+            "$inc": {"version": 1}
+        },
+        return_document=True
+    )
+    
+    if result:
+        return BannerAd(**result)
+    return None
