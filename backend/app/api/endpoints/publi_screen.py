@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, Form, Request, status, Up
 from fastapi.responses import JSONResponse
 from typing import Literal
 from app.core.database import get_database
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.models.publi_screen_ad import PubliScreenAd
 from app.core.security import get_current_user_from_request
 from app.models.user import User
@@ -13,7 +12,7 @@ admin_router = APIRouter()
 
 # mobile endpoints
 @router.get("/{ad_type}/check")
-async def mobile_check(ad_type: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def mobile_check(ad_type: str, db = Depends(get_database)):
     """Retorna apenas existência e etag — sem blob. Usado pelo mobile para checar
     se precisa baixar o anúncio completo."""
     if not ad_type.startswith("publi_screen_"):
@@ -33,7 +32,7 @@ async def mobile_check(ad_type: str, db: AsyncIOMotorDatabase = Depends(get_data
 
 
 @router.get("/{ad_type}")
-async def mobile_get(request: Request, ad_type: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def mobile_get(request: Request, ad_type: str, db = Depends(get_database)):
     """Retorna o anúncio completo (com zip_base64). Suporta ETag / If-None-Match:
     se o cliente enviar If-None-Match igual ao etag atual, responde 304 (sem corpo)."""
     import base64 as b64mod, hashlib
@@ -77,7 +76,7 @@ async def admin_create_or_update(
     priority: int = Form(0),
     is_active: bool = Form(True),
     package: UploadFile = File(None),  # optional zip file with html/css/js/images
-    db: AsyncIOMotorDatabase = Depends(get_database),
+    db = Depends(get_database),
     current_user: User = Depends(get_current_user_from_request)
 ):
     if "admin" not in current_user.roles:
@@ -107,7 +106,7 @@ async def admin_create_or_update(
     return JSONResponse({"ok": True, "alias": alias})
 
 @admin_router.get("/publi_screen/{alias}")
-async def admin_get(alias: str, db: AsyncIOMotorDatabase = Depends(get_database), current_user: User = Depends(get_current_user_from_request)):
+async def admin_get(alias: str, db = Depends(get_database), current_user: User = Depends(get_current_user_from_request)):
     import base64 as b64mod
     if "admin" not in current_user.roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -122,7 +121,7 @@ async def admin_get(alias: str, db: AsyncIOMotorDatabase = Depends(get_database)
     return JSONResponse(raw)
 
 @admin_router.delete("/publi_screen/{alias}")
-async def admin_delete(alias: str, db: AsyncIOMotorDatabase = Depends(get_database), current_user: User = Depends(get_current_user_from_request)):
+async def admin_delete(alias: str, db = Depends(get_database), current_user: User = Depends(get_current_user_from_request)):
     if "admin" not in current_user.roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     await db.publi_screen_ads.delete_one({"alias": alias})

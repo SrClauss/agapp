@@ -39,7 +39,7 @@ class Pressable(BaseModel):
 
 
 class PubliScreenAd(BaseModel):
-    id: Optional[str] = Field(alias="_id")
+    id: Optional[str] = Field(default=None, alias="_id")
     alias: str
     target: Literal["client", "professional"]
     html: Optional[str] = None
