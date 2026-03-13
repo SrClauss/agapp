@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Linking } from 'react-native';
+import { useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 
 // Permite que o Expo Go complete o redirect de autenticação OAuth
 WebBrowser.maybeCompleteAuthSession();
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
-const DEEP_LINK_SCHEME = 'com.agilizapro.agapp://auth/callback';
+const POLLING_INTERVAL_MS = 2000;
+const POLLING_TIMEOUT_MS = 60000;
 
 interface AuthResponse {
   type: 'success' | 'error' | 'dismiss' | 'cancel';
@@ -38,66 +38,78 @@ export function useGoogleAuth() {
   const [response, setResponse] = useState<AuthResponse | null>(null);
   const [isReady, setIsReady] = useState(true);
 
-  useEffect(() => {
-    // Listener para capturar o deep-link de retorno do OAuth
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('[GoogleAuth] Deep-link recebido:', url);
-      
-      if (url.startsWith(DEEP_LINK_SCHEME)) {
-        handleDeepLink(url);
-      }
-    });
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    return () => {
-      subscription.remove();
-    };
-  }, []);
+  const pollSession = async (sessionId: string) => {
+    const startTime = Date.now();
 
-  const handleDeepLink = (url: string) => {
-    try {
-      // Parsear tokens do fragmento da URL
-      // Exemplo: com.agilizapro.agapp://auth/callback#access_token=xxx&refresh_token=yyy&token_type=bearer
-      const fragmentMatch = url.match(/#(.+)$/);
-      if (!fragmentMatch) {
-        setResponse({ type: 'error' });
-        return;
+    while (Date.now() - startTime < POLLING_TIMEOUT_MS) {
+      const statusRes = await fetch(`${BACKEND_URL}/auth/google/session/${sessionId}`);
+      if (!statusRes.ok) {
+        throw new Error('Falha ao consultar status do login Google');
       }
 
-      const params = new URLSearchParams(fragmentMatch[1]);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      const tokenType = params.get('token_type');
+      const statusData = await statusRes.json();
 
-      if (accessToken && refreshToken) {
+      if (statusData.status === 'authorized') {
+        const accessToken = statusData.access_token;
+        const refreshToken = statusData.refresh_token;
+        const tokenType = statusData.token_type || 'bearer';
+
+        if (!accessToken || !refreshToken) {
+          throw new Error('Sessão autorizada sem tokens válidos');
+        }
+
         setResponse({
           type: 'success',
           authentication: {
             accessToken,
             refreshToken,
-            tokenType: tokenType || 'bearer',
+            tokenType,
           },
         });
-      } else {
-        setResponse({ type: 'error' });
+        return;
       }
-    } catch (error) {
-      console.error('[GoogleAuth] Erro ao parsear deep-link:', error);
-      setResponse({ type: 'error' });
+
+      if (statusData.status === 'expired' || statusData.status === 'failed') {
+        throw new Error('Sessão de login expirou. Tente novamente.');
+      }
+
+      await sleep(POLLING_INTERVAL_MS);
     }
+
+    throw new Error('Tempo de login excedido (60s). Tente novamente.');
   };
 
   const signIn = async () => {
     try {
       setResponse(null);
-      const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
-      console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
-      
-      // Abrir navegador do sistema (sem interceptar - o backend vai retornar página HTML com deep-link)
-      const result = await WebBrowser.openBrowserAsync(authUrl);
-      
-      if (result.type === 'cancel' || result.type === 'dismiss') {
-        setResponse({ type: result.type });
+
+      const sessionRes = await fetch(`${BACKEND_URL}/auth/google/session`, {
+        method: 'POST',
+      });
+
+      if (!sessionRes.ok) {
+        throw new Error('Falha ao iniciar sessão de login Google');
       }
+
+      const sessionData = await sessionRes.json();
+      const authUrl = sessionData.auth_url;
+      const sessionId = sessionData.session_id;
+
+      if (!authUrl || !sessionId) {
+        throw new Error('Resposta inválida ao iniciar sessão de login');
+      }
+
+      console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
+
+      const browserResult = await WebBrowser.openBrowserAsync(authUrl);
+      if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
+        setResponse({ type: browserResult.type });
+        return;
+      }
+
+      await pollSession(sessionId);
     } catch (error) {
       console.error('[GoogleAuth] Erro ao abrir autenticação:', error);
       setResponse({ type: 'error' });

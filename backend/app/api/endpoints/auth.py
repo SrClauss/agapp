@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.database import get_database
@@ -15,8 +15,27 @@ import uuid
 import httpx
 import urllib.parse
 from fastapi.responses import RedirectResponse, HTMLResponse
+from typing import Dict, Any
 
 router = APIRouter()
+
+GOOGLE_OAUTH_SESSION_TTL_SECONDS = 60
+google_oauth_sessions: Dict[str, Dict[str, Any]] = {}
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _cleanup_google_oauth_sessions() -> None:
+    now = _utc_now()
+    expired = [
+        session_id
+        for session_id, data in google_oauth_sessions.items()
+        if data.get("expires_at") and data["expires_at"] <= now
+    ]
+    for session_id in expired:
+        del google_oauth_sessions[session_id]
 
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -172,6 +191,84 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/google/session")
+async def create_google_oauth_session(request: Request):
+    """Cria uma sessão de login Google para fluxo mobile com polling."""
+    _cleanup_google_oauth_sessions()
+
+    client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID não configurado no backend.")
+
+    session_id = uuid.uuid4().hex
+    now = _utc_now()
+    expires_at = now + timedelta(seconds=GOOGLE_OAUTH_SESSION_TTL_SECONDS)
+
+    google_oauth_sessions[session_id] = {
+        "status": "pending",
+        "created_at": now,
+        "expires_at": expires_at,
+        "access_token": None,
+        "refresh_token": None,
+    }
+
+    redirect_uri = "https://agilizapro.cloud/auth/google/callback"
+    scope = "openid email profile"
+    params = {
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "scope": scope,
+        "access_type": "offline",
+        "include_granted_scopes": "true",
+        "prompt": "consent",
+        "state": session_id,
+    }
+    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+
+    return {
+        "session_id": session_id,
+        "auth_url": auth_url,
+        "expires_in": GOOGLE_OAUTH_SESSION_TTL_SECONDS,
+    }
+
+
+@router.get("/google/session/{session_id}")
+async def get_google_oauth_session_status(session_id: str):
+    """Consulta status da sessão Google OAuth para polling do app mobile."""
+    _cleanup_google_oauth_sessions()
+
+    session = google_oauth_sessions.get(session_id)
+    if not session:
+        return {"status": "expired"}
+
+    now = _utc_now()
+    expires_at = session.get("expires_at")
+    if expires_at and expires_at <= now:
+        del google_oauth_sessions[session_id]
+        return {"status": "expired"}
+
+    remaining = int((expires_at - now).total_seconds()) if expires_at else 0
+    status_value = session.get("status", "pending")
+
+    if status_value == "authorized":
+        access_token = session.get("access_token")
+        refresh_token = session.get("refresh_token")
+        del google_oauth_sessions[session_id]
+        return {
+            "status": "authorized",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": max(remaining, 0),
+        }
+
+    return {
+        "status": status_value,
+        "expires_in": max(remaining, 0),
+    }
+
+
 @router.get("/google/start")
 async def google_oauth_start(request: Request, next: str | None = None):
     """Redirecta o usuário para a tela de consentimento do Google.
@@ -274,6 +371,38 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         access_token = create_access_token(subject=str(user.id))
         refresh_token = create_refresh_token(subject=str(user.id))
 
+        # Fluxo polling: state contém session_id
+        if state and state in google_oauth_sessions:
+            session = google_oauth_sessions.get(state)
+            if session:
+                session["status"] = "authorized"
+                session["access_token"] = access_token
+                session["refresh_token"] = refresh_token
+                print(f"[OAuth Callback] Session {state} authorized")
+
+                html_content = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>Login concluído</title>
+    <style>
+        body { font-family: system-ui, sans-serif; text-align: center; padding: 40px; background: #f5f5f5; }
+        .container { max-width: 420px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { color: #4CAF50; margin-bottom: 12px; }
+        p { color: #666; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class=\"container\">
+        <h1>✓ Login concluído</h1>
+        <p>Você já pode voltar para o aplicativo.</p>
+        <p>Esta janela pode ser fechada.</p>
+    </div>
+</body>
+</html>"""
+                return HTMLResponse(content=html_content)
+
         # If state is a deep-link scheme, return HTML page that triggers the deep-link
         if state:
             target = urllib.parse.unquote_plus(state)
@@ -326,6 +455,10 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
     except HTTPException:
         raise
     except Exception as e:
+        if state and state in google_oauth_sessions:
+            session = google_oauth_sessions.get(state)
+            if session:
+                session["status"] = "failed"
         print(f"[OAuth Callback] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
