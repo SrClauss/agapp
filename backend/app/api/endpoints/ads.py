@@ -342,10 +342,14 @@ async def admin_list_ad_locations(
         if ad_dir.exists():
             for file in ad_dir.iterdir():
                 if file.is_file():
+                    meta = images_meta.get(file.name, {}) if isinstance(images_meta, dict) else {}
                     files.append({
                         "name": file.name,
                         "size": file.stat().st_size,
-                        "link": images_meta.get(file.name, {}).get('link') if isinstance(images_meta, dict) else None
+                        "link": meta.get('link'),
+                        "alias": meta.get('alias'),
+                        "action_type": meta.get('action_type'),
+                        "action_value": meta.get('action_value')
                     })
 
         locations.append({
@@ -509,11 +513,15 @@ async def admin_set_image_meta(
         "banner_professional_home"
     ],
     filename: str,
+    alias: str = Form(None),
+    action_type: Literal["external_link", "stack"] = Form(None),
+    action_value: str = Form(None),
     link: str = Form(None),
     current_user: User = Depends(get_current_user_from_request)
 ):
     """
-    Set metadata for an image (e.g., link) in the ad location. Stores metadata in meta.json under the ad folder.
+    Set metadata for an image (alias + action + link) in the ad location.
+    Stores metadata in meta.json under the ad folder.
     """
     if "admin" not in current_user.roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can set image metadata")
@@ -537,7 +545,19 @@ async def admin_set_image_meta(
             meta = {}
 
     images_meta = meta.get('images', {})
-    images_meta[filename] = { 'link': link }
+    current = images_meta.get(filename, {}) if isinstance(images_meta, dict) else {}
+
+    # Update only provided values (allow clearing by passing empty string)
+    if alias is not None:
+        current['alias'] = alias or None
+    if action_type is not None:
+        current['action_type'] = action_type or None
+    if action_value is not None:
+        current['action_value'] = action_value or None
+    if link is not None:
+        current['link'] = link or None
+
+    images_meta[filename] = current
     meta['images'] = images_meta
 
     # Write back
@@ -546,7 +566,7 @@ async def admin_set_image_meta(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to write meta.json: {e}")
 
-    return { 'message': 'Image meta updated', 'filename': filename, 'link': link }
+    return { 'message': 'Image meta updated', 'filename': filename, 'meta': current }
 
 
 # ============================================================================

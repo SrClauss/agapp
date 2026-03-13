@@ -380,6 +380,11 @@ async function loadFiles(adType) {
         const loc = locations.find(l => l.location === location);
         const files = loc && loc.files ? loc.files : [];
 
+        if (!window._adsAdminFileMeta) window._adsAdminFileMeta = {};
+        files.forEach(file => {
+            window._adsAdminFileMeta[`${adType}||${file.name}`] = file;
+        });
+
         if (files.length === 0) {
             container.innerHTML = '<small class="text-muted">Nenhum arquivo enviado ainda</small>';
             return;
@@ -392,6 +397,8 @@ async function loadFiles(adType) {
                     `<img src="/ads-admin/assets/${location}/${encodeURIComponent(file.name)}" style="width:110px; max-height:70px; object-fit:cover; border-radius:6px;" alt="${file.name}" />` : '' }
                     <div>
                         <div><span class="file-name">${file.name}</span></div>
+                        ${file.alias ? `<small class="text-muted d-block">Alias: ${file.alias}</small>` : ''}
+                        ${file.action_type ? `<small class="text-muted d-block">Ação: ${file.action_type === 'external_link' ? 'Link → ' + (file.action_value||'') : 'Stack → ' + (file.action_value||'')}</small>` : ''}
                         ${file.link ? `<small class="text-muted d-block">Link: <a href="${file.link}" target="_blank">${file.link}</a></small>` : ''}
                         <span class="badge badge-file ${file.name.endsWith('.html') ? 'bg-primary' : file.name.endsWith('.css') ? 'bg-info' : file.name.endsWith('.js') ? 'bg-warning' : 'bg-secondary'} ms-2">
                             ${file.name.split('.').pop().toUpperCase()}
@@ -407,8 +414,8 @@ async function loadFiles(adType) {
                     <button class="btn btn-sm btn-outline-secondary" onclick="openPreview('/ads-admin/assets/${location}/${encodeURIComponent(file.name)}')">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="editImageLink('${adType}', '${file.name}')">
-                        <i class="fas fa-link"></i>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="openImageMetaModal('${adType}', '${file.name}')">
+                        <i class="fas fa-cogs"></i>
                     </button>
                     ` : '' }
                 </div>
@@ -459,14 +466,53 @@ async function deleteFile(adType, filename) {
     }
 }
 
-// Edit image link metadata
-async function editImageLink(adType, filename) {
+// Image metadata modal (alias + action + link)
+let currentImageMeta = null;
+
+function openImageMetaModal(adType, filename) {
+    const key = `${adType}||${filename}`;
+    const meta = (window._adsAdminFileMeta && window._adsAdminFileMeta[key]) || {};
+    currentImageMeta = { adType, filename };
+
+    document.getElementById('image-meta-filename').textContent = filename;
+    document.getElementById('image-meta-alias').value = meta.alias || '';
+    document.getElementById('image-meta-action-type').value = meta.action_type || '';
+    document.getElementById('image-meta-action-value').value = meta.action_value || '';
+    document.getElementById('image-meta-link').value = meta.link || '';
+
+    updateImageMetaActionLabel();
+    const modal = new bootstrap.Modal(document.getElementById('image-meta-modal'));
+    modal.show();
+}
+
+function updateImageMetaActionLabel() {
+    const type = document.getElementById('image-meta-action-type').value;
+    const label = document.getElementById('image-meta-action-value-label');
+    if (type === 'stack') {
+        label.textContent = 'Stack (nome da tela):';
+    } else {
+        label.textContent = 'URL (externo):';
+    }
+}
+
+async function saveImageMeta() {
+    if (!currentImageMeta) return;
+    const { adType, filename } = currentImageMeta;
     const location = mapAdTypeToLocation(adType);
-    const currentLink = prompt('Insira o link para o clique (deixe vazio para remover):');
+
+    const alias = document.getElementById('image-meta-alias').value.trim();
+    const action_type = document.getElementById('image-meta-action-type').value;
+    const action_value = document.getElementById('image-meta-action-value').value.trim();
+    const link = document.getElementById('image-meta-link').value.trim();
+
     try {
         const token = localStorage.getItem('access_token');
         const formData = new FormData();
-        formData.append('link', currentLink || '');
+        formData.append('alias', alias);
+        formData.append('action_type', action_type);
+        formData.append('action_value', action_value);
+        formData.append('link', link);
+
         const response = await fetch(`/ads-admin/image/meta/${location}/${encodeURIComponent(filename)}`, {
             method: 'POST',
             credentials: 'include',
@@ -475,12 +521,19 @@ async function editImageLink(adType, filename) {
             },
             body: formData
         });
-        if (!response.ok) throw new Error('Failed to set image link');
-        showAlert('Link atualizado com sucesso', 'success');
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || 'Failed to save metadata');
+        }
+
+        showAlert('Metadados da imagem salvos com sucesso', 'success');
         loadFiles(adType);
+        const modal = bootstrap.Modal.getInstance(document.getElementById('image-meta-modal'));
+        modal.hide();
     } catch (error) {
-        console.error('Error setting image link', error);
-        showAlert('Erro ao atualizar link da imagem', 'danger');
+        console.error(error);
+        showAlert('Erro ao salvar metadados', 'danger');
     }
 }
 
@@ -683,6 +736,11 @@ function closePreview() {
     iframe.src = '';
 }
 
+function closeImageMetaModal() {
+    const modal = document.getElementById('image-meta-modal');
+    modal.style.display = 'none';
+}
+
 function openPreviewLocation(adType) {
     const location = mapAdTypeToLocation(adType);
     // Try HTML preview first, otherwise fallback to image preview
@@ -786,6 +844,43 @@ async function uploadZipPubliScreen(target, inputId, btn) {
         <div class="modal-body" style="padding: 0; border-radius: 0 0 10px 10px; overflow: hidden;">
             <div class="phone-frame" style="width: 100%; height: 0; padding-bottom: 200%; position: relative; border-radius: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
                 <iframe id="preview-iframe" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 20px;" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Meta Modal -->
+<div id="image-meta-modal" class="modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content" style="position: relative; margin: auto; top: 50%; transform: translateY(-50%); width: 90%; max-width: 420px; max-height: 90vh;">
+        <div class="modal-header" style="background: #f8f9fa; padding: 10px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;">
+            <h5 style="margin: 0; font-size: 1.1rem;">Configurar Ação da Imagem</h5>
+            <button type="button" class="btn-close" onclick="closeImageMetaModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 16px; background: #fff;">
+            <div class="mb-2"><strong>Arquivo:</strong> <span id="image-meta-filename"></span></div>
+            <div class="mb-3">
+                <label class="form-label">Alias (opcional)</label>
+                <input id="image-meta-alias" class="form-control" placeholder="ex: banner_principal" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Tipo de ação</label>
+                <select id="image-meta-action-type" class="form-select" onchange="updateImageMetaActionLabel()">
+                    <option value="">Nenhuma</option>
+                    <option value="external_link">Link externo</option>
+                    <option value="stack">Navegar (stack)</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label id="image-meta-action-value-label" class="form-label">URL (externo):</label>
+                <input id="image-meta-action-value" class="form-control" placeholder="https://... ou nome da stack" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Link (opcional)</label>
+                <input id="image-meta-link" class="form-control" placeholder="https://..." />
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="closeImageMetaModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveImageMeta()">Salvar</button>
             </div>
         </div>
     </div>
