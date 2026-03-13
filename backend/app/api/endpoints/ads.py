@@ -56,6 +56,10 @@ ASPECT_RATIO_TOLERANCE = 0.05
 IDEAL_BANNER_RATIO = 3.0
 MIN_BANNER_RATIO = 2.5
 
+# File size limits
+MAX_ZIP_SIZE_BYTES = 20 * 1024 * 1024   # 20 MB
+MAX_BANNER_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
+
 
 # ============================================================================
 # IMAGE VALIDATION FUNCTIONS
@@ -836,11 +840,12 @@ async def admin_upload_zip_publiscreen(
 
     content = await file.read()
 
-    if len(content) > 20 * 1024 * 1024:
+    if len(content) > MAX_ZIP_SIZE_BYTES:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Arquivo ZIP muito grande (máx 20 MB)")
 
     ad_dir = ADS_BASE_DIR / location
     ad_dir.mkdir(parents=True, exist_ok=True)
+    ad_dir_resolved = ad_dir.resolve()
 
     try:
         with zipfile.ZipFile(io.BytesIO(content)) as zf:
@@ -849,15 +854,20 @@ async def admin_upload_zip_publiscreen(
                 if not base or name.endswith("/"):
                     continue
                 ext = base.rsplit(".", 1)[-1].lower() if "." in base else ""
-                data = zf.read(name)
                 if ext in ("html", "htm"):
-                    (ad_dir / "index.html").write_bytes(data)
+                    dest = ad_dir / "index.html"
                 elif ext == "css":
-                    (ad_dir / "style.css").write_bytes(data)
+                    dest = ad_dir / "style.css"
                 elif ext == "js":
-                    (ad_dir / "script.js").write_bytes(data)
+                    dest = ad_dir / "script.js"
                 elif ext in ("png", "jpg", "jpeg", "gif", "webp", "svg"):
-                    (ad_dir / base).write_bytes(data)
+                    dest = ad_dir / base
+                else:
+                    continue
+                # Security: ensure destination is within ad_dir
+                if not str(dest.resolve()).startswith(str(ad_dir_resolved)):
+                    continue
+                dest.write_bytes(zf.read(name))
     except zipfile.BadZipFile:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Arquivo ZIP inválido ou corrompido")
 
@@ -901,7 +911,7 @@ async def admin_upload_banner_image(
 
     content = await file.read()
 
-    if len(content) > 10 * 1024 * 1024:
+    if len(content) > MAX_BANNER_SIZE_BYTES:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Imagem muito grande (máx 10 MB)")
 
     if ext != "svg":
@@ -924,7 +934,7 @@ async def admin_upload_banner_image(
             meta = {}
     meta["action"] = {"type": action_type, "value": action_value}
     images_meta = meta.get("images", {})
-    images_meta[fname] = {"link": action_value if action_type == "external" else ""}
+    images_meta[fname] = {"action_type": action_type, "action_value": action_value, "link": action_value if action_type == "external" else ""}
     meta["images"] = images_meta
     meta_file.write_text(json.dumps(meta), encoding="utf-8")
 
