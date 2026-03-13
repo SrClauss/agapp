@@ -294,6 +294,135 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/google/exchange", response_model=Token)
+async def google_oauth_exchange(request: Request, db: AsyncIOMotorDatabase = Depends(get_database)):
+    """
+    Endpoint oficial para troca de authorization code por tokens JWT.
+    
+    Conforme documentação do expo-auth-session:
+    1. Mobile obtém authorization code do Google usando useAuthRequest()
+    2. Mobile envia code + redirect_uri para este endpoint
+    3. Backend troca code por tokens do Google
+    4. Backend verifica, cria/atualiza usuário
+    5. Backend retorna seus próprios JWTs para o mobile
+    
+    Body JSON esperado:
+    {
+      "code": "authorization_code_from_google",
+      "redirect_uri": "redirect_uri_usado_no_oauth"
+    }
+    """
+    try:
+        body = await request.json()
+        code = body.get("code")
+        redirect_uri = body.get("redirect_uri")
+        
+        if not code:
+            raise HTTPException(status_code=400, detail="Missing code parameter")
+        if not redirect_uri:
+            raise HTTPException(status_code=400, detail="Missing redirect_uri parameter")
+        
+        print(f"[Google Exchange] Received code exchange request with redirect_uri: {redirect_uri}")
+        
+        # Obter credenciais OAuth do backend
+        client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
+        
+        if not client_id or not client_secret:
+            raise HTTPException(
+                status_code=500, 
+                detail="GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET not configured"
+            )
+        
+        # Trocar code por tokens com o Google
+        token_endpoint = "https://oauth2.googleapis.com/token"
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(token_endpoint, data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            }, headers={"Accept": "application/json"})
+            
+            if resp.status_code != 200:
+                error_detail = resp.text
+                print(f"[Google Exchange] Error from Google: {error_detail}")
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Failed to exchange code with Google: {error_detail}"
+                )
+            
+            token_data = resp.json()
+        
+        # Extrair id_token do response
+        id_token_str = token_data.get("id_token")
+        if not id_token_str:
+            raise HTTPException(status_code=400, detail="id_token not returned by Google")
+        
+        print("[Google Exchange] Successfully exchanged code for tokens")
+        
+        # Verificar id_token com o Google
+        audience_str = os.getenv("GOOGLE_AUDIENCE_CLIENT_IDS", "")
+        if audience_str:
+            valid_audience = [c.strip() for c in audience_str.split(',')]
+        else:
+            valid_audience = [client_id]
+        
+        idinfo = id_token.verify_oauth2_token(
+            id_token_str, 
+            requests.Request(), 
+            audience=valid_audience
+        )
+        
+        # Extrair informações do usuário
+        google_email = idinfo.get('email')
+        google_name = idinfo.get('name', '')
+        google_picture = idinfo.get('picture', '')
+        
+        if not google_email:
+            raise HTTPException(status_code=400, detail="Email not found in Google token")
+        
+        print(f"[Google Exchange] Verified user: {google_email}")
+        
+        # Upsert usuário no banco de dados
+        existing = await get_user_by_email(db, google_email)
+        if existing:
+            user = existing
+            print(f"[Google Exchange] Existing user found: {user.id}")
+        else:
+            # Criar novo usuário com dados do Google
+            user_create = UserCreate(
+                email=google_email,
+                full_name=google_name,
+                cpf="000.000.000-00",  # CPF temporário
+                password=str(uuid.uuid4()),  # Senha aleatória (não será usada)
+                turnstile_token=None,
+            )
+            user = await create_user(db, user_create)
+            print(f"[Google Exchange] New user created: {user.id}")
+        
+        # Gerar nossos próprios JWTs
+        access_token = create_access_token(subject=str(user.id))
+        refresh_token = create_refresh_token(subject=str(user.id))
+        
+        print(f"[Google Exchange] Tokens generated for user {user.id}")
+        
+        return {
+            "access_token": access_token, 
+            "refresh_token": refresh_token, 
+            "token_type": "bearer"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Google Exchange] Unexpected error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 from fastapi import Request
 
 @router.get("/turnstile-site-key")
