@@ -98,7 +98,7 @@ async def admin_create_or_update(
     # if a package blob was sent, save it directly as a binary blob
     if package:
         contents = await package.read()
-            ad_obj["zip_blob"] = contents  # Save raw binary data
+        ad_obj["zip_blob"] = contents  # Save raw binary data
     # Sempre atualiza updated_at ao salvar para invalidar o ETag
     from datetime import datetime as dt
     ad_obj["updated_at"] = dt.utcnow()
