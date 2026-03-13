@@ -679,6 +679,74 @@ async def preview_adscreen(
         )
 
 
+@admin_router.get("/adscreen/{target}/preview/{file_path:path}")
+async def preview_adscreen_file(
+    target: str,
+    file_path: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Serve individual files from AdScreen ZIP for preview.
+    """
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can preview adscreen"
+        )
+    
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    adscreen = await adscreen_crud.get_adscreen_by_target(db, target, include_zip=True)
+    
+    if not adscreen or not adscreen.zip_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No AdScreen configured for this target"
+        )
+    
+    try:
+        zip_bytes = io.BytesIO(adscreen.zip_data)
+        with zipfile.ZipFile(zip_bytes, 'r') as zip_ref:
+            # Try to find the file (case-insensitive)
+            file_found = None
+            for name in zip_ref.namelist():
+                if name.lower() == file_path.lower() or name.endswith(file_path):
+                    file_found = name
+                    break
+            
+            if not file_found:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"File '{file_path}' not found in ZIP"
+                )
+            
+            file_content = zip_ref.read(file_found)
+            
+            # Determine media type based on extension
+            import mimetypes
+            media_type, _ = mimetypes.guess_type(file_found)
+            if not media_type:
+                media_type = "application/octet-stream"
+            
+            return Response(content=file_content, media_type=media_type)
+    
+    except zipfile.BadZipFile:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Invalid ZIP file"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error extracting file: {str(e)}"
+        )
+
+
 # ============================================================================
 # MOBILE ENDPOINTS - BANNER ADS (MongoDB Storage)
 # ============================================================================
