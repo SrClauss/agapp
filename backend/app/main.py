@@ -205,6 +205,7 @@ app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"
 app.include_router(ads.router, prefix="/ads", tags=["advertisements"])
 app.include_router(ads.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
 app.include_router(ads.mobile_router, prefix="/system-admin/api/public/ads")
+app.include_router(ads.mobile_router, prefix="/ads-mobile", tags=["ads-mobile"])
 app.include_router(contacts.router, tags=["contacts"])
 
 # Expor rotas também sob o prefixo /api para compatibilidade com clientes e testes

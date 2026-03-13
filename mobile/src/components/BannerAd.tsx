@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Image, FlatList, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { useAd } from '../hooks/useAd';
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, Image, FlatList, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { useBannerAds } from '../hooks/useBannerAds';
+import type { AdTarget } from '../api/adsService';
 
 type AdType = 'publi_client' | 'publi_professional' | 'banner_client' | 'banner_professional' | 'banner_cliente_home';
 
@@ -10,6 +10,14 @@ interface BannerAdProps {
   minHeight?: number;
   maxHeight?: number;
   onPress?: () => void;
+}
+
+/** Map legacy adType strings to the new AdTarget ('client' | 'professional') */
+function adTypeToTarget(adType: AdType): AdTarget {
+  if (adType === 'banner_professional' || adType === 'publi_professional') {
+    return 'professional';
+  }
+  return 'client';
 }
 
 /**
@@ -23,10 +31,10 @@ interface BannerAdProps {
  * ```
  */
 export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: BannerAdProps) {
-  const { adHtml, images, loading, exists } = useAd(adType);
+  const target = adTypeToTarget(adType);
+  const { banners, loading, handleBannerPress } = useBannerAds(target);
   const { width: screenWidth } = useWindowDimensions();
   const flatListRef = useRef<FlatList<any> | null>(null);
-  const [index, setIndex] = useState(0);
   const [bannerHeight, setBannerHeight] = useState<number>(minHeight);
   const [firstImageLoaded, setFirstImageLoaded] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
@@ -34,31 +42,12 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
   // Container width: 90% of screen width
   const containerWidth = screenWidth * 0.9;
 
-  // Cycle behavior on user swipe: if user tries to swipe past last/first, wrap around.
-  // removed cyclic refs (startXRef, prevIndexRef)
-
-
   // Calculate height based on image dimensions, clamped to min/max
   const calculateHeight = (imgWidth: number, imgHeight: number): number => {
     const ratio = imgHeight / imgWidth;
     const calculatedHeight = containerWidth * ratio;
     return Math.max(minHeight, Math.min(maxHeight, calculatedHeight));
   };
-
-  const handleMessage = (event: any) => {
-    const message = event.nativeEvent.data;
-
-    // Rastrear cliques
-    if (message === 'click') {
-      onPress?.();
-      // Aqui você pode enviar analytics
-    }
-  };
-
-  // Não mostrar se não existir
-  if (!exists) {
-    return null;
-  }
 
   // Skeleton loader
   if (loading) {
@@ -69,83 +58,70 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
     );
   }
 
+  // Do not render if no banners
+  if (!banners || banners.length === 0) {
+    return null;
+  }
+
   return (
     <View style={[styles.container, { width: containerWidth, height: bannerHeight }]}>
-      {images && images.length > 0 ? (
-        <FlatList
-          ref={flatListRef}
-          data={images}
-          horizontal
-          pagingEnabled
-          getItemLayout={(data, idx) => ({
-            length: containerWidth,
-            offset: containerWidth * idx,
-            index: idx
-          })}
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item, idx) => `${item.uri}-${idx}`}
-          onMomentumScrollEnd={(ev) => {
-            const offsetX = ev.nativeEvent.contentOffset.x;
-            const visibleWidth = ev.nativeEvent.layoutMeasurement?.width || containerWidth;
-            const newIndex = Math.round(offsetX / visibleWidth);
-            setIndex(newIndex);
-          }}
-          renderItem={({ item, index: itemIndex }) => {
-            return (
-              <TouchableOpacity
-                style={[styles.itemContainer, { width: containerWidth }]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  if (item.link) {
-                    Linking.openURL(item.link).catch(() => {});
+      <FlatList
+        ref={flatListRef}
+        data={banners}
+        horizontal
+        pagingEnabled
+        getItemLayout={(data, idx) => ({
+          length: containerWidth,
+          offset: containerWidth * idx,
+          index: idx
+        })}
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item, idx) => `${item.filename}-${idx}`}
+        onMomentumScrollEnd={(ev) => {
+          const offsetX = ev.nativeEvent.contentOffset.x;
+          const visibleWidth = ev.nativeEvent.layoutMeasurement?.width || containerWidth;
+          Math.round(offsetX / visibleWidth);
+        }}
+        renderItem={({ item, index: itemIndex }) => {
+          return (
+            <TouchableOpacity
+              style={[styles.itemContainer, { width: containerWidth }]}
+              activeOpacity={0.8}
+              onPress={() => {
+                handleBannerPress(item);
+                onPress?.();
+              }}
+            >
+              <Image
+                source={{ uri: item.uri }}
+                style={[
+                  styles.image,
+                  {
+                    height: bannerHeight,
+                    width: imageAspectRatio ? Math.min(containerWidth, Math.round(bannerHeight * imageAspectRatio)) : containerWidth,
+                    alignSelf: 'center'
                   }
-                  onPress?.();
+                ]}
+                resizeMode="contain"
+                onLoad={(e) => {
+                  // Only the first image sets the banner height and aspect ratio
+                  if (itemIndex === 0 && !firstImageLoaded) {
+                    const { width: imgW, height: imgH } = e.nativeEvent.source;
+                    const aspect = imgW && imgH ? imgW / imgH : null;
+                    const newHeight = calculateHeight(imgW, imgH);
+                    setBannerHeight(newHeight);
+                    if (aspect) setImageAspectRatio(aspect);
+                    setFirstImageLoaded(true);
+                  }
                 }}
-              >
-                <Image
-                  source={{ uri: item.uri }}
-                  style={[
-                    styles.image,
-                    {
-                      height: bannerHeight,
-                      width: imageAspectRatio ? Math.min(containerWidth, Math.round(bannerHeight * imageAspectRatio)) : containerWidth,
-                      alignSelf: 'center'
-                    }
-                  ]}
-                  resizeMode="contain"
-                  onLoad={(e) => {
-                    // Apenas a primeira imagem define a altura do banner e a proporção
-                    if (itemIndex === 0 && !firstImageLoaded) {
-                      const { width: imgW, height: imgH } = e.nativeEvent.source;
-                      const aspect = imgW && imgH ? imgW / imgH : null;
-                      const newHeight = calculateHeight(imgW, imgH);
-                      setBannerHeight(newHeight);
-                      if (aspect) setImageAspectRatio(aspect);
-                      setFirstImageLoaded(true);
-                    }
-                  }}
-                  onError={(e) => {
-                    // Image failed to load; swallow silently or track via analytics if needed
-                  }}
-                />
-              </TouchableOpacity>
-            );
-          }}
-        />
-      ) : (
-        <WebView
-          source={{ html: adHtml || '' }}
-          style={styles.webview}
-          onMessage={handleMessage}
-          scrollEnabled={false}
-          showsVerticalScrollIndicator={false}
-          javaScriptEnabled
-          domStorageEnabled
-          // Evitar que o WebView intercepte gestos de scroll da tela
-          bounces={false}
-          overScrollMode="never"
-        />
-      )}
+                onError={() => {
+                  // Image failed to load; swallow silently
+                }}
+              />
+            </TouchableOpacity>
+          );
+        }}
+      />
       {/* Dots/indicators intentionally removed - carousel is autoplaying */}
     </View>
   );
@@ -170,10 +146,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F8FC',
     opacity: 0.5,
   },
-  webview: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
   image: {
     borderRadius: 8,
   },
@@ -182,26 +154,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden'
   },
-  dotsContainer: {
-    position: 'absolute',
-    bottom: 8,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    marginHorizontal: 4,
-  },
-  dotActive: {
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
 });
+
