@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
 
 // Permite que o Expo Go complete o redirect de autenticação OAuth
 WebBrowser.maybeCompleteAuthSession();
@@ -80,13 +79,13 @@ export function useGoogleAuth() {
       const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
       console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
       
-      // Usar AuthSession ao invés de WebBrowser - mantém contexto do app
-      const result = await AuthSession.openAuthSessionAsync(authUrl, DEEP_LINK_SCHEME);
+      // Usar WebBrowser.openAuthSessionAsync - mantém contexto do app
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, DEEP_LINK_SCHEME);
       
       console.log('[GoogleAuth] Resultado do AuthSession:', result);
       
       if (result.type === 'success' && result.url) {
-        // AuthSession já capturou a URL de retorno
+        // WebBrowser já capturou a URL de retorno
         handleDeepLink(result.url);
       } else if (result.type === 'cancel' || result.type === 'dismiss') {
         setResponse({ type: result.type });
