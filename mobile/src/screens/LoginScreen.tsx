@@ -255,37 +255,19 @@ export default function LoginScreen() {
   // Processa a autenticação Google com sucesso (chamado pelo useEffect que monitora response)
   const handleGoogleAuthSuccess = async (authentication: any) => {
     try {
-      const idToken = authentication?.idToken;
       const accessToken = authentication?.accessToken;
+      const refreshToken = authentication?.refreshToken;
 
-      if (!idToken) {
-        throw new Error('Não foi possível obter o token do Google');
+      if (!accessToken) {
+        throw new Error('Não foi possível obter o token do backend');
       }
 
-      console.log('Enviando token para o backend...');
-      const data = await loginWithGoogle(idToken);
+      console.log('✅ Login com Google bem-sucedido (server-side OAuth)');
 
-      console.log('✅ Login com Google bem-sucedido');
-
-      await setToken(data.token);
-      let user = data.user || (await fetchCurrentUser(data.token));
+      // O backend já retornou os JWTs; apenas setar no store
+      await setToken(accessToken);
+      const user = await fetchCurrentUser(accessToken);
       console.log('👤 User recebido:', user ? user.email : 'NULL');
-
-      // Se backend não retornou avatar_url, buscar via Google userinfo
-      if (user && (!user.avatar_url || user.avatar_url === '') && accessToken) {
-        try {
-          const { data: googleProfile } = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
-          if (googleProfile?.picture) {
-            user = { ...user, avatar_url: googleProfile.picture };
-          }
-        } catch (err) {
-          console.warn('Erro ao buscar foto do Google via API userinfo', err);
-        }
-      }
       setUser(user);
 
       // Aguardar um pouco para garantir que o estado seja persistido
