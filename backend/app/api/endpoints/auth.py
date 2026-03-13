@@ -173,27 +173,27 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
 
 
 @router.get("/google/start")
-async def google_oauth_start(request: Request, redirect_uri: str | None = None):
+async def google_oauth_start(request: Request, next: str | None = None):
     """Redirecta o usuário para a tela de consentimento do Google.
 
-    Accepts a `redirect_uri` query param that specifies where Google should redirect after auth.
-    For Expo apps, this should be https://auth.expo.io/@username/slug
+    Optionally accepts a `next` query param (deep-link URL) that will be passed through
+    via the OAuth `state` parameter and used as redirect target after callback.
     """
     client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
         raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID não configurado no backend.")
 
-    # Use provided redirect_uri or default to backend callback
-    final_redirect_uri = redirect_uri or "https://agilizapro.cloud/auth/google/callback"
+    # Build redirect_uri to our backend callback (HTTPS forçado)
+    redirect_uri = "https://agilizapro.cloud/auth/google/callback"
     
     scope = "openid email profile"
-    # Store the original redirect_uri in state so we know where it came from
-    state = urllib.parse.quote_plus(final_redirect_uri)
+    # Store deep-link in state para usar depois no callback
+    state = urllib.parse.quote_plus(next or "")
     
     params = {
         "response_type": "code",
         "client_id": client_id,
-        "redirect_uri": final_redirect_uri,
+        "redirect_uri": redirect_uri,
         "scope": scope,
         "access_type": "offline",
         "include_granted_scopes": "true",
@@ -208,7 +208,8 @@ async def google_oauth_start(request: Request, redirect_uri: str | None = None):
 async def google_oauth_callback(request: Request, code: str | None = None, state: str | None = None, db: AsyncIOMotorDatabase = Depends(get_database)):
     """Recebe o `code` do Google, troca por tokens no backend, cria/atualiza usuário e emite JWTs.
 
-    The `state` parameter contains the redirect_uri that was used in /google/start.
+    If a `state` deep-link was provided on /google/start, returns an HTML page that triggers
+    a deep-link to the mobile app with the tokens. Otherwise returns JSON.
     """
     if not code:
         raise HTTPException(status_code=400, detail="Missing code in callback")
@@ -219,10 +220,10 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET not configured")
 
     try:
-        # Extract redirect_uri from state (it was the redirect_uri used in /start)
-        redirect_uri = urllib.parse.unquote_plus(state) if state else "https://agilizapro.cloud/auth/google/callback"
+        # redirect_uri usado no /start (sempre o backend callback)
+        redirect_uri = "https://agilizapro.cloud/auth/google/callback"
         
-        print(f"[OAuth Callback] Using redirect_uri: {redirect_uri}")
+        print(f"[OAuth Callback] Exchanging code for tokens...")
 
         token_endpoint = "https://oauth2.googleapis.com/token"
         async with httpx.AsyncClient() as client:
@@ -273,16 +274,51 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         access_token = create_access_token(subject=str(user.id))
         refresh_token = create_refresh_token(subject=str(user.id))
 
-        # If redirect_uri is Expo Auth Proxy, append tokens as query params
-        if "auth.expo.io" in redirect_uri:
-            params = urllib.parse.urlencode({
-                "access_token": access_token, 
-                "refresh_token": refresh_token, 
-                "token_type": "bearer"
-            })
-            final_url = f"{redirect_uri}?{params}"
-            print(f"[OAuth Callback] Redirecting to Expo with tokens: {final_url}")
-            return RedirectResponse(url=final_url)
+        # If state is a deep-link scheme, return HTML page that triggers the deep-link
+        if state:
+            target = urllib.parse.unquote_plus(state)
+            if target:  # Se tem deep-link
+                # Build deep-link with tokens in fragment
+                sep = '#' if '#' not in target else '&'
+                fragment = urllib.parse.urlencode({"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"})
+                deep_link = f"{target}{sep}{fragment}"
+                
+                print(f"[OAuth Callback] Returning HTML with deep-link: {deep_link}")
+                
+                # Return HTML page that triggers deep-link and shows instructions
+                html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login bem-sucedido</title>
+    <style>
+        body {{ font-family: system-ui, sans-serif; text-align: center; padding: 40px; background: #f5f5f5; }}
+        .container {{ max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+        h1 {{ color: #4CAF50; margin-bottom: 20px; }}
+        p {{ color: #666; line-height: 1.6; }}
+        .button {{ display: inline-block; margin-top: 20px; padding: 12px 24px; background: #4CAF50; color: white; text-decoration: none; border-radius: 6px; }}
+    </style>
+    <script>
+        // Tentar abrir deep-link automaticamente
+        window.location.href = "{deep_link}";
+        
+        // Fechar janela após 2 segundos
+        setTimeout(function() {{
+            window.close();
+        }}, 2000);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>✓ Login realizado com sucesso!</h1>
+        <p>Redirecionando para o aplicativo...</p>
+        <p id="message">Se não abrir automaticamente, toque no botão abaixo:</p>
+        <a href="{deep_link}" class="button">Abrir App</a>
+    </div>
+</body>
+</html>"""
+                return HTMLResponse(content=html_content)
 
         # Otherwise return JSON
         return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}

@@ -1,115 +1,115 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
 
+// Permite que o Expo Go complete o redirect de autenticação OAuth
 WebBrowser.maybeCompleteAuthSession();
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
+const DEEP_LINK_SCHEME = 'com.agilizapro.agapp://auth/callback';
 
-// Google OAuth endpoints
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-};
-
-interface GoogleAuthResult {
-  accessToken?: string;
-  refreshToken?: string;
-  error?: string;
+interface AuthResponse {
+  type: 'success' | 'error' | 'dismiss' | 'cancel';
+  authentication?: {
+    accessToken?: string;
+    refreshToken?: string;
+    tokenType?: string;
+  };
 }
 
 /**
- * Hook de autenticação Google usando expo-auth-session conforme documentação oficial.
- * 
- * O fluxo correto é:
- * 1. Mobile obtém authorization code do Google
- * 2. Envia code para o backend
- * 3. Backend troca code por tokens e retorna JWTs próprios
+ * Hook de autenticação Google via server-side OAuth (backend-driven).
+ *
+ * Uso:
+ *   const { request, response, signIn } = useGoogleAuth();
+ *
+ *   // Disparar o fluxo de login:
+ *   signIn();
+ *
+ *   // Monitorar o resultado via useEffect:
+ *   useEffect(() => {
+ *     if (response?.type === 'success') {
+ *       const { accessToken, refreshToken } = response.authentication ?? {};
+ *       // usar tokens com o backend
+ *     }
+ *   }, [response]);
  */
 export function useGoogleAuth() {
-  const [authResult, setAuthResult] = useState<GoogleAuthResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [response, setResponse] = useState<AuthResponse | null>(null);
+  const [isReady, setIsReady] = useState(true);
 
-  // Usar proxy do Expo para gerar redirect URI compatível com Google OAuth
-  // Isso gera: https://auth.expo.io/@clausemberg/agapp
-  const redirectUri = AuthSession.makeRedirectUri({
-    useProxy: true,
-  });
-
-  console.log('[GoogleAuth] Redirect URI:', redirectUri);
-
-  // Configurar request OAuth com Google
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: '36227471485-8bogr7vvdga110v3c9ha29gu3khom83c.apps.googleusercontent.com',
-      scopes: ['openid', 'email', 'profile'],
-      redirectUri,
-      usePKCE: false, // Google não requer PKCE
-    },
-    discovery
-  );
-
-  // Processar resposta do Google
   useEffect(() => {
-    if (response?.type === 'success') {
-      const code = response.params.code;
-      console.log('[GoogleAuth] Authorization code recebido');
+    // Listener para capturar o deep-link de retorno do OAuth
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      console.log('[GoogleAuth] Deep-link recebido:', url);
       
-      // Trocar code por tokens no backend
-      exchangeCodeForTokens(code);
-    } else if (response?.type === 'error') {
-      console.error('[GoogleAuth] Erro no OAuth:', response.error);
-      setAuthResult({ error: response.error?.message || 'Erro desconhecido' });
-    } else if (response?.type === 'dismiss' || response?.type === 'cancel') {
-      console.log('[GoogleAuth] Usuário cancelou');
-      setAuthResult({ error: 'Cancelado pelo usuário' });
-    }
-  }, [response]);
+      if (url.startsWith(DEEP_LINK_SCHEME)) {
+        handleDeepLink(url);
+      }
+    });
 
-  const exchangeCodeForTokens = async (code: string) => {
-    setIsLoading(true);
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const handleDeepLink = (url: string) => {
     try {
-      console.log('[GoogleAuth] Trocando code por tokens no backend...');
-      
-      const res = await fetch(`${BACKEND_URL}/auth/google/exchange`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          code, 
-          redirect_uri: redirectUri 
-        }),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Backend error: ${errorText}`);
+      // Parsear tokens do fragmento da URL
+      // Exemplo: com.agilizapro.agapp://auth/callback#access_token=xxx&refresh_token=yyy&token_type=bearer
+      const fragmentMatch = url.match(/#(.+)$/);
+      if (!fragmentMatch) {
+        setResponse({ type: 'error' });
+        return;
       }
 
-      const data = await res.json();
-      console.log('[GoogleAuth] Tokens recebidos do backend');
+      const params = new URLSearchParams(fragmentMatch[1]);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const tokenType = params.get('token_type');
 
-      setAuthResult({
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-      });
+      if (accessToken && refreshToken) {
+        setResponse({
+          type: 'success',
+          authentication: {
+            accessToken,
+            refreshToken,
+            tokenType: tokenType || 'bearer',
+          },
+        });
+      } else {
+        setResponse({ type: 'error' });
+      }
     } catch (error) {
-      console.error('[GoogleAuth] Erro ao trocar code:', error);
-      setAuthResult({ error: String(error) });
-    } finally {
-      setIsLoading(false);
+      console.error('[GoogleAuth] Erro ao parsear deep-link:', error);
+      setResponse({ type: 'error' });
     }
   };
 
   const signIn = async () => {
-    console.log('[GoogleAuth] Iniciando login...');
-    setAuthResult(null);
-    await promptAsync();
+    try {
+      setResponse(null);
+      const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
+      console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
+      
+      // Abrir navegador do sistema (sem interceptar - o backend vai retornar página HTML com deep-link)
+      const result = await WebBrowser.openBrowserAsync(authUrl);
+      
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        setResponse({ type: result.type });
+      }
+    } catch (error) {
+      console.error('[GoogleAuth] Erro ao abrir autenticação:', error);
+      setResponse({ type: 'error' });
+    }
   };
 
   return {
-    request,
-    response: authResult,
+    /** Objeto de requisição OAuth (sempre pronto nessa implementação) */
+    request: isReady ? {} : null,
+    /** Resposta OAuth; monitore via useEffect para reagir ao resultado */
+    response,
+    /** Abre o fluxo de autenticação Google no navegador do sistema */
     signIn,
-    isLoading,
   };
 }
