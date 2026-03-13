@@ -13,6 +13,9 @@
 <div class="mb-4">
     <h1 class="h3 mb-1 text-gray-800 fw-bold">Gerenciamento de Publicidade</h1>
     <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel</p>
+    <div class="mt-2">
+        <button class="btn btn-outline-primary btn-sm" onclick="location.href='/ads-admin/publi-screen'">PubliScreen Ads</button>
+    </div>
     <div class="mt-2"><span class="badge bg-success">ADS ADMIN UI: versão 362c8b4 ✓</span></div>
 </div>
 <!-- debug status removed -->
@@ -133,6 +136,9 @@
                         <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('banner_client')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="openBannerActionModal('banner_client')">
+                            <i class="fas fa-link me-1"></i>Ação
+                        </button>
                     </div>
                 </form>
 
@@ -177,6 +183,9 @@
                         <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('banner_professional')">
                             <i class="fas fa-desktop me-1"></i>Preview Desktop
                         </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="openBannerActionModal('banner_professional')">
+                            <i class="fas fa-link me-1"></i>Ação
+                        </button>
                     </div>
                 </form>
 
@@ -195,6 +204,92 @@
             </div>
         </div>
     </div>
+</div>
+
+    <!-- PubliScreen Ads Section -->
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-window-maximize me-2"></i>PubliScreen Ads</h5>
+                <small>HTML + pressables</small>
+            </div>
+            <div class="card-body">
+                <form id="form-publi-screen" class="mb-3" onsubmit="return false;">
+                    <div class="mb-3">
+                        <label class="form-label">Alias</label>
+                        <input type="text" id="publi-alias" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target</label>
+                        <select id="publi-target" class="form-select">
+                            <option value="client">cliente</option>
+                            <option value="professional">profissional</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">HTML</label>
+                        <textarea id="publi-html" class="form-control" rows="6" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Base64 (imagem de fundo opcional)</label>
+                        <textarea id="publi-base64" class="form-control" rows="3" placeholder="data:image/png;base64,..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Pacote (.zip)</label>
+                        <input type="file" id="publi-package" class="form-control" accept=".zip" />
+                        <div class="form-text">Zip com html/css/js/imagens; será armazenado como base64.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Redirect ao fechar</label>
+                        <input type="url" id="publi-onclose" class="form-control" placeholder="https://app.example.com/home" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Pressables (JSON array)</label>
+                        <textarea id="publi-pressables" class="form-control" rows="3" placeholder='[{"id":"botao","onPress_type":"external_link","onPress_link":"https://..."}]'></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="publi-save-btn">Salvar PubliScreen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+<!-- Modal for banner action configuration -->
+<div class="modal fade" id="bannerActionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Configurar Ação do Banner</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-ad-type">
+        <div class="mb-3">
+          <label class="form-label">Tipo de Ação</label>
+          <select id="modal-onpress-type" class="form-select">
+            <option value="external_link">Link Externo</option>
+            <option value="stack">Tela do App</option>
+          </select>
+        </div>
+        <div class="mb-3" id="modal-external-container">
+          <label class="form-label">Link Externo</label>
+          <input type="url" id="modal-onpress-link" class="form-control" placeholder="https://example.com">
+        </div>
+        <div class="mb-3" id="modal-stack-container" style="display:none;">
+          <label class="form-label">Tela</label>
+          <select id="modal-onpress-stack" class="form-select"></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Posição no carrossel</label>
+          <input type="number" id="modal-position" class="form-control" min="1" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="modal-save-btn">Salvar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -236,6 +331,82 @@
 </style>
 
 <script>
+// mapping of allowed stacks by target
+const stacksByTarget = {
+    client: [
+        'servicosProximos',
+        'assinatura',
+        'compraCreditos',
+        'buyFeaturedProjects'
+    ],
+    professional: [
+        'assinarPlano',
+        'compraCreditos',
+        'meusServicos'
+    ]
+};
+
+function openBannerActionModal(adType) {
+    const target = adType.includes('client') ? 'client' : 'professional';
+    document.getElementById('modal-ad-type').value = adType;
+    const stackSelect = document.getElementById('modal-onpress-stack');
+    stackSelect.innerHTML = '';
+    stacksByTarget[target].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        stackSelect.appendChild(opt);
+    });
+    // reset fields
+    document.getElementById('modal-onpress-link').value = '';
+    document.getElementById('modal-position').value = '';
+    document.getElementById('modal-onpress-type').value = 'external_link';
+    toggleModalFields();
+    const modal = new bootstrap.Modal(document.getElementById('bannerActionModal'));
+    modal.show();
+}
+
+function toggleModalFields() {
+    const type = document.getElementById('modal-onpress-type').value;
+    document.getElementById('modal-external-container').style.display = type === 'external_link' ? 'block' : 'none';
+    document.getElementById('modal-stack-container').style.display = type === 'stack' ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('modal-onpress-type').addEventListener('change', toggleModalFields);
+    document.getElementById('modal-save-btn').addEventListener('click', async () => {
+        const adType = document.getElementById('modal-ad-type').value;
+        const baseUrl = '/ads-admin/banner-metadata';
+        const data = {
+            adType,
+            onPress_type: document.getElementById('modal-onpress-type').value,
+            onPress_link: document.getElementById('modal-onpress-link').value || null,
+            onPress_stack: document.getElementById('modal-onpress-stack').value || null,
+            position: parseInt(document.getElementById('modal-position').value) || null
+        };
+        try {
+            const token = localStorage.getItem('access_token');
+            const resp = await fetch(baseUrl, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(data)
+            });
+            if (!resp.ok) throw new Error('Failed to save metadata');
+            showAlert('Ação do banner salva com sucesso');
+            const modalElem = document.getElementById('bannerActionModal');
+            const modal = bootstrap.Modal.getInstance(modalElem);
+            modal.hide();
+        } catch (err) {
+            console.error(err);
+            showAlert('Erro ao salvar ação do banner', 'danger');
+        }
+    });
+});
+
 function showAlert(message, type = 'success') {
     const alert = document.createElement('div');
     alert.className = `alert alert-${type} alert-dismissible fade show`;
@@ -635,6 +806,47 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFiles('banner_client');
     loadFiles('banner_professional');
 });
+
+// publiscreen save handler
+(function(){
+    const btn = document.getElementById('publi-save-btn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+        const alias = document.getElementById('publi-alias').value;
+        const target = document.getElementById('publi-target').value;
+        const html = document.getElementById('publi-html').value;
+        const base64 = document.getElementById('publi-base64').value;
+        const onCloseRedirect = document.getElementById('publi-onclose').value;
+        const pressables = document.getElementById('publi-pressables').value;
+        const packageInput = document.getElementById('publi-package');
+        const form = new FormData();
+        form.append('alias', alias);
+        form.append('target', target);
+        form.append('html', html);
+        form.append('base64', base64);
+        form.append('onClose_redirect', onCloseRedirect);
+        form.append('pressables', pressables);
+        if (packageInput && packageInput.files && packageInput.files[0]) {
+            form.append('package', packageInput.files[0]);
+        }
+        try {
+            const token = localStorage.getItem('access_token');
+            const resp = await fetch('/ads-admin/publi_screen', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: form
+            });
+            if (!resp.ok) throw new Error('failed');
+            showAlert('PubliScreen salvo');
+        } catch (err) {
+            console.error(err);
+            showAlert('Erro ao salvar PubliScreen', 'danger');
+        }
+    });
+})();
 </script>
 
 <!-- Preview Modal -->

@@ -14,6 +14,10 @@ import logging
 
 from app.core.security import get_current_user, get_current_user_from_request
 from app.models.user import User
+from app.core.database import get_database
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.models.ad_content import AdContent  # legacy: publiscreen/old banners
+from app.models.banner import Banner  # used when updating base64 on upload
 
 router = APIRouter()
 admin_router = APIRouter()
@@ -369,7 +373,8 @@ async def admin_upload_ad_file(
     ],
     file: UploadFile = File(...),
     file_type: Literal["html", "css", "js", "image"] = Form(...),
-    current_user: User = Depends(get_current_user_from_request)
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
     Upload a file to ad location (admin only)
@@ -469,6 +474,28 @@ async def admin_upload_ad_file(
                 os.remove(tmp_path)
             except Exception:
                 pass
+
+    # If banner image uploaded, update its base64 representation in DB
+    if "banner" in location and file_type == "image":
+        # compute base64 string
+        import base64 as _b64
+        b64content = _b64.b64encode(content).decode('utf-8')
+        ext = file_ext.replace('.', '')
+        mime = f"image/{ext if ext != 'jpg' else 'jpeg'}"
+        b64str = f"data:{mime};base64,{b64content}"
+        target = "client" if "client" in location else "professional"
+        # ensure model validation when inserting/updating banner
+        banner_data = {
+            "target": target,
+            "base64": b64str,
+            "is_active": True,
+        }
+        banner_doc = Banner(**banner_data).dict(by_alias=True, exclude_none=True)
+        await db.ad_contents.update_one(
+            {"target": target},
+            {"$set": banner_doc},
+            upsert=True
+        )
 
     return {"message": f"File uploaded successfully to {location}", "filename": filename}
 
@@ -729,6 +756,36 @@ async def admin_preview_html(
     return HTMLResponse(content=content)
 
 
+@admin_router.post("/banner-metadata")
+async def admin_save_banner_metadata(
+    adType: str = Form(...),
+    onPress_type: str = Form(None),
+    onPress_link: str = Form(None),
+    onPress_stack: str = Form(None),
+    position: int = Form(None),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: User = Depends(get_current_user_from_request)
+):
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can modify banner metadata")
+
+    target = "client" if "client" in adType else "professional"
+    query = {"target": target}
+    # compose a banner object to validate
+    banner_obj = {
+        "target": target,
+        "onPress_type": onPress_type,
+        "onPress_link": onPress_link,
+        "onPress_stack": onPress_stack,
+        "position": position,
+        "is_active": True,
+        "alias": f"banner_{target}_home"
+    }
+    banner_doc = Banner(**banner_obj).dict(by_alias=True, exclude_none=True)
+    await db.ad_contents.update_one(query, {"$set": banner_doc}, upsert=True)
+    return JSONResponse({"ok": True})
+
+
 @admin_router.get("/preview-images/{location}")
 async def admin_preview_images(
         location: Literal[
@@ -918,103 +975,10 @@ async def get_rendered_ad_for_mobile(
     })
 
 
-@mobile_router.get("/{ad_type}/check")
-async def mobile_check_ad_exists(ad_type: str):
-    """Compatibility: mobile check endpoint. Returns whether ad is configured."""
-    location = ad_type_to_location(ad_type)
-    if not location:
-        return JSONResponse(status_code=404, content={"ad_type": ad_type, "exists": False, "configured": False})
-
-    ad_dir = ADS_BASE_DIR / location
-    has_content = False
-    if ad_dir.exists():
-        if (ad_dir / "index.html").exists():
-            has_content = True
-        else:
-            # if no html, check if image files exist in folder
-            for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
-                if any(ad_dir.glob(f"*.{ext}")):
-                    has_content = True
-                    break
-    return JSONResponse({"ad_type": ad_type, "exists": has_content, "configured": has_content})
 
 
-@mobile_router.get("/{ad_type}")
-async def mobile_get_ad(ad_type: str):
-    """Compatibility: mobile ad endpoint. Returns HTML and assets in the mobile JSON format."""
-    location = ad_type_to_location(ad_type)
-    if not location:
-        return JSONResponse(status_code=404, content={"ad_type": ad_type, "html": "", "assets": {}})
 
-    ad_dir = ADS_BASE_DIR / location
 
-    # Load metadata for images (meta.json)
-    meta_file = ad_dir / 'meta.json'
-    images_meta = {}
-    if meta_file.exists():
-        try:
-            images_meta = json.loads(meta_file.read_text(encoding='utf-8') or '{}').get('images', {})
-        except Exception:
-            images_meta = {}
-
-    # If no HTML file, but images exist, still return image-only response
-    if not ad_dir.exists():
-        return JSONResponse(status_code=204, content=None)
-    if not (ad_dir / "index.html").exists():
-        # if no index.html, but images exist, build image-only response
-        images_only = {}
-        for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
-            for img_file in ad_dir.glob(f"*.{ext}"):
-                with open(img_file, "rb") as f:
-                    img_base64 = base64.b64encode(f.read()).decode()
-                    images_only[img_file.name] = f"data:image/{ext};base64,{img_base64}"
-
-        # Build images list
-        images_list = []
-        for name, content in images_only.items():
-            link = images_meta.get(name, {}).get('link') if isinstance(images_meta, dict) else None
-            images_list.append({"filename": name, "content": content, "link": link})
-
-        return JSONResponse({
-            "ad_type": ad_type,
-            "type": "image",
-            "images": images_list,
-        })
-
-    # Rendered HTML to be embedded
-    rendered = render_ad_template(location)
-
-    # Build assets: style.css, script.js, and images as {type: 'text'|'image', content: '...'}
-    assets = {}
-    css_path = ad_dir / "style.css"
-    js_path = ad_dir / "script.js"
-    if css_path.exists():
-        assets["style.css"] = {"type": "text", "content": css_path.read_text(encoding='utf-8')}
-    if js_path.exists():
-        assets["script.js"] = {"type": "text", "content": js_path.read_text(encoding='utf-8')}
-
-    for ext in ["png", "jpg", "jpeg", "gif", "webp", "svg"]:
-        for img_file in ad_dir.glob(f"*.{ext}"):
-            with open(img_file, "rb") as f:
-                img_base64 = base64.b64encode(f.read()).decode()
-                assets[img_file.name] = {"type": "image", "content": f"data:image/{ext};base64,{img_base64}"}
-    # Build images array for clients that prefer a list
-    images_list = []
-    for key, asset in assets.items():
-        if asset.get("type") == "image":
-            images_list.append({
-                "filename": key,
-                "content": asset.get("content"),
-                "link": images_meta.get(key, {}).get('link') if isinstance(images_meta, dict) else None,
-            })
-
-    return JSONResponse({
-        "ad_type": ad_type,
-        "type": "html",
-        "html": rendered,
-        "assets": assets,
-        "images": images_list,
-    })
 
 
 # ============================================================================
@@ -1084,6 +1048,12 @@ async def get_ad_json(
         images_list = []
         for name, content in images.items():
             images_list.append({"filename": name, "content": content, "link": None})
+
+        # ensure images_meta exists in this scope
+        try:
+            _ = images_meta
+        except NameError:
+            images_meta = {}
 
         return JSONResponse({
             "id": location,

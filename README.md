@@ -355,10 +355,13 @@ Precificação inteligente baseada na **idade do projeto** e no **histórico de 
 |------|-------------|
 | `publi_screen_client` | Tela cheia — home do cliente |
 | `publi_screen_professional` | Tela cheia — home do profissional |
-| `banner_client_home` | Banner — home do cliente |
-| `banner_professional_home` | Banner — home do profissional |
+| `banner_client_home` | Banner — home do cliente (DB-driven, veja `models/banner.py`) |
+| `banner_professional_home` | Banner — home do profissional (DB-driven) |
+
+> Nota: a lógica de `publi_screen` continua baseada em arquivos estáticos, enquanto banners usam modelo e endpoints dedicados (separados em `api/endpoints/banners.py`).
 
 - Upload de conteúdo HTML/CSS/JS ou imagem via painel admin
+- Novas opções de banner: cada banner agora é armazenado no banco de dados com campos `base64`, `onPress_type` (external_link/stack), `onPress_link` ou `onPress_stack`, `target` (client/professional) e `position` (ordem do carrossel).
 - Validação de proporção para banners (mín. 2,5:1; ideal 3:1)
 - Cache local no mobile para exibição offline
 - **Tracking real:**

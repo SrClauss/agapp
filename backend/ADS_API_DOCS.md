@@ -14,6 +14,18 @@
 - `banner_client` - Banner para tela home dos clientes
 - `banner_professional` - Banner para tela home dos profissionais
 
+
+> **Nota para PubliScreen**: além do HTML/asset padrão, o servidor pode retornar campos adicionais quando a configuração é feita via banco de dados. Estes incluem:
+>
+> * `base64` – string com imagem em base64 usada como fundo (alternativa ao campo `html`).
+> * `zip_base64` – pacote ZIP (html/css/js/imagens) codificado em base64; o aplicativo descompacta e renderiza `index.html` contido.
+> * `onClose_redirect` – URL para redirecionar quando o usuário fechar a publiscreen.
+> * `pressables` – array de objetos com propriedades `left`, `top`, `width`, `height` (valores em porcentagem) definidos em relação à imagem, e `onPress_type`/`onPress_link` ou `onPress_stack` para ações clicáveis.
+> * `target` – igual ao tipo (`client` ou `professional`) indicando o público desta publiscreen.
+> * `is_active` – flag de ativação.
+> * `alias` – o nome legível do anúncio, usado internamente.
+
+
 **Exemplo de Request:**
 ```bash
 GET https://agilizapro.net/system-admin/api/public/ads/publi_client
@@ -38,6 +50,21 @@ GET https://agilizapro.net/system-admin/api/public/ads/publi_client
       "content": "data:image/png;base64,iVBORw0KG..."
     }
   }
+}
+```
+
+Um anúncio PubliScreen configurado via banco de dados pode também vir em formato simplificado, por exemplo:
+
+```json
+{
+  "alias": "publi_client",
+  "target": "client",
+  "zip_base64": "UEsDBBQAA... (base64 do zip contendo index.html e demais recursos)",
+  "onClose_redirect": "https://app.example.com/home",
+  "pressables": [
+    { "left": 10, "top": 20, "width": 30, "height": 15, "onPress_type": "external_link", "onPress_link": "https://promo.example.com" }
+  ],
+  "is_active": true
 }
 ```
 
@@ -86,6 +113,9 @@ GET https://agilizapro.net/system-admin/api/public/ads/banner_client/check
 ## Implementação no Mobile (React Native)
 
 ### Componente PubliScreen
+
+> **Nota:** O formato retornado pelo backend evoluiu. Além do `html`/`assets` mostrado abaixo, anúncios configurados via banco de dados podem fornecer `base64`, `onClose_redirect` e uma lista de `pressables` para áreas clicáveis. A implementação no aplicativo foi refatorada para usar o hook `usePubliScreen` em vez de lidar diretamente com fetch e modal; veja `mobile/src/hooks/usePubliScreen.ts`.
+
 
 ```typescript
 import React, { useEffect, useState } from 'react';
@@ -246,7 +276,25 @@ export const BannerAd = ({ userType }: { userType: 'client' | 'professional' }) 
       );
       const data = await adResponse.json();
 
-      // Processar HTML + assets (mesmo código do PubliScreen)
+      // ### Novos campos de banner (se retornados) ###
+      // Se o servidor retornar um objeto simples de banner em base64,
+      // o payload terá a forma:
+      // ```json
+      // {
+      //   "ad_type": "banner_client",
+      //   "alias": "banner_client_home",
+      //   "base64": "data:image/png;base64,...",
+      //   "onPress_type": "stack" | "external_link",
+      //   "onPress_link": "https://...",            // opcional
+      //   "onPress_stack": "compraCreditos",        // opcional
+      //   "target": "client",                       // público-alvo
+      //   "position": 1                              // ordem no carrossel
+      // }
+      // ```
+      // Nesse caso o app deve simplesmente renderizar a imagem/base64
+      // e ligar o clique para abrir link ou navegar para stack.
+
+      // Caso o payload contenha `html` (formato antigo), procede-se como antes:
       let html = data.html;
       // ... processar assets ...
 

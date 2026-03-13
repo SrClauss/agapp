@@ -215,6 +215,20 @@ app.include_router(attendant_auth.router, prefix="/attendant", tags=["attendant"
 app.include_router(ads.router, prefix="/ads", tags=["advertisements"])
 app.include_router(ads.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
 app.include_router(ads.mobile_router, prefix="/system-admin/api/public/ads")
+
+# banner-specific endpoints (new simple DB-backed banners)
+from app.api.endpoints import banners, publi_screen
+app.include_router(banners.router, prefix="/system-admin/api/public/ads")
+app.include_router(banners.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
+# publiscreen endpoints
+app.include_router(publi_screen.router, prefix="/system-admin/api/public/ads")
+app.include_router(publi_screen.admin_router, prefix="/ads-admin", tags=["advertisements-admin"])
+
+# ensure collection exists on startup
+@app.on_event("startup")
+async def ensure_collections():
+    db = await get_database()
+    await db.create_collection('publi_screen_ads', capped=False)
 app.include_router(contacts.router, tags=["contacts"])
 
 # Expor rotas também sob o prefixo /api para compatibilidade com clientes e testes

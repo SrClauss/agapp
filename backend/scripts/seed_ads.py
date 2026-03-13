@@ -145,35 +145,36 @@ async def seed_ads():
     print(f"✅ Criado: {publi_professional.alias} (ID: {publi_professional.id})")
 
     # Create Banner Cliente
-    banner_client = AdContent(
+    # using Banner model instead of AdContent for new structure
+    from app.models.banner import Banner
+    banner_client = Banner(
         alias="banner_client_home",
         type="banner",
         target="client",
-        index_html="banner_client_home/index.html",
-        css_files=["banner_client_home/style.css"],
-        js_files=["banner_client_home/script.js"],
-        image_files=[],
-        title="Banner Home Cliente",
-        description="Banner exibido no topo da tela principal do cliente",
         is_active=True,
-        priority=5
+        priority=5,
+        base64=None,
+        onPress_type=None,
+        onPress_link=None,
+        onPress_stack=None,
+        position=1
     )
     await db.ad_contents.insert_one(banner_client.model_dump())
     print(f"✅ Criado: {banner_client.alias} (ID: {banner_client.id})")
 
     # Create Banner Profissional
-    banner_professional = AdContent(
+    from app.models.banner import Banner
+    banner_professional = Banner(
         alias="banner_professional_home",
         type="banner",
         target="professional",
-        index_html="banner_professional_home/index.html",
-        css_files=["banner_professional_home/style.css"],
-        js_files=["banner_professional_home/script.js"],
-        image_files=[],
-        title="Banner Home Profissional",
-        description="Banner exibido no topo da tela principal do profissional",
         is_active=True,
-        priority=5
+        priority=5,
+        base64=None,
+        onPress_type=None,
+        onPress_link=None,
+        onPress_stack=None,
+        position=1
     )
     await db.ad_contents.insert_one(banner_professional.model_dump())
     print(f"✅ Criado: {banner_professional.alias} (ID: {banner_professional.id})")
