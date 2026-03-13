@@ -609,8 +609,6 @@ function openPubliModal(location) {
   modal.show();
 }
 
-document.getElementById('publiscreen-action-type').addEventListener('change', updatePubliActionValueGroup);
-
 function updatePubliActionValueGroup() {
   const type = document.getElementById('publiscreen-action-type').value;
   const grp  = document.getElementById('publiscreen-action-value-group');
@@ -722,8 +720,6 @@ function openBannerModal(location) {
   modal.show();
 }
 
-document.getElementById('banner-action-type').addEventListener('change', updateBannerActionValueGroup);
-
 function updateBannerActionValueGroup() {
   const type = document.getElementById('banner-action-type').value;
   const grp  = document.getElementById('banner-action-value-group');
@@ -750,76 +746,64 @@ function updateBannerActionValueGroup() {
   }
 }
 
-// Show local preview as soon as user picks images
-  document.getElementById('banner-image').addEventListener('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      document.getElementById('banner-modal-img').src = e.target.result;
-      document.getElementById('banner-modal-preview').style.display = '';
-    };
-    reader.readAsDataURL(file);
-  });
+async function submitBanner() {
+  const location    = _bannerLocation;
+  const imgInput    = document.getElementById('banner-image');
+  const actionType  = document.getElementById('banner-action-type').value;
+  const actionValueInput = document.getElementById('banner-action-value').value.trim();
+  const actionValueSelect = document.getElementById('banner-action-value-select').value;
+  const actionValue = (actionType === 'internal') ? actionValueSelect : actionValueInput;
+  const btn         = document.getElementById('btn-banner-submit');
+  const progress    = document.getElementById('banner-progress');
 
-  async function submitBanner() {
-    const location    = _bannerLocation;
-    const imgInput    = document.getElementById('banner-image');
-    const actionType  = document.getElementById('banner-action-type').value;
-    const actionValueInput = document.getElementById('banner-action-value').value.trim();
-    const actionValueSelect = document.getElementById('banner-action-value-select').value;
-    const actionValue = (actionType === 'internal') ? actionValueSelect : actionValueInput;
-    const btn         = document.getElementById('btn-banner-submit');
-    const progress    = document.getElementById('banner-progress');
+  if (!imgInput.files.length) {
+    showAlert('Selecione ao menos uma imagem para o banner.', 'warning');
+    return;
+  }
 
-    if (!imgInput.files.length) {
-      showAlert('Selecione ao menos uma imagem para o banner.', 'warning');
-      return;
+  if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
+    showAlert('Selecione ou informe o destino para a ação.', 'warning');
+    return;
+  }
+
+  btn.disabled = true;
+  progress.style.display = '';
+
+  try {
+    const promises = [];
+    for (let i = 0; i < imgInput.files.length; i++) {
+      const fd = new FormData();
+      fd.append('file', imgInput.files[i]);
+      fd.append('action_type', actionType);
+      fd.append('action_value', actionValue);
+      promises.push(fetch(`/ads-admin/upload-banner/${location}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: authHeaders(),
+        body: fd
+      }));
     }
 
-    if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
-      showAlert('Selecione ou informe o destino para a ação.', 'warning');
-      return;
-    }
-
-    btn.disabled = true;
-    progress.style.display = '';
-
-    try {
-      const promises: Promise<Response>[] = [];
-      for (let i = 0; i < imgInput.files.length; i++) {
-        const fd = new FormData();
-        fd.append('file', imgInput.files[i]);
-        fd.append('action_type', actionType);
-        fd.append('action_value', actionValue);
-        promises.push(fetch(`/ads-admin/upload-banner/${location}`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: authHeaders(),
-          body: fd
-        }));
-      }
-
-      const responses = await Promise.all(promises);
-      for (const res of responses) {
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}));
-          const detail = (json as any).detail;
-          let msg = 'Erro no upload';
-          if (typeof detail === 'object' && detail.message) {
-            msg = detail.message;
-            if (detail.details && detail.details.suggestion) msg += ` — ${detail.details.suggestion}`;
-          } else if (typeof detail === 'string') {
-            msg = detail;
-          }
-          showAlert(`Erro: ${msg}`, 'danger');
-          return;
+    const responses = await Promise.all(promises);
+    for (const res of responses) {
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        const detail = json.detail;
+        let msg = 'Erro no upload';
+        if (typeof detail === 'object' && detail.message) {
+          msg = detail.message;
+          if (detail.details && detail.details.suggestion) msg += ` — ${detail.details.suggestion}`;
+        } else if (typeof detail === 'string') {
+          msg = detail;
         }
+        showAlert(`Erro: ${msg}`, 'danger');
+        return;
       }
+    }
 
-      // Success: close modal, show alert, reload state
-      bootstrap.Modal.getInstance(document.getElementById('modalBanner')).hide();
-      showAlert('Banner(s) configurado(s) com sucesso!', 'success');
+    // Success: close modal, show alert, reload state
+    bootstrap.Modal.getInstance(document.getElementById('modalBanner')).hide();
+    showAlert('Banner(s) configurado(s) com sucesso!', 'success');
 
     await loadState(location);
 
@@ -854,6 +838,22 @@ async function clearLocation(location) {
 
 // ── Init ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Setup event listeners
+  document.getElementById('publiscreen-action-type').addEventListener('change', updatePubliActionValueGroup);
+  document.getElementById('banner-action-type').addEventListener('change', updateBannerActionValueGroup);
+  
+  // Show local preview as soon as user picks images
+  document.getElementById('banner-image').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('banner-modal-img').src = e.target.result;
+      document.getElementById('banner-modal-preview').style.display = '';
+    };
+    reader.readAsDataURL(file);
+  });
+  
   // init action-value group visibility
   updatePubliActionValueGroup();
   updateBannerActionValueGroup();
