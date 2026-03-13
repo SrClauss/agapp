@@ -1,8 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "🔄 Fazendo pull das mudanças..."
-git pull
+echo "🔄 Sincronizando com o branch remoto master..."
+# Garantir que estamos no branch master e que estamos alinhados com o remoto
+# (evita falha quando o branch de upstream configurado não existe mais).
+git fetch --prune origin
+# Força checkout em master (cria se não existir localmente)
+git checkout -B master origin/master
+# Sincroniza o histórico local com o remoto
+git reset --hard origin/master
 
 echo "🛑 Parando container do backend..."
 docker-compose stop backend
