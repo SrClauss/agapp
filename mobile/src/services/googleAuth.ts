@@ -6,7 +6,6 @@ import * as WebBrowser from 'expo-web-browser';
 WebBrowser.maybeCompleteAuthSession();
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
-const DEEP_LINK_SCHEME = 'com.agilizapro.agapp://auth/callback';
 const REDIRECT_URL = 'https://auth.expo.io/@clausemberg/agapp';
 
 interface AuthResponse {
@@ -39,39 +38,24 @@ export function useGoogleAuth() {
   const [response, setResponse] = useState<AuthResponse | null>(null);
   const [isReady, setIsReady] = useState(true);
 
-  useEffect(() => {
-    // Listener para capturar o deep-link de retorno do OAuth
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('[GoogleAuth] Deep-link recebido:', url);
-      
-      if (url.startsWith(DEEP_LINK_SCHEME)) {
-        handleDeepLink(url);
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  const handleDeepLink = (url: string) => {
+  const handleAuthUrl = (url: string) => {
     try {
-      console.log('[GoogleAuth] Processando URL:', url);
+      console.log('[GoogleAuth] Processando URL de retorno:', url);
       
-      // Tentar parsear tokens do fragmento (#) ou query string (?)
+      // Extrair tokens da query string ou fragmento
       let params: URLSearchParams;
       
-      // Primeiro tenta fragmento: com.agilizapro.agapp://auth/callback#access_token=xxx
-      const fragmentMatch = url.match(/#(.+)$/);
-      if (fragmentMatch) {
-        params = new URLSearchParams(fragmentMatch[1]);
+      // Tenta query string primeiro: https://auth.expo.io/@clausemberg/agapp?access_token=xxx
+      const queryMatch = url.match(/\?(.+)$/);
+      if (queryMatch) {
+        params = new URLSearchParams(queryMatch[1]);
       } else {
-        // Tenta query string: com.agilizapro.agapp://auth/callback?access_token=xxx
-        const queryMatch = url.match(/\?(.+)$/);
-        if (queryMatch) {
-          params = new URLSearchParams(queryMatch[1]);
+        // Tenta fragmento: https://auth.expo.io/@clausemberg/agapp#access_token=xxx  
+        const fragmentMatch = url.match(/#(.+)$/);
+        if (fragmentMatch) {
+          params = new URLSearchParams(fragmentMatch[1]);
         } else {
-          console.error('[GoogleAuth] URL sem tokens');
+          console.error('[GoogleAuth] URL sem parametros');
           setResponse({ type: 'error' });
           return;
         }
@@ -81,10 +65,9 @@ export function useGoogleAuth() {
       const refreshToken = params.get('refresh_token');
       const tokenType = params.get('token_type');
 
-      console.log('[GoogleAuth] Tokens extraídos:', {
+      console.log('[GoogleAuth] Tokens encontrados:', {
         hasAccess: !!accessToken,
         hasRefresh: !!refreshToken,
-        tokenType,
       });
 
       if (accessToken && refreshToken) {
@@ -97,11 +80,11 @@ export function useGoogleAuth() {
           },
         });
       } else {
-        console.error('[GoogleAuth] Tokens ausentes');
+        console.error('[GoogleAuth] Tokens ausentes na URL');
         setResponse({ type: 'error' });
       }
     } catch (error) {
-      console.error('[GoogleAuth] Erro ao parsear deep-link:', error);
+      console.error('[GoogleAuth] Erro ao parsear URL:', error);
       setResponse({ type: 'error' });
     }
   };
@@ -109,17 +92,24 @@ export function useGoogleAuth() {
   const signIn = async () => {
     try {
       setResponse(null);
-      // Usar redirect URL do Expo que funciona com openAuthSessionAsync
-      const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
-      console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
+      // URL do backend com redirect para o proxy Expo
+      const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(REDIRECT_URL)}`;
+      console.log('[GoogleAuth] Iniciando OAuth via:', authUrl);
       
-      // Usar openAuthSessionAsync com redirect URL configurado
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, DEEP_LINK_SCHEME, {
-        preferEphemeralSession: true, // Não usar cache/cookies compartilhados
+      // openAuthSessionAsync captura o redirect automaticamente
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, REDIRECT_URL, {
+        preferEphemeralSession: true,
       });
       
-      if (result.type === 'cancel' || result.type === 'dismiss') {
+      console.log('[GoogleAuth] Resultado:', result);
+      
+      if (result.type === 'success' && result.url) {
+        // Parsear tokens da URL retornada
+        handleAuthUrl(result.url);
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
         setResponse({ type: result.type });
+      } else {
+        setResponse({ type: 'error' });
       }
     } catch (error) {
       console.error('[GoogleAuth] Erro ao abrir autenticação:', error);
