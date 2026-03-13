@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Image, FlatList, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import { useAd } from '../hooks/useAd';
+import { stacksByTarget } from '../constants/bannerStacks';
+import client from '../api/axiosClient';
 
 type AdType = 'publi_client' | 'publi_professional' | 'banner_client' | 'banner_professional' | 'banner_cliente_home';
 
@@ -11,6 +14,31 @@ interface BannerAdProps {
   maxHeight?: number;
   onLongPress?: () => void;
 }
+
+// stacks that can be navigated to; must match route names in navigation
+export type BannerStack =
+  | 'servicosProximos'
+  | 'assinatura'
+  | 'compraCreditos'
+  | 'buyFeaturedProjects'
+  | 'assinarPlano'
+  | 'meusServicos';
+
+interface BannerContent {
+  id: string;
+  alias: string;
+  type: string;
+  html?: string;
+  css?: string;
+  js?: string;
+  images?: { [key: string]: string };
+  // new fields
+  base64?: string;
+  onPress_type?: 'external_link' | 'stack';
+  onPress_link?: string;
+  onPress_stack?: BannerStack;
+}
+
 
 /**
  * Componente que exibe um banner publicitário
@@ -23,9 +51,28 @@ interface BannerAdProps {
  * ```
  */
 export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onLongPress }: BannerAdProps) {
-  const { adHtml, images, loading, exists } = useAd(adType);
+  const {
+    adHtml,
+    images,
+    loading,
+    exists,
+    base64,
+    onPress_type,
+    onPress_link,
+    onPress_stack,
+  } = useAd(adType);
+  const navigation = useNavigation();
   const { width: screenWidth } = useWindowDimensions();
   const flatListRef = useRef<FlatList<any> | null>(null);
+
+  const trackClick = async () => {
+    if (!adHtml && !base64) return;
+    try {
+      await client.post(`/ads/public/ads/${adType}/click`, null);
+    } catch (err) {
+      console.error('Error tracking banner click', err);
+    }
+  };
   const [index, setIndex] = useState(0);
   const [bannerHeight, setBannerHeight] = useState<number>(minHeight);
   const [firstImageLoaded, setFirstImageLoaded] = useState(false);
@@ -33,6 +80,36 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onLongPress
 
   // Container width: 90% of screen width
   const containerWidth = screenWidth * 0.9;
+
+  const handlePress = () => {
+    trackClick();
+    if (onPress_type === 'external_link' && onPress_link) {
+      Linking.openURL(onPress_link).catch(() => {});
+    } else if (onPress_type === 'stack' && onPress_stack) {
+      switch (onPress_stack) {
+        case 'servicosProximos':
+          navigation.navigate('SearchResults' as never, { /* params */ } as never);
+          break;
+        case 'assinatura':
+          navigation.navigate('Subscriptions' as never);
+          break;
+        case 'compraCreditos':
+          navigation.navigate('CreditPackages' as never);
+          break;
+        case 'buyFeaturedProjects':
+          navigation.navigate('ProjectsList' as never, { featuredOnly: true } as never);
+          break;
+        case 'assinarPlano':
+          navigation.navigate('Subscriptions' as never);
+          break;
+        case 'meusServicos':
+          navigation.navigate('AllProjects' as never);
+          break;
+        default:
+          break;
+      }
+    }
+  };
 
   // Cycle behavior on user swipe: if user tries to swipe past last/first, wrap around.
   // removed cyclic refs (startXRef, prevIndexRef)
@@ -60,8 +137,18 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onLongPress
   }
 
   return (
-    <View style={[styles.container, { width: containerWidth, height: bannerHeight }]}>
-      {images && images.length > 0 ? (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={handlePress}
+        style={[styles.container, { width: containerWidth, height: bannerHeight }]}
+      >
+      {base64 ? (
+        <Image
+          source={{ uri: base64 }}
+          style={[styles.image, { width: containerWidth, height: bannerHeight }]}
+          resizeMode="contain"
+        />
+      ) : images && images.length > 0 ? (
         <FlatList
           ref={flatListRef}
           data={images}
@@ -135,7 +222,7 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onLongPress
         />
       )}
       {/* Dots/indicators intentionally removed - carousel is autoplaying */}
-    </View>
+    </TouchableOpacity>
   );
 }
 

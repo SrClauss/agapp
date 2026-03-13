@@ -204,6 +204,7 @@ export default function App() {
           <Stack.Screen name="ProfileEvaluations" component={ProfileEvaluationsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Credits" component={CreditsScreen} options={{ title: 'Meus Créditos' }} />
           <Stack.Screen name="CreditPackages" component={CreditPackagesScreen} options={{ title: 'Comprar Créditos' }} />
+          <Stack.Screen name="BuyFeaturedProjects" component={require('./src/screens/BuyFeaturedProjectsScreen').default} options={{ title: 'Projetos Destacados' }} />
           <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ title: 'Assinaturas' }} />
           <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Suporte' }} />
           <Stack.Screen name="ChatList" component={ChatListScreen} options={{ title: 'Conversas' }} />

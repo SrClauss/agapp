@@ -45,7 +45,8 @@
     "react-native-worklets": "0.5.1",
     "reconnecting-websocket": "^4.4.0",
     "uuid": "^9.0.0",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "jszip": "^3.10.1"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.23.0",

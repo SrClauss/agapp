@@ -25,6 +25,13 @@ interface AdData {
     [key: string]: AdAsset;
   };
   images?: ImageItem[];
+  // new banner fields
+  base64?: string;
+  onPress_type?: string;
+  onPress_link?: string;
+  onPress_stack?: string;
+  target?: string;
+  position?: number;
 }
 
 // Helper: map adType to location used in backend URLs
@@ -96,6 +103,13 @@ const ensureImageLocal = async (img: ImageItem, adTypeParam: string): Promise<st
 interface UseAdReturn {
   adHtml: string | null;
   images: Array<{ uri: string; link?: string }> | null;
+  /** new banner fields */
+  base64?: string | null;
+  onPress_type?: 'external_link' | 'stack';
+  onPress_link?: string | null;
+  onPress_stack?: string | null;
+  target?: 'client' | 'professional';
+  position?: number;
   loading: boolean;
   error: Error | null;
   exists: boolean;
@@ -126,6 +140,13 @@ export function useAd(
 ): UseAdReturn {
   const [adHtml, setAdHtml] = useState<string | null>(null);
   const [images, setImages] = useState<Array<{ uri: string; link?: string }> | null>(null);
+  // banner-specific state
+  const [base64, setBase64] = useState<string | null>(null);
+  const [onPressType, setOnPressType] = useState<'external_link' | 'stack' | null>(null);
+  const [onPressLink, setOnPressLink] = useState<string | null>(null);
+  const [onPressStack, setOnPressStack] = useState<string | null>(null);
+  const [target, setTarget] = useState<'client' | 'professional' | null>(null);
+  const [position, setPosition] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [exists, setExists] = useState(false);
@@ -281,6 +302,30 @@ export function useAd(
 
       const adData: AdData = adResponse.data;
       
+
+      // New banner format with base64/image and navigation metadata
+      if (typeof adData.base64 === 'string') {
+        setBase64(adData.base64);
+        setOnPressType(adData.onPress_type as any);
+        setOnPressLink(adData.onPress_link || null);
+        setOnPressStack(adData.onPress_stack || null);
+        if (adData.target) setTarget(adData.target as any);
+        if (typeof adData.position === 'number') setPosition(adData.position);
+        // ensure banner target matches request
+        const isClientRequest = adType.includes('client');
+        if (
+          (isClientRequest && adData.target !== 'client') ||
+          (!isClientRequest && adData.target !== 'professional')
+        ) {
+          console.warn('Banner target mismatch:', adData.target, 'for adType', adType);
+          setExists(false);
+          setLoading(false);
+          return;
+        }
+        setExists(true);
+        setLoading(false);
+        return;
+      }
 
       // If the payload includes images, set them and skip building HTML
       if (adData.images && adData.images.length > 0) {
