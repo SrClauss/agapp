@@ -1,3 +1,41 @@
+# Implementation Summary - Ads Admin Screen Rebuild (PR #45)
+
+## Overview
+Complete rebuild of the ads administration UI (`/ads-admin`) replacing the previous flat upload form with a modal-driven flow aligned to the 4 fixed ad locations. New backend endpoints added to `ads.py` for ZIP upload, banner image upload, and location state queries.
+
+## What Was Implemented
+
+### ✅ Backend — New Endpoints (`backend/app/api/endpoints/ads.py`)
+
+**New constants:**
+- `MAX_ZIP_SIZE_BYTES = 20MB` — enforced on ZIP uploads
+- `MAX_BANNER_SIZE_BYTES = 10MB` — enforced on banner image uploads
+
+**New endpoints:**
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/ads-admin/upload-zip/{location}` | Upload a `.zip` containing `index.html`, `style.css`, `script.js` and image assets; stores `action` in `meta.json`; blocks path traversal |
+| `POST` | `/ads-admin/upload-banner/{location}` | Upload a banner image; validates ≥2.5:1 aspect ratio; stores `action_type`, `action_value`, and `link` in `meta.json`; returns base64 data-URL for preview |
+| `GET` | `/ads-admin/state/{location}` | Returns `{ configured, has_html, images[], action }` for a given location; used on page load and after each upload |
+
+**Security:** ZIP extraction resolves each file path against the location directory to prevent path traversal attacks.
+
+### ✅ Template — `backend/templates/admin/ads.html` (Complete Rewrite)
+
+Four section cards (PubliScreen Cliente, PubliScreen Profissional, Banner Cliente, Banner Profissional), each with:
+- **Status badge** (`Configurado` / `Vazio`) driven by `GET /state/{location}` on page load
+- **Configurar** button → opens the appropriate modal
+- **Limpar** button → calls existing `DELETE /ads-admin/delete-all/{location}`
+
+**PubliScreen modal:** ZIP file input + action selector (`none` / `external URL` / `internal Stack`) with conditional value field. On success, renders an iframe (9:16 aspect, sandboxed) loaded from `/ads-admin/preview-html/{location}`.
+
+**Banner modal:** image file input with local `FileReader` preview before upload + same action selector. On success, renders the uploaded image inline.
+
+All four locations are refreshed on `DOMContentLoaded` via `reloadAll()`.
+
+---
+
 # Implementation Summary - Contact, Chat, and Evaluation System
 
 ## Overview
