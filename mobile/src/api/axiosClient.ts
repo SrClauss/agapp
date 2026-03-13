@@ -70,7 +70,7 @@ client.interceptors.request.use(
       // Get token (may read SecureStore if in-memory missing)
       const token = await getAuthToken();
 
-      if (token && config.headers) {
+      if (token && config.headers && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`;
         if (__DEV__) {
           // Masked log for debugging only

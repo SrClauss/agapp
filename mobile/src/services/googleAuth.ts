@@ -103,13 +103,21 @@ export function useGoogleAuth() {
 
       console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
 
-      const browserResult = await WebBrowser.openBrowserAsync(authUrl);
-      if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
-        setResponse({ type: browserResult.type });
-        return;
+      // Inicia polling em paralelo ao navegador para não depender de fechamento manual.
+      const pollingPromise = pollSession(sessionId);
+      const browserPromise = WebBrowser.openBrowserAsync(authUrl);
+
+      await pollingPromise;
+
+      // Tenta fechar o navegador automaticamente após autorização.
+      try {
+        await WebBrowser.dismissBrowser();
+      } catch {
+        // Em alguns ambientes/plataformas o dismiss pode ser ignorado.
       }
 
-      await pollSession(sessionId);
+      // Consome resultado do browser para evitar promise pendente.
+      await browserPromise;
     } catch (error) {
       console.error('[GoogleAuth] Erro ao abrir autenticação:', error);
       setResponse({ type: 'error' });
