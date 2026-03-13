@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, Response
 from typing import List, Optional
 import base64
 import logging
 from pathlib import Path
 from PIL import Image
 import io
+import zipfile
 
 from app.core.security import get_current_user_from_request
 from app.core.database import get_database
@@ -615,6 +616,67 @@ async def clear_adscreen(
         "message": f"AdScreen '{target}' cleared successfully",
         "deleted": result
     }
+
+
+@admin_router.get("/adscreen/{target}/preview")
+async def preview_adscreen(
+    target: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Serve AdScreen HTML for preview (extracts index.html from ZIP).
+    """
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can preview adscreen"
+        )
+    
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    adscreen = await adscreen_crud.get_adscreen_by_target(db, target, include_zip=True)
+    
+    if not adscreen or not adscreen.zip_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No AdScreen configured for this target"
+        )
+    
+    try:
+        # Extract index.html from ZIP
+        zip_bytes = io.BytesIO(adscreen.zip_data)
+        with zipfile.ZipFile(zip_bytes, 'r') as zip_ref:
+            # Try to find index.html
+            index_file = None
+            for name in zip_ref.namelist():
+                if name.lower().endswith('index.html'):
+                    index_file = name
+                    break
+            
+            if not index_file:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No index.html found in ZIP"
+                )
+            
+            html_content = zip_ref.read(index_file).decode('utf-8')
+            return HTMLResponse(content=html_content)
+    
+    except zipfile.BadZipFile:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Invalid ZIP file"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error extracting HTML: {str(e)}"
+        )
 
 
 # ============================================================================

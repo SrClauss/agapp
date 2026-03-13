@@ -52,22 +52,46 @@ async def update_adscreen(
     # Convert bytes to BSON Binary
     zip_binary = Binary(zip_bytes)
     
-    result = await db.adscreen_ads.find_one_and_update(
-        {"target": target},
-        {
-            "$set": {
-                "zip_data": zip_binary,
-                "zip_filename": filename,
-                "zip_size": len(zip_bytes),
-                "action_type": action_type,
-                "action_value": action_value,
-                "updated_at": datetime.utcnow(),
-                "updated_by": user_id
+    # Check if adscreen exists
+    existing = await db.adscreen_ads.find_one({"target": target})
+    
+    if existing:
+        # Update existing document
+        result = await db.adscreen_ads.find_one_and_update(
+            {"target": target},
+            {
+                "$set": {
+                    "zip_data": zip_binary,
+                    "zip_filename": filename,
+                    "zip_size": len(zip_bytes),
+                    "action_type": action_type,
+                    "action_value": action_value,
+                    "updated_at": datetime.utcnow(),
+                    "updated_by": user_id
+                },
+                "$inc": {"version": 1}
             },
-            "$inc": {"version": 1}
-        },
-        return_document=True
-    )
+            return_document=True
+        )
+    else:
+        # Create new document
+        new_adscreen = {
+            "_id": ulid.new().str,
+            "target": target,
+            "zip_data": zip_binary,
+            "zip_filename": filename,
+            "zip_size": len(zip_bytes),
+            "action_type": action_type,
+            "action_value": action_value,
+            "version": 1,
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+            "created_by": user_id,
+            "updated_by": user_id
+        }
+        await db.adscreen_ads.insert_one(new_adscreen)
+        result = new_adscreen
     
     if result:
         return AdScreenAd(**result)
