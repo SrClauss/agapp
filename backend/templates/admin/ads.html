@@ -265,7 +265,10 @@
           <div class="mb-3" id="publiscreen-action-value-group">
             <label class="form-label fw-semibold" id="publiscreen-action-value-label">URL / Stack</label>
             <input type="text" class="form-control" id="publiscreen-action-value"
-                   placeholder="Ex: https://... ou NomeDoStack">
+                   placeholder="Ex: https://..." style="display:none;">
+            <select class="form-select" id="publiscreen-action-value-select" style="display:none;">
+              <option value="">Selecione a tela de destino</option>
+            </select>
           </div>
 
           <!-- upload progress -->
@@ -334,7 +337,10 @@
           <div class="mb-3" id="banner-action-value-group">
             <label class="form-label fw-semibold" id="banner-action-value-label">URL / Stack</label>
             <input type="text" class="form-control" id="banner-action-value"
-                   placeholder="Ex: https://... ou NomeDoStack">
+                   placeholder="Ex: https://..." style="display:none;">
+            <select class="form-select" id="banner-action-value-select" style="display:none;">
+              <option value="">Selecione a tela de destino</option>
+            </select>
           </div>
 
           <!-- preview dentro do modal -->
@@ -447,6 +453,64 @@
      JAVASCRIPT
 ═══════════════════════════════════════════════════════════ -->
 <script>
+// ── Stack definitions per profile ────────────────────────────
+const STACKS_BY_PROFILE = {
+  client: [
+    { value: 'WelcomeCustomer', label: 'Tela de Boas Vindas (Cliente)', isDefault: true },
+    { value: 'SearchResults', label: 'Resultados de Busca' },
+    { value: 'CreateProject', label: 'Criar Projeto' },
+    { value: 'AllProjects', label: 'Todos os Projetos' },
+    { value: 'Credits', label: 'Meus Créditos' },
+    { value: 'CreditPackages', label: 'Comprar Créditos' },
+    { value: 'Subscriptions', label: 'Assinaturas' },
+    { value: 'Support', label: 'Suporte' },
+    { value: 'ChatList', label: 'Conversas' },
+    { value: 'ContactDetail', label: 'Detalhes de Contato' },
+    { value: 'ProfileEvaluations', label: 'Avaliações de Perfil' }
+  ],
+  professional: [
+    { value: 'WelcomeProfessional', label: 'Tela de Boas Vindas (Profissional)', isDefault: true },
+    { value: 'EditProfessionalSettings', label: 'Minhas Especialidades' },
+    { value: 'ContactedProjects', label: 'Projetos Contatados' },
+    { value: 'ProjectsList', label: 'Lista de Projetos' },
+    { value: 'Credits', label: 'Meus Créditos' },
+    { value: 'CreditPackages', label: 'Comprar Créditos' },
+    { value: 'Subscriptions', label: 'Assinaturas' },
+    { value: 'Support', label: 'Suporte' },
+    { value: 'ChatList', label: 'Conversas' },
+    { value: 'ContactDetail', label: 'Detalhes de Contato' },
+    { value: 'ProfileEvaluations', label: 'Avaliações de Perfil' }
+  ]
+};
+
+// Get profile from location name
+function getProfileFromLocation(location) {
+  if (location.includes('client')) return 'client';
+  if (location.includes('professional')) return 'professional';
+  return 'client'; // fallback
+}
+
+// Populate stack select based on profile
+function populateStackSelect(selectId, profile) {
+  const select = document.getElementById(selectId);
+  const stacks = STACKS_BY_PROFILE[profile] || STACKS_BY_PROFILE.client;
+  
+  // Clear existing options except first
+  select.innerHTML = '<option value="">Selecione a tela de destino</option>';
+  
+  // Add stacks
+  stacks.forEach(stack => {
+    const option = document.createElement('option');
+    option.value = stack.value;
+    option.textContent = stack.label;
+    if (stack.isDefault) {
+      option.selected = true;
+      option.textContent += ' (Padrão)';
+    }
+    select.appendChild(option);
+  });
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 function getToken() {
   return localStorage.getItem('access_token') || '';
@@ -532,9 +596,14 @@ function openPubliModal(location) {
   _publiLocation = location;
   document.getElementById('publiscreen-location').value = location;
   document.getElementById('publiscreen-zip').value = '';
-  document.getElementById('publiscreen-action-type').value = 'none';
+  document.getElementById('publiscreen-action-type').value = 'internal'; // Padrão: navegação interna
   document.getElementById('publiscreen-action-value').value = '';
   document.getElementById('publiscreen-progress').style.display = 'none';
+  
+  // Populate stack select based on profile
+  const profile = getProfileFromLocation(location);
+  populateStackSelect('publiscreen-action-value-select', profile);
+  
   updatePubliActionValueGroup();
   const modal = new bootstrap.Modal(document.getElementById('modalPubliscreen'));
   modal.show();
@@ -547,16 +616,23 @@ function updatePubliActionValueGroup() {
   const grp  = document.getElementById('publiscreen-action-value-group');
   const lbl  = document.getElementById('publiscreen-action-value-label');
   const inp  = document.getElementById('publiscreen-action-value');
+  const sel  = document.getElementById('publiscreen-action-value-select');
+  
   if (type === 'none') {
     grp.style.display = 'none';
+    inp.style.display = 'none';
+    sel.style.display = 'none';
   } else {
     grp.style.display = '';
     if (type === 'external') {
       lbl.textContent = 'URL de destino';
       inp.placeholder = 'https://exemplo.com';
-    } else {
-      lbl.textContent = 'Nome da Stack (navegação interna)';
-      inp.placeholder = 'Ex: HomeScreen, ProfileScreen…';
+      inp.style.display = '';
+      sel.style.display = 'none';
+    } else { // internal
+      lbl.textContent = 'Tela de destino (Stack)';
+      inp.style.display = 'none';
+      sel.style.display = '';
     }
   }
 }
@@ -565,7 +641,9 @@ async function submitPubliscreen() {
   const location    = _publiLocation;
   const zipInput    = document.getElementById('publiscreen-zip');
   const actionType  = document.getElementById('publiscreen-action-type').value;
-  const actionValue = document.getElementById('publiscreen-action-value').value.trim();
+  const actionValueInput = document.getElementById('publiscreen-action-value').value.trim();
+  const actionValueSelect = document.getElementById('publiscreen-action-value-select').value;
+  const actionValue = (actionType === 'internal') ? actionValueSelect : actionValueInput;
   const btn         = document.getElementById('btn-publiscreen-submit');
   const progress    = document.getElementById('publiscreen-progress');
 
@@ -575,7 +653,7 @@ async function submitPubliscreen() {
   }
 
   if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
-    showAlert('Informe a URL ou o nome da Stack para a ação selecionada.', 'warning');
+    showAlert('Selecione ou informe o destino para a ação.', 'warning');
     return;
   }
 
@@ -634,6 +712,11 @@ function openBannerModal(location) {
   document.getElementById('banner-modal-preview').style.display = 'none';
   document.getElementById('banner-modal-img').src = '';
   document.getElementById('banner-progress').style.display = 'none';
+  
+  // Populate stack select based on profile
+  const profile = getProfileFromLocation(location);
+  populateStackSelect('banner-action-value-select', profile);
+  
   updateBannerActionValueGroup();
   const modal = new bootstrap.Modal(document.getElementById('modalBanner'));
   modal.show();
@@ -646,16 +729,23 @@ function updateBannerActionValueGroup() {
   const grp  = document.getElementById('banner-action-value-group');
   const lbl  = document.getElementById('banner-action-value-label');
   const inp  = document.getElementById('banner-action-value');
+  const sel  = document.getElementById('banner-action-value-select');
+  
   if (type === 'none') {
     grp.style.display = 'none';
+    inp.style.display = 'none';
+    sel.style.display = 'none';
   } else {
     grp.style.display = '';
     if (type === 'external') {
       lbl.textContent = 'URL de destino';
       inp.placeholder = 'https://exemplo.com';
-    } else {
-      lbl.textContent = 'Nome da Stack (navegação interna)';
-      inp.placeholder = 'Ex: HomeScreen, ProfileScreen…';
+      inp.style.display = '';
+      sel.style.display = 'none';
+    } else { // internal
+      lbl.textContent = 'Tela de destino (Stack)';
+      inp.style.display = 'none';
+      sel.style.display = '';
     }
   }
 }
@@ -676,7 +766,9 @@ async function submitBanner() {
   const location    = _bannerLocation;
   const imgInput    = document.getElementById('banner-image');
   const actionType  = document.getElementById('banner-action-type').value;
-  const actionValue = document.getElementById('banner-action-value').value.trim();
+  const actionValueInput = document.getElementById('banner-action-value').value.trim();
+  const actionValueSelect = document.getElementById('banner-action-value-select').value;
+  const actionValue = (actionType === 'internal') ? actionValueSelect : actionValueInput;
   const btn         = document.getElementById('btn-banner-submit');
   const progress    = document.getElementById('banner-progress');
 
@@ -686,7 +778,7 @@ async function submitBanner() {
   }
 
   if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
-    showAlert('Informe a URL ou o nome da Stack para a ação selecionada.', 'warning');
+    showAlert('Selecione ou informe o destino para a ação.', 'warning');
     return;
   }
 
