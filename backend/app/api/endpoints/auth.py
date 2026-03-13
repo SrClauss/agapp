@@ -14,6 +14,7 @@ import os
 import uuid
 import httpx
 import urllib.parse
+import logging
 from fastapi.responses import RedirectResponse, HTMLResponse
 from typing import Dict, Any
 

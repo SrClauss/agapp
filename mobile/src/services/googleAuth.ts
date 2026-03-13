@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Linking } from 'react-native';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 // Permite que o Expo Go complete o redirect de autenticação OAuth
 WebBrowser.maybeCompleteAuthSession();
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
-const DEEP_LINK_SCHEME = 'com.agilizapro.agapp://auth/callback';
 
 interface AuthResponse {
   type: 'success' | 'error' | 'dismiss' | 'cancel';
@@ -43,7 +42,8 @@ export function useGoogleAuth() {
     const subscription = Linking.addEventListener('url', ({ url }) => {
       console.log('[GoogleAuth] Deep-link recebido:', url);
       
-      if (url.startsWith(DEEP_LINK_SCHEME) || url.includes('auth/callback')) {
+      // Aceita qualquer URL que contenha auth/callback (funciona com exp:// e com.agilizapro.agapp://)
+      if (url.includes('auth/callback')) {
         handleDeepLink(url);
       }
     });
@@ -64,10 +64,13 @@ export function useGoogleAuth() {
       const refreshToken = parsed.queryParams?.refresh_token as string | undefined;
       const tokenType = (parsed.queryParams?.token_type as string | undefined) || 'bearer';
 
+      console.log('[GoogleAuth] URL completa:', url);
+      console.log('[GoogleAuth] Query params completo:', JSON.stringify(parsed.queryParams));
       console.log('[GoogleAuth] Tokens parseados:', { 
         hasAccessToken: !!accessToken, 
         hasRefreshToken: !!refreshToken,
-        tokenType 
+        tokenType,
+        accessTokenStart: accessToken?.substring(0, 20)
       });
 
       if (accessToken) {
@@ -92,8 +95,14 @@ export function useGoogleAuth() {
   const signIn = async () => {
     try {
       setResponse(null);
-      const authUrl = `${BACKEND_URL}/auth/google/start?redirect_uri=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
       
+      // Gera o redirect URI correto para o ambiente atual (Expo Go ou standalone)
+      // No Expo Go: exp://127.0.0.1:8081/--/auth/callback
+      // No standalone: com.agilizapro.agapp://auth/callback
+      const redirectUri = Linking.createURL('auth/callback');
+      const authUrl = `${BACKEND_URL}/auth/google/start?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      
+      console.log('[GoogleAuth] Redirect URI gerado:', redirectUri);
       console.log('[GoogleAuth] Abrindo navegador com URL:', authUrl);
       
       // Usar openBrowserAsync para que o navegador não bloqueie o deep-link

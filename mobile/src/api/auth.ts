@@ -67,12 +67,16 @@ export async function loginWithGoogle(idToken: string) {
 
 export async function fetchCurrentUser(token: string) {
   try {
+    console.log('[fetchCurrentUser] Tentando buscar usuário com token:', token?.substring(0, 30) + '...');
     const { data } = await client.get('/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
+    console.log('[fetchCurrentUser] Usuário obtido:', data?.email);
     return data;
   } catch (error) {
-    throw new Error('Failed fetching user');
+    const axiosError = error as AxiosError<{ detail?: string }>;
+    console.error('[fetchCurrentUser] Erro ao buscar usuário:', axiosError.response?.data || axiosError.message);
+    throw new Error(axiosError.response?.data?.detail || 'Failed fetching user');
   }
 }
 
