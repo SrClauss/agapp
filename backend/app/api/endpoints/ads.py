@@ -665,6 +665,16 @@ async def preview_adscreen(
                 )
             
             html_content = zip_ref.read(index_file).decode('utf-8')
+            
+            # Add base tag to fix relative paths
+            base_tag = f'<base href="/ads-admin/adscreen/{target}/preview/">'
+            if '<head>' in html_content.lower():
+                html_content = html_content.replace('<head>', f'<head>\n{base_tag}', 1)
+            elif '<html>' in html_content.lower():
+                html_content = html_content.replace('<html>', f'<html>\n<head>{base_tag}</head>', 1)
+            else:
+                html_content = f'<head>{base_tag}</head>\n{html_content}'
+            
             return HTMLResponse(content=html_content)
     
     except zipfile.BadZipFile:
