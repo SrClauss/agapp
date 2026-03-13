@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Linking } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { useState } from 'react';
+import * as AuthSession from 'expo-auth-session';
 
 // Permite que o Expo Go complete o redirect de autenticação OAuth
-WebBrowser.maybeCompleteAuthSession();
+AuthSession.maybeCompleteAuthSession();
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
 const DEEP_LINK_SCHEME = 'com.agilizapro.agapp://auth/callback';
@@ -38,20 +37,8 @@ export function useGoogleAuth() {
   const [response, setResponse] = useState<AuthResponse | null>(null);
   const [isReady, setIsReady] = useState(true);
 
-  useEffect(() => {
-    // Listener para capturar o deep-link de retorno do OAuth
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('[GoogleAuth] Deep-link recebido:', url);
-      
-      if (url.startsWith(DEEP_LINK_SCHEME)) {
-        handleDeepLink(url);
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
+  // Nota: Não precisamos mais do listener Linking porque AuthSession.openAuthSessionAsync
+  // retorna a URL de callback diretamente
 
   const handleDeepLink = (url: string) => {
     try {
@@ -92,10 +79,15 @@ export function useGoogleAuth() {
       const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
       console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
       
-      // Abrir navegador do sistema (sem interceptar - o backend vai retornar página HTML com deep-link)
-      const result = await WebBrowser.openBrowserAsync(authUrl);
+      // Usar AuthSession ao invés de WebBrowser - mantém contexto do app
+      const result = await AuthSession.openAuthSessionAsync(authUrl, DEEP_LINK_SCHEME);
       
-      if (result.type === 'cancel' || result.type === 'dismiss') {
+      console.log('[GoogleAuth] Resultado do AuthSession:', result);
+      
+      if (result.type === 'success' && result.url) {
+        // AuthSession já capturou a URL de retorno
+        handleDeepLink(result.url);
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
         setResponse({ type: result.type });
       }
     } catch (error) {
