@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 
 // Permite que o Expo Go complete o redirect de autenticação OAuth
-AuthSession.maybeCompleteAuthSession();
+WebBrowser.maybeCompleteAuthSession();
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
 const DEEP_LINK_SCHEME = 'com.agilizapro.agapp://auth/callback';
