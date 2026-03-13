@@ -184,11 +184,8 @@ async def google_oauth_start(request: Request, next: str | None = None):
         raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID não configurado no backend.")
 
     # Build redirect_uri to our callback
-    try:
-        redirect_uri = str(request.url_for("google_callback"))
-    except Exception:
-        base = str(request.base_url).rstrip("/")
-        redirect_uri = f"{base}/auth/google/callback"
+    # Force HTTPS since we're behind nginx proxy
+    redirect_uri = "https://agilizapro.cloud/auth/google/callback"
 
     scope = "openid email profile"
     state = urllib.parse.quote_plus(next or "")
@@ -222,12 +219,8 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET not configured")
 
     try:
-        # Determine redirect_uri same as in start
-        try:
-            redirect_uri = str(request.url_for("google_callback"))
-        except Exception:
-            base = str(request.base_url).rstrip("/")
-            redirect_uri = f"{base}/auth/google/callback"
+        # Determine redirect_uri same as in start - force HTTPS
+        redirect_uri = "https://agilizapro.cloud/auth/google/callback"
 
         token_endpoint = "https://oauth2.googleapis.com/token"
         async with httpx.AsyncClient() as client:
