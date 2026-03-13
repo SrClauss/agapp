@@ -157,13 +157,10 @@
 
         <div class="preview-area" id="preview-banner_client_home" style="display:none;">
           <div class="preview-label">
-            <i class="fas fa-eye me-1"></i>Preview
+            <i class="fas fa-eye me-1"></i>Preview (<span id="count-banner_client_home">0</span> imagens)
             <span class="action-pill" id="action-pill-banner_client_home"></span>
           </div>
-          <img id="img-banner_client_home"
-               src=""
-               class="preview-banner-img"
-               alt="Preview Banner Cliente" />
+          <div class="banner-images-grid" id="grid-banner_client_home"></div>
         </div>
 
         <div class="empty-state" id="empty-banner_client_home">
@@ -204,13 +201,10 @@
 
         <div class="preview-area" id="preview-banner_professional_home" style="display:none;">
           <div class="preview-label">
-            <i class="fas fa-eye me-1"></i>Preview
+            <i class="fas fa-eye me-1"></i>Preview (<span id="count-banner_professional_home">0</span> imagens)
             <span class="action-pill" id="action-pill-banner_professional_home"></span>
           </div>
-          <img id="img-banner_professional_home"
-               src=""
-               class="preview-banner-img"
-               alt="Preview Banner Profissional" />
+          <div class="banner-images-grid" id="grid-banner_professional_home"></div>
         </div>
 
         <div class="empty-state" id="empty-banner_professional_home">
@@ -434,6 +428,57 @@
     max-height:160px;
   }
 
+  /* banner images grid */
+  .banner-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    padding: 0.5rem 0;
+  }
+
+  .banner-image-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1e293b;
+    aspect-ratio: 3/1;
+  }
+
+  .banner-image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .banner-image-item .btn-remove-image {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    background: rgba(220, 38, 38, 0.9);
+    border: none;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .banner-image-item:hover .btn-remove-image {
+    opacity: 1;
+  }
+
+  .banner-image-item .btn-remove-image:hover {
+    background: rgba(185, 28, 28, 1);
+  }
+
   /* empty state */
   .empty-state {
     display:flex;
@@ -570,10 +615,30 @@ function applyState(location, data) {
       iframe.src = `/ads-admin/preview-html/${location}?t=${Date.now()}`;
     }
 
-    // banner: load first image
-    const img = document.getElementById(`img-${location}`);
-    if (img && data.images && data.images.length > 0) {
-      img.src = `/ads-admin/assets/${location}/${encodeURIComponent(data.images[0])}?t=${Date.now()}`;
+    // banner: load ALL images into grid
+    const grid = document.getElementById(`grid-${location}`);
+    const count = document.getElementById(`count-${location}`);
+    if (grid && data.images && data.images.length > 0) {
+      count.textContent = data.images.length;
+      grid.innerHTML = '';
+      data.images.forEach(imgName => {
+        const item = document.createElement('div');
+        item.className = 'banner-image-item';
+        
+        const img = document.createElement('img');
+        img.src = `/ads-admin/assets/${location}/${encodeURIComponent(imgName)}?t=${Date.now()}`;
+        img.alt = imgName;
+        
+        const btnRemove = document.createElement('button');
+        btnRemove.className = 'btn-remove-image';
+        btnRemove.innerHTML = '&times;';
+        btnRemove.title = `Remover ${imgName}`;
+        btnRemove.onclick = () => removeImage(location, imgName);
+        
+        item.appendChild(img);
+        item.appendChild(btnRemove);
+        grid.appendChild(item);
+      });
     }
   } else {
     badge.textContent = 'Vazio';
@@ -813,6 +878,30 @@ async function submitBanner() {
   } finally {
     btn.disabled = false;
     progress.style.display = 'none';
+  }
+}
+
+// ── Remove individual image ──────────────────────────────────────
+async function removeImage(location, filename) {
+  if (!confirm(`Remover a imagem "${filename}"?`)) return;
+  
+  try {
+    const res = await fetch(`/ads-admin/delete-file/${location}/${filename}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      showAlert('Erro ao remover imagem.', 'danger');
+      return;
+    }
+    
+    showAlert(`Imagem ${filename} removida com sucesso.`, 'success');
+    await loadState(location);
+  } catch (e) {
+    showAlert('Erro de conexão ao remover imagem.', 'danger');
+    console.error(e);
   }
 }
 
