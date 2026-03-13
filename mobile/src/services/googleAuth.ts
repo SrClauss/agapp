@@ -7,6 +7,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
 const DEEP_LINK_SCHEME = 'com.agilizapro.agapp://auth/callback';
+const REDIRECT_URL = 'https://auth.expo.io/@clausemberg/agapp';
 
 interface AuthResponse {
   type: 'success' | 'error' | 'dismiss' | 'cancel';
@@ -55,18 +56,36 @@ export function useGoogleAuth() {
 
   const handleDeepLink = (url: string) => {
     try {
-      // Parsear tokens do fragmento da URL
-      // Exemplo: com.agilizapro.agapp://auth/callback#access_token=xxx&refresh_token=yyy&token_type=bearer
+      console.log('[GoogleAuth] Processando URL:', url);
+      
+      // Tentar parsear tokens do fragmento (#) ou query string (?)
+      let params: URLSearchParams;
+      
+      // Primeiro tenta fragmento: com.agilizapro.agapp://auth/callback#access_token=xxx
       const fragmentMatch = url.match(/#(.+)$/);
-      if (!fragmentMatch) {
-        setResponse({ type: 'error' });
-        return;
+      if (fragmentMatch) {
+        params = new URLSearchParams(fragmentMatch[1]);
+      } else {
+        // Tenta query string: com.agilizapro.agapp://auth/callback?access_token=xxx
+        const queryMatch = url.match(/\?(.+)$/);
+        if (queryMatch) {
+          params = new URLSearchParams(queryMatch[1]);
+        } else {
+          console.error('[GoogleAuth] URL sem tokens');
+          setResponse({ type: 'error' });
+          return;
+        }
       }
 
-      const params = new URLSearchParams(fragmentMatch[1]);
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
       const tokenType = params.get('token_type');
+
+      console.log('[GoogleAuth] Tokens extraídos:', {
+        hasAccess: !!accessToken,
+        hasRefresh: !!refreshToken,
+        tokenType,
+      });
 
       if (accessToken && refreshToken) {
         setResponse({
@@ -78,6 +97,7 @@ export function useGoogleAuth() {
           },
         });
       } else {
+        console.error('[GoogleAuth] Tokens ausentes');
         setResponse({ type: 'error' });
       }
     } catch (error) {
@@ -89,11 +109,14 @@ export function useGoogleAuth() {
   const signIn = async () => {
     try {
       setResponse(null);
+      // Usar redirect URL do Expo que funciona com openAuthSessionAsync
       const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
       console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
       
-      // Abrir navegador do sistema (sem interceptar - o backend vai retornar página HTML com deep-link)
-      const result = await WebBrowser.openBrowserAsync(authUrl);
+      // Usar openAuthSessionAsync com redirect URL configurado
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, DEEP_LINK_SCHEME, {
+        preferEphemeralSession: true, // Não usar cache/cookies compartilhados
+      });
       
       if (result.type === 'cancel' || result.type === 'dismiss') {
         setResponse({ type: result.type });
