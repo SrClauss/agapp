@@ -14,7 +14,7 @@ import os
 import uuid
 import httpx
 import urllib.parse
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 
 router = APIRouter()
 
@@ -210,9 +210,8 @@ async def google_oauth_start(request: Request, next: str | None = None):
 async def google_oauth_callback(request: Request, code: str | None = None, state: str | None = None, db: AsyncIOMotorDatabase = Depends(get_database)):
     """Recebe o `code` do Google, troca por tokens no backend, cria/atualiza usuário e emite JWTs.
 
-    If a `state` URL was provided on /google/start, the callback will redirect the
-    browser to that URL carrying the JWTs in the fragment (so JavaScript/native app
-    can read them). Otherwise returns a JSON body with the tokens.
+    If a `state` URL was provided on /google/start, returns an HTML page that triggers
+    a deep-link to the mobile app with the tokens. Otherwise returns JSON.
     """
     if not code:
         raise HTTPException(status_code=400, detail="Missing code in callback")
@@ -279,14 +278,53 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         access_token = create_access_token(subject=str(user.id))
         refresh_token = create_refresh_token(subject=str(user.id))
 
-        # If state is a URL, redirect to it carrying tokens in fragment
+        # If state is a deep-link scheme, return HTML page that triggers the deep-link
         if state:
             try:
                 target = urllib.parse.unquote_plus(state)
+                # Build deep-link with tokens in fragment
                 sep = '#' if '#' not in target else '&'
                 fragment = urllib.parse.urlencode({"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"})
-                return RedirectResponse(f"{target}{sep}{fragment}")
-            except Exception:
+                deep_link = f"{target}{sep}{fragment}"
+                
+                # Return HTML page that triggers deep-link and shows instructions
+                html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login bem-sucedido</title>
+    <style>
+        body {{ font-family: system-ui, sans-serif; text-align: center; padding: 40px; background: #f5f5f5; }}
+        .container {{ max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+        h1 {{ color: #4CAF50; margin-bottom: 20px; }}
+        p {{ color: #666; line-height: 1.6; }}
+        .button {{ display: inline-block; margin-top: 20px; padding: 12px 24px; background: #4CAF50; color: white; text-decoration: none; border-radius: 6px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✓ Login realizado com sucesso!</h1>
+        <p>Redirecionando para o aplicativo...</p>
+        <p id="message">Se não abrir automaticamente, toque no botão abaixo:</p>
+        <a href="{deep_link}" class="button">Abrir App</a>
+    </div>
+    <script>
+        // Automatically trigger deep-link after a short delay
+        setTimeout(function() {{
+            window.location.href = "{deep_link}";
+        }}, 1000);
+        
+        // Try to close the window after redirect (some browsers allow this)
+        setTimeout(function() {{
+            window.close();
+        }}, 2000);
+    </script>
+</body>
+</html>"""
+                return HTMLResponse(content=html_content)
+            except Exception as e:
+                print(f"Error building deep-link response: {e}")
                 pass
 
         # Otherwise return JSON with tokens
