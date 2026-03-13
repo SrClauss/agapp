@@ -9,647 +9,765 @@
 {% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="mb-4">
-    <h1 class="h3 mb-1 text-gray-800 fw-bold">Gerenciamento de Publicidade</h1>
+
+<!-- ───────── PAGE HEADER ───────── -->
+<div class="mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="h3 mb-1 fw-bold text-gray-800">Gerenciamento de Publicidade</h1>
     <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel</p>
-    <div class="mt-2"><span class="badge bg-success">ADS ADMIN UI: versão 362c8b4 ✓</span></div>
+  </div>
+  <button class="btn btn-outline-secondary btn-sm" onclick="reloadAll()">
+    <i class="fas fa-sync-alt me-1"></i>Atualizar tudo
+  </button>
 </div>
-<!-- debug status removed -->
 
-<!-- Alert Container -->
-<div id="alert-container"></div>
+<!-- ───────── ALERTS ───────── -->
+<div id="alert-container" class="mb-3"></div>
 
-<!-- Ads Grid -->
+<!-- ───────── GRID 4 SEÇÕES ───────── -->
 <div class="row g-4">
-    <!-- PubliScreen Cliente -->
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>PubliScreen Cliente</h5>
-                <small>Tela cheia exibida após login do cliente</small>
-            </div>
-            <div class="card-body">
-                <form id="form-publi-client" class="upload-form" data-ad-type="publi_client">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Arquivos do Anúncio</label>
-                            <input type="file" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.svg,.webp">
-                            <div class="form-text">Imagens apenas (png/jpg/jpeg/webp/svg/gif). Máx 5MB por arquivo.</div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-upload me-1"></i>Fazer Upload
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('publi_client')">
-                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('publi_client')">
-                            <i class="fas fa-desktop me-1"></i>Preview Desktop
-                        </button>
-                    </div>
-                </form>
 
-                <hr class="my-3">
-
-                <div class="file-list" id="files-publi-client">
-                    <small class="text-muted">Carregando arquivos...</small>
-                </div>
-
-                <div class="mt-3 text-center">
-                    <!-- JS-enhanced button (shown when JS enabled) -->
-                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="publi_client">
-                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
-                    </button>
-                </div>
-            </div>
+  <!-- ═══════════════════════════════════
+       SEÇÃO 1 — PubliScreen Cliente
+  ═══════════════════════════════════ -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100" id="card-publi_screen_client">
+      <div class="card-header d-flex align-items-center justify-content-between"
+           style="background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff;">
+        <div>
+          <i class="fas fa-mobile-alt me-2"></i>
+          <strong>PubliScreen — Cliente</strong>
+          <div class="small opacity-75">Tela cheia exibida após login do cliente</div>
         </div>
-    </div>
+        <span class="badge status-badge" id="badge-publi_screen_client">—</span>
+      </div>
+      <div class="card-body d-flex flex-column gap-3">
 
-    <!-- PubliScreen Profissional -->
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>PubliScreen Profissional</h5>
-                <small>Tela cheia exibida após login do profissional</small>
-            </div>
-            <div class="card-body">
-                <form id="form-publi-professional" class="upload-form" data-ad-type="publi_professional">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Arquivos do Anúncio</label>
-                            <input type="file" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.svg,.webp">
-                            <div class="form-text">Imagens apenas (png/jpg/jpeg/webp/svg/gif). Máx 5MB por arquivo.</div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-upload me-1"></i>Fazer Upload
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('publi_professional')">
-                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('publi_professional')">
-                            <i class="fas fa-desktop me-1"></i>Preview Desktop
-                        </button>
-                    </div>
-                </form>
-
-                <hr class="my-3">
-
-                <div class="file-list" id="files-publi-professional">
-                    <small class="text-muted">Carregando arquivos...</small>
-                </div>
-
-                <div class="mt-3 text-center">
-                    <!-- JS-enhanced button (shown when JS enabled) -->
-                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="publi_professional">
-                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
-                    </button>
-                </div>
-            </div>
+        <!-- action buttons -->
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-primary btn-sm"
+                  onclick="openPubliModal('publi_screen_client')">
+            <i class="fas fa-upload me-1"></i>Configurar ZIP
+          </button>
+          <button class="btn btn-outline-danger btn-sm"
+                  onclick="clearLocation('publi_screen_client')">
+            <i class="fas fa-trash me-1"></i>Limpar
+          </button>
         </div>
-    </div>
 
-    <!-- Banner Cliente -->
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-rectangle-ad me-2"></i>Banner Cliente</h5>
-                <small>Banner exibido na tela home do cliente</small>
-            </div>
-            <div class="card-body">
-                <form id="form-banner-client" class="upload-form" data-ad-type="banner_client">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Arquivos do Banner</label>
-                        <input type="file" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.svg,.webp">
-                        <div class="form-text">Imagens apenas (png/jpg/jpeg/webp/svg/gif). Máx 5MB por arquivo.</div>
-                        <div class="form-text text-muted">Nota: Para banners, a proporção ideal é <strong>3:1</strong>. Aceitamos a partir de <strong>2.5:1</strong> (largura ÷ altura). Haverá tolerância de <strong>±5%</strong> para comparar imagens do mesmo carrossel. As publiScreens podem ter qualquer tamanho.</div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-info">
-                            <i class="fas fa-upload me-1"></i>Fazer Upload
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('banner_client')">
-                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('banner_client')">
-                            <i class="fas fa-desktop me-1"></i>Preview Desktop
-                        </button>
-                    </div>
-                </form>
-
-                <hr class="my-3">
-
-                <div class="file-list" id="files-banner-client">
-                    <small class="text-muted">Carregando arquivos...</small>
-                </div>
-
-                <div class="mt-3 text-center">
-                    <!-- JS-enhanced button (shown when JS enabled) -->
-                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="banner_client">
-                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
-                    </button>
-                </div>
-            </div>
+        <!-- preview area -->
+        <div class="preview-area" id="preview-publi_screen_client" style="display:none;">
+          <div class="preview-label">
+            <i class="fas fa-eye me-1"></i>Preview
+            <span class="action-pill" id="action-pill-publi_screen_client"></span>
+          </div>
+          <div class="iframe-wrapper">
+            <iframe id="iframe-publi_screen_client"
+                    src=""
+                    class="preview-iframe"
+                    sandbox="allow-scripts allow-same-origin"></iframe>
+          </div>
         </div>
-    </div>
 
-    <!-- Banner Profissional -->
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-rectangle-ad me-2"></i>Banner Profissional</h5>
-                <small>Banner exibido na tela home do profissional</small>
-            </div>
-            <div class="card-body">
-                <form id="form-banner-professional" class="upload-form" data-ad-type="banner_professional">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Arquivos do Banner</label>
-                        <input type="file" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.svg,.webp">
-                        <div class="form-text">Imagens apenas (png/jpg/jpeg/webp/svg/gif). Máx 5MB por arquivo.</div>
-                        <div class="form-text text-muted">Nota: Para banners, a proporção ideal é <strong>3:1</strong>. Aceitamos a partir de <strong>2.5:1</strong> (largura ÷ altura). Haverá tolerância de <strong>±5%</strong> para comparar imagens do mesmo carrossel. As publiScreens podem ter qualquer tamanho.</div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-upload me-1"></i>Fazer Upload
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="openPreviewLocation('banner_professional')">
-                            <i class="fas fa-mobile-alt me-1"></i>Preview Mobile
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="openDesktopPreviewLocation('banner_professional')">
-                            <i class="fas fa-desktop me-1"></i>Preview Desktop
-                        </button>
-                    </div>
-                </form>
-
-                <hr class="my-3">
-
-                <div class="file-list" id="files-banner-professional">
-                    <small class="text-muted">Carregando arquivos...</small>
-                </div>
-
-                <div class="mt-3 text-center">
-                    <!-- JS-enhanced button (shown when JS enabled) -->
-                    <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="banner_professional">
-                        <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
-                    </button>
-                </div>
-            </div>
+        <!-- empty state -->
+        <div class="empty-state" id="empty-publi_screen_client">
+          <i class="fas fa-photo-film fa-2x mb-2 text-muted"></i>
+          <div class="text-muted small">Nenhum conteúdo configurado</div>
         </div>
+
+      </div>
     </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SEÇÃO 2 — PubliScreen Profissional
+  ═══════════════════════════════════ -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100" id="card-publi_screen_professional">
+      <div class="card-header d-flex align-items-center justify-content-between"
+           style="background:linear-gradient(135deg,#10b981,#059669); color:#fff;">
+        <div>
+          <i class="fas fa-mobile-alt me-2"></i>
+          <strong>PubliScreen — Profissional</strong>
+          <div class="small opacity-75">Tela cheia exibida após login do profissional</div>
+        </div>
+        <span class="badge status-badge" id="badge-publi_screen_professional">—</span>
+      </div>
+      <div class="card-body d-flex flex-column gap-3">
+
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-success btn-sm"
+                  onclick="openPubliModal('publi_screen_professional')">
+            <i class="fas fa-upload me-1"></i>Configurar ZIP
+          </button>
+          <button class="btn btn-outline-danger btn-sm"
+                  onclick="clearLocation('publi_screen_professional')">
+            <i class="fas fa-trash me-1"></i>Limpar
+          </button>
+        </div>
+
+        <div class="preview-area" id="preview-publi_screen_professional" style="display:none;">
+          <div class="preview-label">
+            <i class="fas fa-eye me-1"></i>Preview
+            <span class="action-pill" id="action-pill-publi_screen_professional"></span>
+          </div>
+          <div class="iframe-wrapper">
+            <iframe id="iframe-publi_screen_professional"
+                    src=""
+                    class="preview-iframe"
+                    sandbox="allow-scripts allow-same-origin"></iframe>
+          </div>
+        </div>
+
+        <div class="empty-state" id="empty-publi_screen_professional">
+          <i class="fas fa-photo-film fa-2x mb-2 text-muted"></i>
+          <div class="text-muted small">Nenhum conteúdo configurado</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SEÇÃO 3 — Banner Cliente
+  ═══════════════════════════════════ -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100" id="card-banner_client_home">
+      <div class="card-header d-flex align-items-center justify-content-between"
+           style="background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff;">
+        <div>
+          <i class="fas fa-rectangle-ad me-2"></i>
+          <strong>Banner — Cliente</strong>
+          <div class="small opacity-75">Banner exibido na home do cliente (mín 2.5:1, ideal 3:1)</div>
+        </div>
+        <span class="badge status-badge" id="badge-banner_client_home">—</span>
+      </div>
+      <div class="card-body d-flex flex-column gap-3">
+
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-info btn-sm text-white"
+                  onclick="openBannerModal('banner_client_home')">
+            <i class="fas fa-image me-1"></i>Configurar Banner
+          </button>
+          <button class="btn btn-outline-danger btn-sm"
+                  onclick="clearLocation('banner_client_home')">
+            <i class="fas fa-trash me-1"></i>Limpar
+          </button>
+        </div>
+
+        <div class="preview-area" id="preview-banner_client_home" style="display:none;">
+          <div class="preview-label">
+            <i class="fas fa-eye me-1"></i>Preview
+            <span class="action-pill" id="action-pill-banner_client_home"></span>
+          </div>
+          <img id="img-banner_client_home"
+               src=""
+               class="preview-banner-img"
+               alt="Preview Banner Cliente" />
+        </div>
+
+        <div class="empty-state" id="empty-banner_client_home">
+          <i class="fas fa-image fa-2x mb-2 text-muted"></i>
+          <div class="text-muted small">Nenhum banner configurado</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SEÇÃO 4 — Banner Profissional
+  ═══════════════════════════════════ -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100" id="card-banner_professional_home">
+      <div class="card-header d-flex align-items-center justify-content-between"
+           style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff;">
+        <div>
+          <i class="fas fa-rectangle-ad me-2"></i>
+          <strong>Banner — Profissional</strong>
+          <div class="small opacity-75">Banner exibido na home do profissional (mín 2.5:1, ideal 3:1)</div>
+        </div>
+        <span class="badge status-badge" id="badge-banner_professional_home">—</span>
+      </div>
+      <div class="card-body d-flex flex-column gap-3">
+
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-warning btn-sm"
+                  onclick="openBannerModal('banner_professional_home')">
+            <i class="fas fa-image me-1"></i>Configurar Banner
+          </button>
+          <button class="btn btn-outline-danger btn-sm"
+                  onclick="clearLocation('banner_professional_home')">
+            <i class="fas fa-trash me-1"></i>Limpar
+          </button>
+        </div>
+
+        <div class="preview-area" id="preview-banner_professional_home" style="display:none;">
+          <div class="preview-label">
+            <i class="fas fa-eye me-1"></i>Preview
+            <span class="action-pill" id="action-pill-banner_professional_home"></span>
+          </div>
+          <img id="img-banner_professional_home"
+               src=""
+               class="preview-banner-img"
+               alt="Preview Banner Profissional" />
+        </div>
+
+        <div class="empty-state" id="empty-banner_professional_home">
+          <i class="fas fa-image fa-2x mb-2 text-muted"></i>
+          <div class="text-muted small">Nenhum banner configurado</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /row -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — PubliScreen (upload ZIP + ação)
+═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalPubliscreen" tabindex="-1" aria-labelledby="modalPubliscreenLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalPubliscreenLabel">
+          <i class="fas fa-upload me-2"></i>Configurar PubliScreen
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="form-publiscreen" novalidate>
+          <input type="hidden" id="publiscreen-location" value="">
+
+          <!-- ZIP file -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-file-zipper me-1"></i>Arquivo ZIP <span class="text-danger">*</span>
+            </label>
+            <input type="file" class="form-control" id="publiscreen-zip" accept=".zip" required>
+            <div class="form-text">O ZIP pode conter <code>index.html</code>, <code>style.css</code>, <code>script.js</code> e imagens. Ao menos um arquivo HTML é recomendado. Máx 20 MB.</div>
+          </div>
+
+          <!-- Ação -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-route me-1"></i>Tipo de ação ao fechar o anúncio
+            </label>
+            <select class="form-select" id="publiscreen-action-type">
+              <option value="none">Sem ação (apenas fechar)</option>
+              <option value="external">Redirecionamento externo (URL)</option>
+              <option value="internal">Redirecionamento interno (Stack)</option>
+            </select>
+          </div>
+
+          <div class="mb-3" id="publiscreen-action-value-group">
+            <label class="form-label fw-semibold" id="publiscreen-action-value-label">URL / Stack</label>
+            <input type="text" class="form-control" id="publiscreen-action-value"
+                   placeholder="Ex: https://... ou NomeDoStack">
+          </div>
+
+          <!-- upload progress -->
+          <div id="publiscreen-progress" style="display:none;">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated"
+                   style="width:100%">Enviando...</div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-publiscreen-submit"
+                onclick="submitPubliscreen()">
+          <i class="fas fa-check me-1"></i>OK — Enviar
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — Banner (upload imagem + ação)
+═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalBanner" tabindex="-1" aria-labelledby="modalBannerLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="modalBannerLabel">
+          <i class="fas fa-image me-2"></i>Configurar Banner
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="form-banner" novalidate>
+          <input type="hidden" id="banner-location" value="">
+
+          <!-- Image file -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-image me-1"></i>Imagem do Banner <span class="text-danger">*</span>
+            </label>
+            <input type="file" class="form-control" id="banner-image"
+                   accept=".png,.jpg,.jpeg,.gif,.webp,.svg" required>
+            <div class="form-text">
+              Proporção mínima: <strong>2.5:1 (largura ÷ altura)</strong>. Ideal: <strong>3:1</strong>.
+              Formatos: PNG, JPG, JPEG, GIF, WebP, SVG. Máx 10 MB.
+            </div>
+          </div>
+
+          <!-- Ação -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-route me-1"></i>Ação ao clicar no banner
+            </label>
+            <select class="form-select" id="banner-action-type">
+              <option value="none">Sem ação</option>
+              <option value="external">Redirecionamento externo (URL)</option>
+              <option value="internal">Redirecionamento interno (Stack)</option>
+            </select>
+          </div>
+
+          <div class="mb-3" id="banner-action-value-group">
+            <label class="form-label fw-semibold" id="banner-action-value-label">URL / Stack</label>
+            <input type="text" class="form-control" id="banner-action-value"
+                   placeholder="Ex: https://... ou NomeDoStack">
+          </div>
+
+          <!-- preview dentro do modal -->
+          <div id="banner-modal-preview" style="display:none; margin-top:1rem;">
+            <label class="form-label fw-semibold text-muted small">Pré-visualização</label>
+            <img id="banner-modal-img" src="" alt="preview" class="img-fluid rounded border">
+          </div>
+
+          <!-- upload progress -->
+          <div id="banner-progress" style="display:none;">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+                   style="width:100%">Enviando...</div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-info text-white" id="btn-banner-submit"
+                onclick="submitBanner()">
+          <i class="fas fa-check me-1"></i>OK — Enviar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     STYLES
+═══════════════════════════════════════════════════════════ -->
 <style>
-.file-list {
-    height: 120px;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
+  .card { border:none; border-radius:14px; overflow:hidden; }
+  .card-header { padding:1rem 1.25rem; }
 
-.file-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem;
-    background: #f8f9fa;
-    border-radius: 6px;
-    margin-bottom: 0.5rem;
-}
+  .status-badge { font-size:.75rem; padding:.35rem .7rem; border-radius:20px; }
 
-.file-item:hover {
-    background: #e9ecef;
-}
+  /* Preview area */
+  .preview-area {
+    border-radius:10px;
+    overflow:hidden;
+    background:#0f172a;
+    padding:.5rem;
+  }
+  .preview-label {
+    font-size:.75rem;
+    font-weight:600;
+    color:#94a3b8;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-bottom:.5rem;
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+  }
+  .action-pill {
+    background:#1e293b;
+    border:1px solid #334155;
+    border-radius:20px;
+    padding:.15rem .6rem;
+    font-size:.7rem;
+    color:#60a5fa;
+    font-weight:500;
+    word-break:break-all;
+  }
 
-.file-name {
-    font-size: 0.875rem;
-    font-family: monospace;
-}
+  /* iframe (publiscreen) */
+  .iframe-wrapper {
+    position:relative;
+    width:100%;
+    padding-bottom:177.78%; /* 9:16 - simula tela de celular */
+    border-radius:8px;
+    overflow:hidden;
+    background:#000;
+  }
+  .preview-iframe {
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    border:none;
+  }
 
-.badge-file {
-    font-size: 0.7rem;
-    padding: 0.25rem 0.5rem;
-}
+  /* banner image */
+  .preview-banner-img {
+    width:100%;
+    border-radius:8px;
+    display:block;
+    object-fit:cover;
+    max-height:160px;
+  }
 
-.upload-progress {
-    margin-top: 1rem;
-}
-
-.btn.clear-dir-btn { font-size: 0.8rem; padding: 0.25rem 0.5rem; }
+  /* empty state */
+  .empty-state {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:2rem 1rem;
+    border:2px dashed #e2e8f0;
+    border-radius:10px;
+    color:#94a3b8;
+    text-align:center;
+  }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
 <script>
+// ── Helpers ──────────────────────────────────────────────────────
+function getToken() {
+  return localStorage.getItem('access_token') || '';
+}
+
+function authHeaders() {
+  const tok = getToken();
+  return tok ? { 'Authorization': `Bearer ${tok}` } : {};
+}
+
 function showAlert(message, type = 'success') {
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show`;
-    alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.getElementById('alert-container').appendChild(alert);
-
-    setTimeout(() => {
-        alert.remove();
-    }, 5000);
+  const div = document.createElement('div');
+  div.className = `alert alert-${type} alert-dismissible fade show`;
+  div.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+  document.getElementById('alert-container').prepend(div);
+  setTimeout(() => div.remove(), 7000);
 }
 
-// Load files for each ad type
-function mapAdTypeToLocation(adType) {
-    const map = {
-        'publi_client': 'publi_screen_client',
-        'publi_professional': 'publi_screen_professional',
-        'banner_client': 'banner_client_home',
-        'banner_professional': 'banner_professional_home'
-    };
-    return map[adType] || adType;
+function actionLabel(action) {
+  if (!action || action.type === 'none') return 'Sem ação';
+  if (action.type === 'external') return `↗ Externo: ${action.value}`;
+  if (action.type === 'internal') return `⤷ Stack: ${action.value}`;
+  return action.value || '—';
 }
 
-async function loadFiles(adType) {
-    const container = document.getElementById(`files-${adType.replace('_', '-')}`);
-    const location = mapAdTypeToLocation(adType);
-
-    try {
-        // Use the admin locations endpoint and filter by location
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(`/ads-admin/locations`, {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            }
-        });
-        if (!response.ok) {
-            container.innerHTML = '<small class="text-muted">Nenhum arquivo encontrado</small>';
-            return;
-        }
-
-        const data = await response.json();
-        console.log('ADS_ADMIN: loadFiles response', data);
-        const locations = data.locations || [];
-        const loc = locations.find(l => l.location === location);
-        const files = loc && loc.files ? loc.files : [];
-
-        if (files.length === 0) {
-            container.innerHTML = '<small class="text-muted">Nenhum arquivo enviado ainda</small>';
-            return;
-        }
-
-        container.innerHTML = files.map(file => `
-            <div class="file-item">
-                <div style="display:flex; align-items:center; gap:0.75rem;">
-                    ${ file.name.endsWith('.png') || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.webp') || file.name.endsWith('.gif') || file.name.endsWith('.svg') ?
-                    `<img src="/ads-admin/assets/${location}/${encodeURIComponent(file.name)}" style="width:110px; max-height:70px; object-fit:cover; border-radius:6px;" alt="${file.name}" />` : '' }
-                    <div>
-                        <div><span class="file-name">${file.name}</span></div>
-                        ${file.link ? `<small class="text-muted d-block">Link: <a href="${file.link}" target="_blank">${file.link}</a></small>` : ''}
-                        <span class="badge badge-file ${file.name.endsWith('.html') ? 'bg-primary' : file.name.endsWith('.css') ? 'bg-info' : file.name.endsWith('.js') ? 'bg-warning' : 'bg-secondary'} ms-2">
-                            ${file.name.split('.').pop().toUpperCase()}
-                        </span>
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-danger" onclick="deleteFile('${adType}', '${file.name}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    ${ file.name.endsWith('.png') || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.webp') || file.name.endsWith('.gif') || file.name.endsWith('.svg') ?
-                    `
-                    <button class="btn btn-sm btn-outline-secondary" onclick="openPreview('/ads-admin/assets/${location}/${encodeURIComponent(file.name)}')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="editImageLink('${adType}', '${file.name}')">
-                        <i class="fas fa-link"></i>
-                    </button>
-                    ` : '' }
-                </div>
-            </div>
-        `).join('');
-        // Show an 'Image-only' badge on the card if no HTML index exists
-        const card = container.closest('.card');
-        const hasHtml = files.some(f => f.name.endsWith('.html'));
-        let badgeEl = card.querySelector('.image-only-badge');
-        if (!hasHtml) {
-            if (!badgeEl) {
-                const header = card.querySelector('.card-body');
-                const span = document.createElement('div');
-                span.className = 'image-only-badge mt-2';
-                span.innerHTML = '<span class="badge bg-info">Image-only</span>';
-                header.insertBefore(span, header.firstChild);
-            }
-        } else {
-            if (badgeEl) badgeEl.remove();
-        }
-    } catch (error) {
-        console.error('Error loading files:', error);
-        container.innerHTML = '<small class="text-danger">Erro ao carregar arquivos</small>';
-    }
-}
-
-// Delete file
-async function deleteFile(adType, filename) {
-    if (!confirm(`Deseja deletar ${filename}?`)) return;
-    const location = mapAdTypeToLocation(adType);
-
-    try {
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(`/ads-admin/delete-file/${location}/${encodeURIComponent(filename)}`, {
-            method: 'DELETE',
-            credentials: 'include',
-            headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            }
-        });
-
-        if (!response.ok) throw new Error('Failed to delete');
-
-        showAlert(`Arquivo ${filename} deletado com sucesso!`, 'success');
-        loadFiles(adType);
-    } catch (error) {
-        showAlert('Erro ao deletar arquivo', 'danger');
-    }
-}
-
-// Edit image link metadata
-async function editImageLink(adType, filename) {
-    const location = mapAdTypeToLocation(adType);
-    const currentLink = prompt('Insira o link para o clique (deixe vazio para remover):');
-    try {
-        const token = localStorage.getItem('access_token');
-        const formData = new FormData();
-        formData.append('link', currentLink || '');
-        const response = await fetch(`/ads-admin/image/meta/${location}/${encodeURIComponent(filename)}`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: formData
-        });
-        if (!response.ok) throw new Error('Failed to set image link');
-        showAlert('Link atualizado com sucesso', 'success');
-        loadFiles(adType);
-    } catch (error) {
-        console.error('Error setting image link', error);
-        showAlert('Erro ao atualizar link da imagem', 'danger');
-    }
-}
-
-// Delete all files in a location (admin only)
-async function deleteAllFilesByLocation(location) {
-    try {
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(`/ads-admin/delete-all/${location}`, {
-            method: 'DELETE',
-            credentials: 'include',
-            headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            }
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error('Delete failed: ' + text);
-        }
-
-        showAlert(`Conteúdo de ${location} removido com sucesso`, 'success');
-
-        // re-enable buttons if any were disabled
-        document.querySelectorAll('.clear-dir-btn').forEach(btn => btn.disabled = false);
-        // find adType from location and reload files
-        const map = {
-            'publi_screen_client': 'publi_client',
-            'publi_screen_professional': 'publi_professional',
-            'banner_client_home': 'banner_client',
-            'banner_professional_home': 'banner_professional'
-        };
-        const adType = map[location] || location;
-        loadFiles(adType);
-    } catch (error) {
-        console.error('Delete error:', error);
-        showAlert('Erro ao limpar diretório', 'danger');
-        document.querySelectorAll('.clear-dir-btn').forEach(btn => btn.disabled = false);
-    }
-}
-
-// Attach clear directory event handlers to buttons
-function clearLocationHandler(e) {
-    const btn = e.currentTarget;
-    const adType = btn.dataset.adType;
-    if (!confirm('Deseja remover todos os arquivos deste diretório? Esta operação não pode ser desfeita.')) {
-        return;
-    }
-    // Disable button while deleting to prevent duplicates
-    btn.disabled = true;
-    const location = mapAdTypeToLocation(adType);
-    deleteAllFilesByLocation(location);
-}
-
-// Attach handlers once DOM is ready
-function attachClearDirHandlers() {
-    const buttons = document.querySelectorAll('.clear-dir-btn');
-    buttons.forEach((btn) => {
-        btn.removeEventListener('click', clearLocationHandler);
-        btn.addEventListener('click', clearLocationHandler);
+// ── Load state for a location ────────────────────────────────────
+async function loadState(location) {
+  try {
+    const res = await fetch(`/ads-admin/state/${location}`, {
+      credentials: 'include',
+      headers: authHeaders()
     });
+    if (!res.ok) return;
+    const data = await res.json();
+    applyState(location, data);
+  } catch (e) {
+    console.warn('loadState error', location, e);
+  }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attachClearDirHandlers);
-} else {
-    attachClearDirHandlers();
+function applyState(location, data) {
+  const badge    = document.getElementById(`badge-${location}`);
+  const preview  = document.getElementById(`preview-${location}`);
+  const empty    = document.getElementById(`empty-${location}`);
+  const pill     = document.getElementById(`action-pill-${location}`);
+
+  if (data.configured) {
+    badge.textContent = 'Configurado';
+    badge.className = 'badge status-badge bg-success';
+    preview.style.display = '';
+    empty.style.display   = 'none';
+    if (pill) pill.textContent = actionLabel(data.action);
+
+    // publiscreen: reload iframe
+    const iframe = document.getElementById(`iframe-${location}`);
+    if (iframe) {
+      iframe.src = `/ads-admin/preview-html/${location}?t=${Date.now()}`;
+    }
+
+    // banner: load first image
+    const img = document.getElementById(`img-${location}`);
+    if (img && data.images && data.images.length > 0) {
+      img.src = `/ads-admin/assets/${location}/${encodeURIComponent(data.images[0])}?t=${Date.now()}`;
+    }
+  } else {
+    badge.textContent = 'Vazio';
+    badge.className = 'badge status-badge bg-secondary';
+    preview.style.display = 'none';
+    empty.style.display   = '';
+    if (pill) pill.textContent = '';
+  }
 }
 
-// Determine file_type from filename extension
-function getFileTypeFromFilename(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
-    if (['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'].includes(ext)) return 'image';
-    // Disallow other file types
-    return null;
+function reloadAll() {
+  ['publi_screen_client','publi_screen_professional','banner_client_home','banner_professional_home']
+    .forEach(loadState);
 }
 
-// Handle form submissions
-document.querySelectorAll('.upload-form').forEach(form => {
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+// ── PubliScreen modal ────────────────────────────────────────────
+let _publiLocation = '';
 
-        const adType = form.dataset.adType;
-        const fileInput = form.querySelector('input[type="file"]');
-        const files = fileInput.files;
+function openPubliModal(location) {
+  _publiLocation = location;
+  document.getElementById('publiscreen-location').value = location;
+  document.getElementById('publiscreen-zip').value = '';
+  document.getElementById('publiscreen-action-type').value = 'none';
+  document.getElementById('publiscreen-action-value').value = '';
+  document.getElementById('publiscreen-progress').style.display = 'none';
+  updatePubliActionValueGroup();
+  const modal = new bootstrap.Modal(document.getElementById('modalPubliscreen'));
+  modal.show();
+}
 
-        if (files.length === 0) {
-            showAlert('Selecione pelo menos um arquivo', 'warning');
-            return;
-        }
+document.getElementById('publiscreen-action-type').addEventListener('change', updatePubliActionValueGroup);
 
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando...';
+function updatePubliActionValueGroup() {
+  const type = document.getElementById('publiscreen-action-type').value;
+  const grp  = document.getElementById('publiscreen-action-value-group');
+  const lbl  = document.getElementById('publiscreen-action-value-label');
+  const inp  = document.getElementById('publiscreen-action-value');
+  if (type === 'none') {
+    grp.style.display = 'none';
+  } else {
+    grp.style.display = '';
+    if (type === 'external') {
+      lbl.textContent = 'URL de destino';
+      inp.placeholder = 'https://exemplo.com';
+    } else {
+      lbl.textContent = 'Nome da Stack (navegação interna)';
+      inp.placeholder = 'Ex: HomeScreen, ProfileScreen…';
+    }
+  }
+}
 
-        let successCount = 0;
-        let errorCount = 0;
+async function submitPubliscreen() {
+  const location    = _publiLocation;
+  const zipInput    = document.getElementById('publiscreen-zip');
+  const actionType  = document.getElementById('publiscreen-action-type').value;
+  const actionValue = document.getElementById('publiscreen-action-value').value.trim();
+  const btn         = document.getElementById('btn-publiscreen-submit');
+  const progress    = document.getElementById('publiscreen-progress');
 
-        const location = mapAdTypeToLocation(adType);
-        for (const file of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-                // append file_type for the new admin endpoint
-                const fileType = getFileTypeFromFilename(file.name);
-                if (!fileType) {
-                    showAlert('Tipo de arquivo não suportado. Apenas imagens são permitidas.', 'warning');
-                    errorCount++;
-                    continue;
-                }
-                formData.append('file_type', fileType);
+  if (!zipInput.files.length) {
+    showAlert('Selecione um arquivo ZIP.', 'warning');
+    return;
+  }
 
-            try {
-                    const token = localStorage.getItem('access_token');
-                    const response = await fetch(`/ads-admin/upload/${location}`, {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                            },
-                            body: formData
-                        });
+  if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
+    showAlert('Informe a URL ou o nome da Stack para a ação selecionada.', 'warning');
+    return;
+  }
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    const errorDetails = errorData.detail;
+  const fd = new FormData();
+  fd.append('file', zipInput.files[0]);
+  fd.append('action_type', actionType);
+  fd.append('action_value', actionValue);
 
-                    // Format error message based on structured error response
-                    let errorMessage = 'Upload falhou';
-                    if (typeof errorDetails === 'object' && errorDetails.message) {
-                        errorMessage = `${file.name}: ${errorDetails.message}`;
+  btn.disabled = true;
+  progress.style.display = '';
 
-                        // Add detailed information if available
-                        if (errorDetails.details) {
-                            const details = errorDetails.details;
-                            const infoLines = [];
-
-                            if (details.uploaded_dimensions) infoLines.push(`Dimensões: ${details.uploaded_dimensions}`);
-                            if (details.uploaded_ratio) infoLines.push(`Proporção: ${details.uploaded_ratio}`);
-                            if (details.minimum_required) infoLines.push(`Mínimo requerido: ${details.minimum_required}`);
-                            if (details.existing_ratio) infoLines.push(`Proporção existente: ${details.existing_ratio}`);
-                            if (details.file_size) infoLines.push(`Tamanho: ${details.file_size}`);
-                            if (details.max_allowed) infoLines.push(`Máximo: ${details.max_allowed}`);
-
-                            if (infoLines.length > 0) {
-                                errorMessage += '\n' + infoLines.join(' | ');
-                            }
-
-                            if (details.suggestion) {
-                                errorMessage += `\n💡 ${details.suggestion}`;
-                            }
-
-                            if (details.examples && details.examples.length > 0) {
-                                errorMessage += `\n📋 Exemplos válidos: ${details.examples.join(', ')}`;
-                            }
-                        }
-                    } else if (typeof errorDetails === 'string') {
-                        errorMessage = `${file.name}: ${errorDetails}`;
-                    }
-
-                    showAlert(errorMessage, 'danger');
-                    throw new Error(errorMessage);
-                }
-
-                successCount++;
-            } catch (error) {
-                console.error('Upload error:', error);
-                errorCount++;
-            }
-        }
-
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-
-        if (errorCount === 0) {
-            showAlert(`${successCount} arquivo(s) enviado(s) com sucesso!`, 'success');
-            fileInput.value = '';
-            loadFiles(adType);
-        } else {
-            showAlert(`${successCount} enviado(s), ${errorCount} erro(s)`, 'warning');
-        }
+  try {
+    const res = await fetch(`/ads-admin/upload-zip/${location}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: authHeaders(),
+      body: fd
     });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      const msg = json.detail || 'Erro no upload';
+      showAlert(`Erro: ${msg}`, 'danger');
+      return;
+    }
+
+    // Success: close modal, show alert, reload state
+    bootstrap.Modal.getInstance(document.getElementById('modalPubliscreen')).hide();
+    showAlert('PubliScreen configurado com sucesso!', 'success');
+
+    // Show browser alert with action info (works outside webview)
+    const actLabel = actionLabel(json.action);
+    alert(`✅ PubliScreen cadastrado!\n\nAção configurada: ${actLabel}`);
+
+    await loadState(location);
+
+  } catch (e) {
+    showAlert('Erro de conexão ao enviar ZIP.', 'danger');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    progress.style.display = 'none';
+  }
+}
+
+// ── Banner modal ─────────────────────────────────────────────────
+let _bannerLocation = '';
+
+function openBannerModal(location) {
+  _bannerLocation = location;
+  document.getElementById('banner-location').value = location;
+  document.getElementById('banner-image').value = '';
+  document.getElementById('banner-action-type').value = 'none';
+  document.getElementById('banner-action-value').value = '';
+  document.getElementById('banner-modal-preview').style.display = 'none';
+  document.getElementById('banner-modal-img').src = '';
+  document.getElementById('banner-progress').style.display = 'none';
+  updateBannerActionValueGroup();
+  const modal = new bootstrap.Modal(document.getElementById('modalBanner'));
+  modal.show();
+}
+
+document.getElementById('banner-action-type').addEventListener('change', updateBannerActionValueGroup);
+
+function updateBannerActionValueGroup() {
+  const type = document.getElementById('banner-action-type').value;
+  const grp  = document.getElementById('banner-action-value-group');
+  const lbl  = document.getElementById('banner-action-value-label');
+  const inp  = document.getElementById('banner-action-value');
+  if (type === 'none') {
+    grp.style.display = 'none';
+  } else {
+    grp.style.display = '';
+    if (type === 'external') {
+      lbl.textContent = 'URL de destino';
+      inp.placeholder = 'https://exemplo.com';
+    } else {
+      lbl.textContent = 'Nome da Stack (navegação interna)';
+      inp.placeholder = 'Ex: HomeScreen, ProfileScreen…';
+    }
+  }
+}
+
+// Show local preview as soon as user picks an image
+document.getElementById('banner-image').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('banner-modal-img').src = e.target.result;
+    document.getElementById('banner-modal-preview').style.display = '';
+  };
+  reader.readAsDataURL(file);
 });
 
-// Preview modal functions
-function openPreview(url) {
-    const modal = document.getElementById('preview-modal');
-    const iframe = document.getElementById('preview-iframe');
-    iframe.src = url;
-    modal.style.display = 'block';
+async function submitBanner() {
+  const location    = _bannerLocation;
+  const imgInput    = document.getElementById('banner-image');
+  const actionType  = document.getElementById('banner-action-type').value;
+  const actionValue = document.getElementById('banner-action-value').value.trim();
+  const btn         = document.getElementById('btn-banner-submit');
+  const progress    = document.getElementById('banner-progress');
+
+  if (!imgInput.files.length) {
+    showAlert('Selecione uma imagem para o banner.', 'warning');
+    return;
+  }
+
+  if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
+    showAlert('Informe a URL ou o nome da Stack para a ação selecionada.', 'warning');
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append('file', imgInput.files[0]);
+  fd.append('action_type', actionType);
+  fd.append('action_value', actionValue);
+
+  btn.disabled = true;
+  progress.style.display = '';
+
+  try {
+    const res = await fetch(`/ads-admin/upload-banner/${location}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: authHeaders(),
+      body: fd
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      const detail = json.detail;
+      let msg = 'Erro no upload';
+      if (typeof detail === 'object' && detail.message) {
+        msg = detail.message;
+        if (detail.details && detail.details.suggestion) msg += ` — ${detail.details.suggestion}`;
+      } else if (typeof detail === 'string') {
+        msg = detail;
+      }
+      showAlert(`Erro: ${msg}`, 'danger');
+      return;
+    }
+
+    // Success: close modal, show alert, reload state
+    bootstrap.Modal.getInstance(document.getElementById('modalBanner')).hide();
+    showAlert('Banner configurado com sucesso!', 'success');
+
+    // Show browser alert with action info (works outside webview)
+    const actLabel = actionLabel(json.action);
+    alert(`✅ Banner cadastrado!\n\nAção configurada: ${actLabel}`);
+
+    await loadState(location);
+
+  } catch (e) {
+    showAlert('Erro de conexão ao enviar banner.', 'danger');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    progress.style.display = 'none';
+  }
 }
 
-function openDesktopPreview(url) {
-    window.open(url, '_blank');
+// ── Clear location ───────────────────────────────────────────────
+async function clearLocation(location) {
+  if (!confirm(`Limpar todos os arquivos de "${location}"? Esta ação não pode ser desfeita.`)) return;
+  try {
+    const res = await fetch(`/ads-admin/delete-all/${location}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: authHeaders()
+    });
+    if (!res.ok) {
+      showAlert('Erro ao limpar conteúdo.', 'danger');
+      return;
+    }
+    showAlert(`Conteúdo de ${location} removido.`, 'success');
+    await loadState(location);
+  } catch (e) {
+    showAlert('Erro de conexão ao limpar.', 'danger');
+  }
 }
 
-function closePreview() {
-    const modal = document.getElementById('preview-modal');
-    const iframe = document.getElementById('preview-iframe');
-    modal.style.display = 'none';
-    iframe.src = '';
-}
-
-function openPreviewLocation(adType) {
-    const location = mapAdTypeToLocation(adType);
-    // Try HTML preview first, otherwise fallback to image preview
-    (async function() {
-        const token = localStorage.getItem('access_token');
-        try {
-            const resp = await fetch(`/ads-admin/preview-html/${location}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                }
-            });
-            if (resp.ok) {
-                openPreview(`/ads-admin/preview-html/${location}`);
-            } else {
-                // fallback to images preview (if available)
-                openPreview(`/ads-admin/preview-images/${location}`);
-            }
-        } catch (e) {
-            // network or CORS, fallback
-            openPreview(`/ads-admin/preview-images/${location}`);
-        }
-    })();
-}
-
-function openDesktopPreviewLocation(adType) {
-    const location = mapAdTypeToLocation(adType);
-    (async function() {
-        const resp = await fetch(`/ads-admin/preview-html/${location}`, { method: 'GET', credentials: 'include' });
-        if (resp.ok) {
-            openDesktopPreview(`/ads-admin/preview-html/${location}`);
-        } else {
-            openDesktopPreview(`/ads-admin/preview-images/${location}`);
-        }
-    })();
-}
-
-// Load files on page load
+// ── Init ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    loadFiles('publi_client');
-    loadFiles('publi_professional');
-    loadFiles('banner_client');
-    loadFiles('banner_professional');
+  // init action-value group visibility
+  updatePubliActionValueGroup();
+  updateBannerActionValueGroup();
+  // load current state for all 4 locations
+  reloadAll();
 });
 </script>
-
-<!-- Preview Modal -->
-<div id="preview-modal" class="modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-    <div class="modal-content" style="position: relative; margin: auto; top: 50%; transform: translateY(-50%); width: 90%; max-width: 400px; max-height: 90vh;">
-        <div class="modal-header" style="background: #f8f9fa; padding: 10px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;">
-            <h5 style="margin: 0; font-size: 1.1rem;">Preview Mobile</h5>
-            <button type="button" class="btn-close" onclick="closePreview()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
-        </div>
-        <div class="modal-body" style="padding: 0; border-radius: 0 0 10px 10px; overflow: hidden;">
-            <div class="phone-frame" style="width: 100%; height: 0; padding-bottom: 200%; position: relative; border-radius: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
-                <iframe id="preview-iframe" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 20px;" allowfullscreen></iframe>
-            </div>
-        </div>
-    </div>
-</div>
 
 {% endblock %}

@@ -7,6 +7,7 @@ import json
 import shutil
 import os
 import tempfile
+import zipfile
 import jinja2
 from PIL import Image
 import io
@@ -54,6 +55,10 @@ ADS_BASE_DIR = Path(__file__).resolve().parents[3] / "ads"
 ASPECT_RATIO_TOLERANCE = 0.05
 IDEAL_BANNER_RATIO = 3.0
 MIN_BANNER_RATIO = 2.5
+
+# File size limits
+MAX_ZIP_SIZE_BYTES = 20 * 1024 * 1024   # 20 MB
+MAX_BANNER_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 # ============================================================================
@@ -807,6 +812,188 @@ async def admin_serve_asset(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
 
     return FileResponse(asset_path)
+
+
+# ============================================================================
+# NEW ADMIN - Upload ZIP for PubliScreen locations
+# ============================================================================
+
+@admin_router.post("/upload-zip/{location}")
+async def admin_upload_zip_publiscreen(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    file: UploadFile = File(...),
+    action_type: str = Form(...),
+    action_value: str = Form(""),
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """Upload a ZIP file containing HTML/CSS/JS assets for an ad location (admin only)."""
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can upload ad files")
+
+    if not (file.filename or "").lower().endswith(".zip"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Apenas arquivos ZIP são aceitos")
+
+    content = await file.read()
+
+    if len(content) > MAX_ZIP_SIZE_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Arquivo ZIP muito grande (máx 20 MB)")
+
+    ad_dir = ADS_BASE_DIR / location
+    ad_dir.mkdir(parents=True, exist_ok=True)
+    ad_dir_resolved = ad_dir.resolve()
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as zf:
+            for name in zf.namelist():
+                base = Path(name).name
+                if not base or name.endswith("/"):
+                    continue
+                ext = base.rsplit(".", 1)[-1].lower() if "." in base else ""
+                if ext in ("html", "htm"):
+                    dest = ad_dir / "index.html"
+                elif ext == "css":
+                    dest = ad_dir / "style.css"
+                elif ext == "js":
+                    dest = ad_dir / "script.js"
+                elif ext in ("png", "jpg", "jpeg", "gif", "webp", "svg"):
+                    dest = ad_dir / base
+                else:
+                    continue
+                # Security: ensure destination is within ad_dir
+                if not str(dest.resolve()).startswith(str(ad_dir_resolved)):
+                    continue
+                dest.write_bytes(zf.read(name))
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Arquivo ZIP inválido ou corrompido")
+
+    # Persist action in meta.json
+    meta_file = ad_dir / "meta.json"
+    meta = {}
+    if meta_file.exists():
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8") or "{}")
+        except Exception:
+            meta = {}
+    meta["action"] = {"type": action_type, "value": action_value}
+    meta_file.write_text(json.dumps(meta), encoding="utf-8")
+
+    return {"message": f"ZIP extraído em {location}", "action": meta["action"]}
+
+
+# ============================================================================
+# NEW ADMIN - Upload banner image with action
+# ============================================================================
+
+@admin_router.post("/upload-banner/{location}")
+async def admin_upload_banner_image(
+    location: Literal[
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    file: UploadFile = File(...),
+    action_type: str = Form(...),
+    action_value: str = Form(""),
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """Upload a banner image with action configuration (admin only)."""
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can upload ad files")
+
+    fname = file.filename or ""
+    ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+    if ext not in ("png", "jpg", "jpeg", "gif", "webp", "svg"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Apenas imagens são aceitas para banners")
+
+    content = await file.read()
+
+    if len(content) > MAX_BANNER_SIZE_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Imagem muito grande (máx 10 MB)")
+
+    if ext != "svg":
+        width, height, aspect_ratio = validate_image_dimensions(content)
+        validate_minimum_aspect_ratio(width, height)
+
+    ad_dir = ADS_BASE_DIR / location
+    ad_dir.mkdir(parents=True, exist_ok=True)
+
+    img_path = ad_dir / fname
+    img_path.write_bytes(content)
+
+    # Persist action + image link in meta.json
+    meta_file = ad_dir / "meta.json"
+    meta = {}
+    if meta_file.exists():
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8") or "{}")
+        except Exception:
+            meta = {}
+    meta["action"] = {"type": action_type, "value": action_value}
+    images_meta = meta.get("images", {})
+    images_meta[fname] = {"action_type": action_type, "action_value": action_value, "link": action_value if action_type == "external" else ""}
+    meta["images"] = images_meta
+    meta_file.write_text(json.dumps(meta), encoding="utf-8")
+
+    img_b64 = base64.b64encode(content).decode()
+    mime_map = {
+        "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+        "gif": "image/gif", "webp": "image/webp", "svg": "image/svg+xml"
+    }
+    data_url = f"data:{mime_map.get(ext, 'image/png')};base64,{img_b64}"
+
+    return {
+        "message": f"Banner enviado para {location}",
+        "filename": fname,
+        "action": meta["action"],
+        "preview": data_url
+    }
+
+
+# ============================================================================
+# NEW ADMIN - Get state (action + files) for a location
+# ============================================================================
+
+@admin_router.get("/state/{location}")
+async def admin_get_location_state(
+    location: Literal[
+        "publi_screen_client",
+        "publi_screen_professional",
+        "banner_client_home",
+        "banner_professional_home"
+    ],
+    current_user: User = Depends(get_current_user_from_request)
+):
+    """Return current configuration state for one ad location (admin only)."""
+    if "admin" not in current_user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can read ad state")
+
+    ad_dir = ADS_BASE_DIR / location
+    meta_file = ad_dir / "meta.json"
+    meta = {}
+    if meta_file.exists():
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8") or "{}")
+        except Exception:
+            meta = {}
+
+    has_html = (ad_dir / "index.html").exists() if ad_dir.exists() else False
+    images = []
+    if ad_dir.exists():
+        for ext in ("png", "jpg", "jpeg", "gif", "webp", "svg"):
+            for f in ad_dir.glob(f"*.{ext}"):
+                images.append(f.name)
+
+    return {
+        "location": location,
+        "configured": has_html or len(images) > 0,
+        "has_html": has_html,
+        "images": images,
+        "action": meta.get("action", None),
+    }
 
 
 # ============================================================================
