@@ -12,6 +12,9 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 import os
 import uuid
+import httpx
+import urllib.parse
+from fastapi.responses import RedirectResponse
 
 router = APIRouter()
 
@@ -163,6 +166,132 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
         refresh_token = create_refresh_token(subject=str(user.id))
 
         return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/google/start")
+async def google_oauth_start(request: Request, next: str | None = None):
+    """Redirecta o usuário para a tela de consentimento do Google.
+
+    Optionally accepts a `next` query param (URL) that will be passed through
+    via the OAuth `state` parameter and used as redirect target after callback.
+    """
+    client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID não configurado no backend.")
+
+    # Build redirect_uri to our callback
+    try:
+        redirect_uri = str(request.url_for("google_callback"))
+    except Exception:
+        base = str(request.base_url).rstrip("/")
+        redirect_uri = f"{base}/auth/google/callback"
+
+    scope = "openid email profile"
+    state = urllib.parse.quote_plus(next or "")
+    params = {
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "scope": scope,
+        "access_type": "offline",
+        "include_granted_scopes": "true",
+        "prompt": "consent",
+        "state": state,
+    }
+    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+    return RedirectResponse(auth_url)
+
+
+@router.get("/google/callback", name="google_callback")
+async def google_oauth_callback(request: Request, code: str | None = None, state: str | None = None, db: AsyncIOMotorDatabase = Depends(get_database)):
+    """Recebe o `code` do Google, troca por tokens no backend, cria/atualiza usuário e emite JWTs.
+
+    If a `state` URL was provided on /google/start, the callback will redirect the
+    browser to that URL carrying the JWTs in the fragment (so JavaScript/native app
+    can read them). Otherwise returns a JSON body with the tokens.
+    """
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing code in callback")
+
+    client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET not configured")
+
+    try:
+        # Determine redirect_uri same as in start
+        try:
+            redirect_uri = str(request.url_for("google_callback"))
+        except Exception:
+            base = str(request.base_url).rstrip("/")
+            redirect_uri = f"{base}/auth/google/callback"
+
+        token_endpoint = "https://oauth2.googleapis.com/token"
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(token_endpoint, data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            }, headers={"Accept": "application/json"})
+            resp.raise_for_status()
+            token_data = resp.json()
+
+        id_token_str = token_data.get("id_token")
+        if not id_token_str:
+            raise HTTPException(status_code=400, detail="id_token not returned by Google")
+
+        # Verify ID token
+        audience_str = os.getenv("GOOGLE_AUDIENCE_CLIENT_IDS", "")
+        if audience_str:
+            valid_audience = [c.strip() for c in audience_str.split(',')]
+        else:
+            valid_audience = [client_id]
+
+        idinfo = id_token.verify_oauth2_token(id_token_str, requests.Request(), audience=valid_audience)
+
+        google_email = idinfo.get('email')
+        google_name = idinfo.get('name', '')
+        google_picture = idinfo.get('picture', '')
+
+        if not google_email:
+            raise HTTPException(status_code=400, detail="Google token inválido")
+
+        # Upsert user (reuse existing flow)
+        existing = await get_user_by_email(db, google_email)
+        if existing:
+            user = existing
+        else:
+            user_create = UserCreate(
+                email=google_email,
+                full_name=google_name,
+                cpf="000.000.000-00",
+                password=str(uuid.uuid4()),
+                turnstile_token=None,
+            )
+            user = await create_user(db, user_create)
+
+        access_token = create_access_token(subject=str(user.id))
+        refresh_token = create_refresh_token(subject=str(user.id))
+
+        # If state is a URL, redirect to it carrying tokens in fragment
+        if state:
+            try:
+                target = urllib.parse.unquote_plus(state)
+                sep = '#' if '#' not in target else '&'
+                fragment = urllib.parse.urlencode({"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"})
+                return RedirectResponse(f"{target}{sep}{fragment}")
+            except Exception:
+                pass
+
+        # Otherwise return JSON with tokens
+        return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
+
     except HTTPException:
         raise
     except Exception as e:
