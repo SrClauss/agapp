@@ -80,23 +80,15 @@ export default function LoginScreen() {
       return;
     }
 
-    // Determinar adType baseado no role (formato mobile)
-    const adType = user.roles.includes('client') ? 'publi_client' : 'publi_professional';
-    console.log('📍 AdType determinado:', adType);
+    // Determinar location do ad baseado no role (formato backend atual)
+    const location = user.roles.includes('client') ? 'publi_screen_client' : 'publi_screen_professional';
 
-    // Verificar se anúncios estão disponíveis
+    // Verificar se anúncios estão disponíveis (usando os arquivos estáticos gerados pelo backend)
     try {
-      console.log('🔍 Verificando anúncio para adType:', adType);
-
-      const checkResponse = await client.get(`/system-admin/api/public/ads/${adType}/check`);
-      console.log('📡 Status da verificação de anúncios:', checkResponse.status);
-      console.log('📦 Check data:', checkResponse.data);
-
-      if (checkResponse.data.exists) {
+      console.log('🔍 Verificando anúncio para location:', location);
+      const checkResponse = await client.get(`/ads/${location}/index.html`, { responseType: 'text' });
+      if (checkResponse.status === 200) {
         console.log('✅ Anúncio encontrado, navegando para AdScreen');
-        // Converter adType para location para compatibilidade com AdScreen
-        const location = adType === 'publi_client' ? 'publi_screen_client' : 'publi_screen_professional';
-        // Determine role when user already has a single role
         const roleParam = user.roles.includes('client') && !user.roles.includes('professional') ? 'client' : user.roles.includes('professional') && !user.roles.includes('client') ? 'professional' : undefined;
         navigation.navigate('AdScreen' as never, { location, role: roleParam } as any);
         return;
@@ -104,7 +96,11 @@ export default function LoginScreen() {
 
       console.log('ℹ️ Nenhum anúncio disponível, indo para tela principal');
     } catch (error: any) {
-      console.error('🚨 Erro ao verificar anúncios:', error);
+      if (error.response?.status === 404) {
+        console.log('ℹ️ Nenhum anúncio configurado para esta location (404)');
+      } else {
+        console.error('🚨 Erro ao verificar anúncios:', error);
+      }
     }
 
     // Se não houver anúncios ou erro, vai direto para tela principal
@@ -246,7 +242,9 @@ export default function LoginScreen() {
       }
     } catch (e: any) {
       console.error('[Login] onTurnstileMessage error', e);
+      // Mensagem de erro já formatada pela API
       setError(e.message || 'Erro no login');
+      setShowTurnstile(false);
     } finally {
       setLoading(false);
     }

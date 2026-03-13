@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request, status, Query
 from fastapi.responses import JSONResponse, HTMLResponse, Response
 from typing import List, Optional
 import base64
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from PIL import Image
 import io
@@ -900,6 +901,34 @@ async def sync_adscreen(
         "version": adscreen.version,
         "up_to_date": True
     }
+
+
+# ==========================================================================
+# MOBILE ENDPOINTS - AD CLICK / IMPRESSION TRACKING
+# ==========================================================================
+
+@mobile_router.post("/click/{ad_type}")
+async def track_ad_click(ad_type: str, request: Request):
+    """Track ad clicks for mobile ads."""
+    click_logger.info({
+        "ad_type": ad_type,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "remote_addr": request.client.host if request.client else None,
+        "user_agent": request.headers.get("user-agent"),
+    })
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@mobile_router.post("/impression/{ad_type}")
+async def track_ad_impression(ad_type: str, request: Request):
+    """Track ad impressions for mobile ads."""
+    impression_logger.info({
+        "ad_type": ad_type,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "remote_addr": request.client.host if request.client else None,
+        "user_agent": request.headers.get("user-agent"),
+    })
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ============================================================================

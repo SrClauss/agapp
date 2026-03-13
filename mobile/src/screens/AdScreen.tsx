@@ -16,6 +16,7 @@ interface AdContent {
   alias: string;
   type: 'html' | 'image';
   html?: string;
+  uri?: string;
   css?: string;
   js?: string;
   images?: { [key: string]: string };
@@ -76,82 +77,34 @@ export default function AdScreen() {
   const fetchAdContent = async () => {
     try {
       console.log('🔍 Buscando anúncio para location:', location);
-      console.log('🔑 Token presente:', !!token);
 
-      // Converter location para adType (formato mobile)
-      const adTypeMap: { [key: string]: string } = {
-        'publi_screen_client': 'publi_client',
-        'publi_screen_professional': 'publi_professional',
-        'banner_client_home': 'banner_client',
-        'banner_professional_home': 'banner_professional',
-      };
-      const adType = adTypeMap[location] || location;
+      // Use the static file served by backend (ad HTML + assets)
+      const base = client.defaults.baseURL?.replace(/\/$/, '') || '';
+      const url = `${base}/ads/${location}/index.html`;
+      console.log('🔗 URL do anúncio:', url);
 
-      const response = await client.get(`/system-admin/api/public/ads/${adType}`);
+      // Check if the ad exists by fetching the HTML (will 404 if not configured)
+      const response = await client.get(url, { responseType: 'text' });
 
-      console.log('📡 Status HTTP:', response.status);
-
-      const data = response.data;
-      console.log('📦 Dados recebidos:', JSON.stringify(data).substring(0, 200) + '...');
-
-      // Se for tipo imagem, processar imagens
-      if (data && data.type === 'image' && data.images && Array.isArray(data.images)) {
-        console.log('🖼️ Anúncio do tipo imagem, processando', data.images.length, 'imagens');
-        const imagesList: ImageItem[] = data.images.map((img: any) => ({
-          uri: img.content || '',
-          link: img.link || null,
-        })).filter((img: ImageItem) => img.uri); // Filtrar imagens sem URI
-
-        if (imagesList.length === 0) {
-          console.log('⚠️ Nenhuma imagem válida encontrada');
-          // Keep debug info so we can inspect payload in the app and retry manually
-          setDebugPayload({ reason: 'no_valid_images', data });
-          setLoading(false);
-          return;
-        }
-
-        const adaptedAd: AdContent = {
-          id: data.ad_type || data.id,
-          alias: data.ad_type || data.alias,
-          type: 'image',
-          imagesList,
-        };
-
-        setAdContent(adaptedAd);
-      }
-      // Se for tipo HTML, processar HTML
-      else if (data && data.html) {
-        console.log('📄 Anúncio do tipo HTML');
-        const adaptedAd: AdContent = {
-          id: data.id,
-          alias: data.alias,
+      if (response.status === 200 && response.data) {
+        setAdContent({
+          id: location,
+          alias: location,
           type: 'html',
-          html: data.html,
-          css: data.css || '',
-          js: data.js || '',
-          images: data.images || {}
-        };
-
-        setAdContent(adaptedAd);
-      } else {
-        console.log('ℹ️ Dados de anúncio inválidos ou vazios');
-        setDebugPayload({ reason: 'invalid_payload', data });
-        setLoading(false);
+          uri: url,
+        });
         return;
       }
+
+      setDebugPayload({ reason: 'unexpected_response', status: response.status, data: response.data });
     } catch (error: any) {
-      // Status 204 = sem anúncio configurado
-      if (error.response?.status === 204) {
-        console.log('ℹ️ Nenhum anúncio configurado para esta location');
-        setDebugPayload({ reason: 'no_ad_configured', status: 204 });
-        setLoading(false);
-        return;
+      if (error.response?.status === 404) {
+        console.log('ℹ️ Nenhum anúncio configurado para esta location (404)');
+        setDebugPayload({ reason: 'no_ad_configured', status: 404 });
+      } else {
+        console.error('🚨 Erro ao buscar anúncio:', error);
+        setDebugPayload({ reason: 'fetch_error', error: error?.message || error, status: error.response?.status });
       }
-
-      console.error('🚨 Erro ao buscar anúncio:', error);
-      setDebugPayload({ reason: 'fetch_error', error: error?.message || error, status: error.response?.status });
-      setLoading(false);
-      return;
     } finally {
       setLoading(false);
     }
@@ -165,7 +118,7 @@ export default function AdScreen() {
     if (!location) return;
 
     try {
-      await client.post(`/ads/public/ads/${location}/click`);
+      await client.post(`/system-admin/api/public/ads/click/${location}`);
     } catch (error) {
       console.error('Error tracking click:', error);
     }
@@ -240,37 +193,13 @@ export default function AdScreen() {
     );
   }
 
-  // Se for anúncio HTML, usar WebView
-  if (adContent.type === 'html' && adContent.html) {
-    // Build complete HTML with injected CSS, JS, and images
-    const fullHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    ${adContent.css || ''}
-  </style>
-</head>
-<body>
-  ${adContent.html.replace(/src="([^"]+)"/g, (match, filename) => {
-    const imageName = filename.split('/').pop();
-    const base64Image = adContent.images?.[imageName];
-    return base64Image ? `src="${base64Image}"` : match;
-  })}
-  <script>
-    ${adContent.js || ''}
-  </script>
-</body>
-</html>
-    `;
-
+  // Se for anúncio HTML, usar WebView carregando a URL do ad
+  if (adContent.type === 'html' && adContent.uri) {
     return (
       <SafeAreaView style={styles.container}>
-        {/* WebView occupies full available height */}
         <View style={styles.webviewContainer}>
           <WebView
-            source={{ html: fullHTML }}
+            source={{ uri: adContent.uri }}
             style={styles.webview}
             onMessage={handleMessage}
             javaScriptEnabled={true}

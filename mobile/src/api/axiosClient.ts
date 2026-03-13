@@ -41,6 +41,8 @@ const getAuthToken = async (): Promise<string | null> => {
 // Get base URL from environment
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
+console.log('[axiosClient] BASE_URL configurado:', BASE_URL);
+
 // Create axios instance
 const client = axios.create({
   baseURL: BASE_URL,
@@ -67,6 +69,8 @@ axiosRetry(client, {
 client.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
+      console.log('[axios] Requisição para:', config.baseURL + config.url, 'Método:', config.method);
+      
       // Get token (may read SecureStore if in-memory missing)
       const token = await getAuthToken();
 

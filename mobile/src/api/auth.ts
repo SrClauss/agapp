@@ -26,9 +26,15 @@ export async function loginWithEmail(email: string, password: string, turnstileT
       headers['Authorization'] = `Bearer ${authToken}`;
     }
 
+    console.log('[loginWithEmail] Enviando requisição para /auth/login');
+    console.log('[loginWithEmail] Headers:', JSON.stringify(headers));
+    console.log('[loginWithEmail] Params:', params.toString());
+
     const { data } = await client.post('/auth/login', params, {
       headers,
     });
+
+    console.log('[loginWithEmail] Login bem-sucedido, access_token recebido');
 
     // Buscar dados do usuário se não vieram no token
     if (!data.user) {
@@ -38,7 +44,20 @@ export async function loginWithEmail(email: string, password: string, turnstileT
     return { token: data.access_token, user: data.user };
   } catch (error) {
     const axiosError = error as AxiosError<{ detail?: string }>;
-    throw new Error(axiosError.response?.data?.detail || 'Login failed');
+    console.error('[loginWithEmail] Erro:', axiosError.response?.status, axiosError.response?.data);
+    
+    // Mensagens mais amigáveis baseadas no erro
+    if (axiosError.response?.status === 401) {
+      throw new Error('E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.');
+    } else if (axiosError.response?.status === 404) {
+      throw new Error('Usuário não encontrado. Verifique o e-mail digitado.');
+    } else if (axiosError.response?.status === 400) {
+      throw new Error(axiosError.response?.data?.detail || 'Dados inválidos. Verifique os campos e tente novamente.');
+    } else if (axiosError.response?.status && axiosError.response.status >= 500) {
+      throw new Error('Erro no servidor. Tente novamente em alguns instantes.');
+    }
+    
+    throw new Error(axiosError.response?.data?.detail || 'Erro ao fazer login. Verifique sua conexão e tente novamente.');
   }
 }
 
