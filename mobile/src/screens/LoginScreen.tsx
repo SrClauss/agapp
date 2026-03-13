@@ -10,6 +10,7 @@ import NotificationsService from '../services/notifications';
 
 import client from '../api/axiosClient';
 import axios from 'axios';
+import { checkAdScreenVersion } from '../api/adsService';
 import { WebView } from 'react-native-webview';
 import { Modal, ActivityIndicator, Linking } from 'react-native';
 
@@ -80,30 +81,26 @@ export default function LoginScreen() {
       return;
     }
 
-    // Determinar location do ad baseado no role (formato backend atual)
-    const location = user.roles.includes('client') ? 'publi_screen_client' : 'publi_screen_professional';
+    // Determine target based on user role
+    const target: 'client' | 'professional' = user.roles.includes('client') ? 'client' : 'professional';
+    const roleParam: 'client' | 'professional' | undefined = target;
 
-    // Verificar se anúncios estão disponíveis (usando os arquivos estáticos gerados pelo backend)
+    // Check if AdScreen is configured using the version endpoint
     try {
-      console.log('🔍 Verificando anúncio para location:', location);
-      const checkResponse = await client.get(`/ads/${location}/index.html`, { responseType: 'text' });
-      if (checkResponse.status === 200) {
-        console.log('✅ Anúncio encontrado, navegando para AdScreen');
-        const roleParam = user.roles.includes('client') && !user.roles.includes('professional') ? 'client' : user.roles.includes('professional') && !user.roles.includes('client') ? 'professional' : undefined;
-        navigation.navigate('AdScreen' as never, { location, role: roleParam } as any);
+      console.log('🔍 Verificando versão do AdScreen para target:', target);
+      const version = await checkAdScreenVersion(target);
+      if (version > 0) {
+        console.log(`✅ AdScreen configurado (v${version}), navegando para AdScreen`);
+        navigation.navigate('AdScreen' as never, { target, role: roleParam } as any);
         return;
       }
 
-      console.log('ℹ️ Nenhum anúncio disponível, indo para tela principal');
+      console.log('ℹ️ Nenhum AdScreen disponível, indo para tela principal');
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        console.log('ℹ️ Nenhum anúncio configurado para esta location (404)');
-      } else {
-        console.error('🚨 Erro ao verificar anúncios:', error);
-      }
+      console.error('🚨 Erro ao verificar AdScreen:', error);
     }
 
-    // Se não houver anúncios ou erro, vai direto para tela principal
+    // If no AdScreen or error, go directly to main screen
     const destination = user.roles.includes('client')
       ? 'WelcomeCustomer'
       : user.roles.includes('professional')

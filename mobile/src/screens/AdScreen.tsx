@@ -1,36 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Text, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import useAuthStore from '../stores/authStore';
 import client from '../api/axiosClient';
-import ImageAdCarousel from '../components/ImageAdCarousel';
-
-interface ImageItem {
-  uri: string;
-  link?: string | null;
-}
-
-interface AdContent {
-  id: string;
-  alias: string;
-  type: 'html' | 'image';
-  html?: string;
-  uri?: string;
-  css?: string;
-  js?: string;
-  images?: { [key: string]: string };
-  imagesList?: ImageItem[];
-}
+import { checkAdScreenVersion } from '../api/adsService';
 
 export default function AdScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { location, role } = route.params as { location: 'publi_screen_client' | 'publi_screen_professional'; role?: 'client' | 'professional' };
-  const [adContent, setAdContent] = useState<AdContent | null>(null);
-  const [debugPayload, setDebugPayload] = useState<any>(null);
+  // Support both legacy 'location' param and new 'target' param
+  const params = route.params as {
+    location?: 'publi_screen_client' | 'publi_screen_professional';
+    target?: 'client' | 'professional';
+    role?: 'client' | 'professional';
+  };
+  const role = params.role;
+  // Derive target from 'target' param or from legacy 'location' param
+  const target: 'client' | 'professional' = params.target
+    ? params.target
+    : params.location === 'publi_screen_professional'
+    ? 'professional'
+    : 'client';
+
+  const [adUri, setAdUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const token = useAuthStore((state) => state.token);
+  const [hasError, setHasError] = useState(false);
   const user = useAuthStore((state) => state.user);
   const setActiveRole = useAuthStore((s) => s.setActiveRole);
 
@@ -38,7 +33,6 @@ export default function AdScreen() {
   const handleContinue = () => {
     // If a role was explicitly passed (ProfileSelection or single-role login), honor it
     if (role) {
-      // Persist active role and replace current route with the respective welcome
       setActiveRole(role);
       if (role === 'client') {
         navigation.replace('WelcomeCustomer' as never);
@@ -53,7 +47,6 @@ export default function AdScreen() {
     const isClient = user?.roles?.includes('client');
     const isProfessional = user?.roles?.includes('professional');
 
-    // If user has both roles, replace with ProfileSelection
     if (isClient && isProfessional) {
       navigation.replace('ProfileSelection' as never);
       return;
@@ -65,69 +58,101 @@ export default function AdScreen() {
     }
 
     if (isProfessional) {
-      // Professional flows are deprecated for now; replace with ProfileSelection so user can continue
       navigation.replace('ProfileSelection' as never);
       return;
     }
 
-    // Fallback
     navigation.replace('WelcomeCustomer' as never);
   };
 
-  const fetchAdContent = async () => {
+  const loadAdScreen = async () => {
     try {
-      console.log('🔍 Buscando anúncio para location:', location);
+      setLoading(true);
+      setHasError(false);
 
-      // Use the static file served by backend (ad HTML + assets)
-      const base = client.defaults.baseURL?.replace(/\/$/, '') || '';
-      const url = `${base}/ads/${location}/index.html`;
-      console.log('🔗 URL do anúncio:', url);
-
-      // Check if the ad exists by fetching the HTML (will 404 if not configured)
-      const response = await client.get(url, { responseType: 'text' });
-
-      if (response.status === 200 && response.data) {
-        setAdContent({
-          id: location,
-          alias: location,
-          type: 'html',
-          uri: url,
-        });
+      // Check if AdScreen exists (version > 0 means content is configured)
+      const version = await checkAdScreenVersion(target);
+      if (version === 0) {
+        console.log(`ℹ️ No AdScreen configured for target: ${target}`);
+        handleContinue();
         return;
       }
 
-      setDebugPayload({ reason: 'unexpected_response', status: response.status, data: response.data });
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        console.log('ℹ️ Nenhum anúncio configurado para esta location (404)');
-        setDebugPayload({ reason: 'no_ad_configured', status: 404 });
-      } else {
-        console.error('🚨 Erro ao buscar anúncio:', error);
-        setDebugPayload({ reason: 'fetch_error', error: error?.message || error, status: error.response?.status });
-      }
+      // Use the public serve endpoint to load the AdScreen HTML in WebView
+      const base = client.defaults.baseURL?.replace(/\/$/, '') || '';
+      const uri = `${base}/ads-mobile/adscreen/${target}/serve/index.html`;
+      console.log(`✅ AdScreen found (v${version}), loading from: ${uri}`);
+      setAdUri(uri);
+    } catch (error) {
+      console.error('�� Error loading AdScreen:', error);
+      setHasError(true);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAdContent();
-  }, [location]);
+    loadAdScreen();
+  }, [target]);
 
   const trackClick = async () => {
-    if (!location) return;
-
     try {
-      await client.post(`/system-admin/api/public/ads/click/${location}`);
-    } catch (error) {
-      console.error('Error tracking click:', error);
+      await client.post(`/ads-mobile/click/adscreen_${target}`);
+    } catch {
+      // Tracking errors are non-critical
     }
   };
 
+  /**
+   * Handle messages from the WebView HTML.
+   *
+   * Supported message formats:
+   * - 'Onclose' or 'close': close the AdScreen and navigate to welcome screen
+   * - JSON { type: 'internal', action: { onPress_type: 'stack', onPress_stack: 'ScreenName' } }
+   * - JSON { type: 'external', link: 'https://...' }
+   * - 'click' or 'banner_click': track ad click
+   */
   const handleMessage = (event: any) => {
-    const message = event.nativeEvent.data;
-    if (message === 'click' || message === 'banner_click') {
+    const raw: string = event.nativeEvent.data;
+
+    // Handle plain string messages
+    if (raw === 'Onclose' || raw === 'close') {
+      handleContinue();
+      return;
+    }
+
+    if (raw === 'click' || raw === 'banner_click') {
       trackClick();
+      return;
+    }
+
+    // Try to parse as structured JSON message
+    try {
+      const message = JSON.parse(raw);
+
+      if (message?.type === 'internal') {
+        const stackName = message?.action?.onPress_stack;
+        if (stackName) {
+          try {
+            (navigation as any).navigate(stackName);
+          } catch (err) {
+            console.error('[AdScreen] Error navigating to stack:', stackName, err);
+          }
+        }
+        return;
+      }
+
+      if (message?.type === 'external') {
+        const link = message?.link;
+        if (link) {
+          Linking.openURL(link).catch(err => {
+            console.error('[AdScreen] Error opening URL:', link, err);
+          });
+        }
+        return;
+      }
+    } catch {
+      // Not valid JSON — ignore
     }
   };
 
@@ -141,89 +166,56 @@ export default function AdScreen() {
     );
   }
 
-  if (!adContent) {
-    // If we have debug information (no ad / error), show a debug UI so devs can inspect and retry
-    if (!loading && debugPayload) {
-      return (
-        <SafeAreaView style={styles.container}>
-          <View style={styles.debugContainer}>
-            <Text style={styles.debugTitle}>Anúncio indisponível</Text>
-            <Text style={styles.debugText}>{JSON.stringify(debugPayload, null, 2)}</Text>
-            <View style={styles.debugActions}>
-              <TouchableOpacity
-                style={styles.debugButton}
-                onPress={() => {
-                  setDebugPayload(null);
-                  setLoading(true);
-                  fetchAdContent();
-                }}
-              >
-                <Text>Repetir</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.debugButton}
-                onPress={() => {
-                  setDebugPayload(null);
-                  handleContinue();
-                }}
-              >
-                <Text>Continuar</Text>
-              </TouchableOpacity>
-            </View>
+  if (hasError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugTitle}>Anúncio indisponível</Text>
+          <View style={styles.debugActions}>
+            <TouchableOpacity style={styles.debugButton} onPress={() => loadAdScreen()}>
+              <Text>Repetir</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.debugButton} onPress={handleContinue}>
+              <Text>Continuar</Text>
+            </TouchableOpacity>
           </View>
-        </SafeAreaView>
-      );
-    }
+        </View>
+      </SafeAreaView>
+    );
+  }
 
+  if (!adUri) {
     return null;
   }
 
-  const handleClose = () => {
-    // Close the ad and continue (respecting a passed role if any)
-    handleContinue();
-  };
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.webviewContainer}>
+        <WebView
+          source={{ uri: adUri }}
+          style={styles.webview}
+          onMessage={handleMessage}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#667eea" />
+            </View>
+          )}
+          onError={() => {
+            console.error('[AdScreen] WebView failed to load:', adUri);
+            handleContinue();
+          }}
+        />
+      </View>
 
-  // Se for anúncio de imagem, usar o componente ImageAdCarousel
-  if (adContent.type === 'image' && adContent.imagesList && adContent.imagesList.length > 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ImageAdCarousel images={adContent.imagesList} onClose={handleClose} />
-      </SafeAreaView>
-    );
-  }
-
-  // Se for anúncio HTML, usar WebView carregando a URL do ad
-  if (adContent.type === 'html' && adContent.uri) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.webviewContainer}>
-          <WebView
-            source={{ uri: adContent.uri }}
-            style={styles.webview}
-            onMessage={handleMessage}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            startInLoadingState={true}
-            renderLoading={() => (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#667eea" />
-              </View>
-            )}
-          />
-        </View>
-
-        {/* Overlay close button at the top-right corner (independent of ad template) */}
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose} accessibilityLabel="Fechar anúncio">
-          <Text style={styles.closeButtonText}>✕</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  // Fallback: se não for nem imagem nem HTML, redirecionar
-  handleClose();
-  return null;
+      {/* Overlay close button at the top-right corner */}
+      <TouchableOpacity style={styles.closeButton} onPress={handleContinue} accessibilityLabel="Fechar anúncio">
+        <Text style={styles.closeButtonText}>✕</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -238,7 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   webviewContainer: {
-    flex: 1, // WebView takes full screen height
+    flex: 1,
     width: '100%',
   },
   webview: {
@@ -246,12 +238,12 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 66, // increase top margin to keep inside the container
-    right: 22, // increase right margin to keep inside the container
+    top: 66,
+    right: 22,
     width: 34,
     height: 34,
     borderRadius: 34 / 2,
-    backgroundColor: 'rgba(255,255,255,0.1)', // glass/semi-transparent
+    backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
@@ -264,19 +256,13 @@ const styles = StyleSheet.create({
     paddingRight: 0,
   },
   closeButtonText: {
-    color: '#111', // discreet black 'X'
+    color: '#111',
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 16,
   },
-  // The bottom button is removed in favor of a top-right overlay close button
-  button: {
-    width: '100%',
-  },
-  /* Debug UI styles */
   debugContainer: { flex: 1, padding: 16, justifyContent: 'center', alignItems: 'center' },
   debugTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
-  debugText: { fontSize: 12, color: '#333', textAlign: 'left' },
   debugActions: { flexDirection: 'row', marginTop: 16 },
-  debugButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#eee' },
+  debugButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#eee', marginHorizontal: 8 },
 });

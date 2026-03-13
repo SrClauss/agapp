@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { ImageBackground } from 'react-native';
 import { Button } from 'react-native-paper';
+import { checkAdScreenVersion } from '../api/adsService';
 export default function ProfileSelectionScreen() {
   const navigation = useNavigation();
   const setActiveRole = useAuthStore((s: AuthState) => s.setActiveRole);
@@ -14,22 +15,19 @@ export default function ProfileSelectionScreen() {
   const handleRoleSelection = async (role: string) => {
     setActiveRole(role);
 
-    // Determine location for this role (uses backend static ad files)
-    const location = role === 'client' ? 'publi_screen_client' : 'publi_screen_professional';
+    // Determine target for the selected role
+    const target: 'client' | 'professional' = role === 'client' ? 'client' : 'professional';
 
     try {
-      const clientApi = require('../api/axiosClient').default;
-      const checkResponse = await clientApi.get(`/ads/${location}/index.html`, { responseType: 'text' });
-      if (checkResponse.status === 200) {
+      const version = await checkAdScreenVersion(target);
+      if (version > 0) {
         // If ad exists, show AdScreen which will navigate to the correct welcome screen afterward
-        navigation.navigate('AdScreen' as never, { location, role } as never);
+        navigation.navigate('AdScreen' as never, { target, role } as never);
         return;
       }
     } catch (err: any) {
-      if (err.response?.status !== 404) {
-        console.warn('Erro ao verificar anúncio após seleção de perfil:', err);
-      }
-      // If 404 or other error, fall through to navigate normally
+      console.warn('Erro ao verificar anúncio após seleção de perfil:', err);
+      // If error, fall through to navigate normally
     }
 
     // No ad — navigate to the appropriate screen based on role

@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse, HTMLResponse, Response
 from typing import List, Optional
 import base64
 import logging
+import mimetypes
 from datetime import datetime, timezone
 from pathlib import Path
 from PIL import Image
@@ -739,7 +740,6 @@ async def preview_adscreen_file(
             file_content = zip_ref.read(file_found)
             
             # Determine media type based on extension
-            import mimetypes
             media_type, _ = mimetypes.guess_type(file_found)
             if not media_type:
                 media_type = "application/octet-stream"
@@ -901,6 +901,75 @@ async def sync_adscreen(
         "version": adscreen.version,
         "up_to_date": True
     }
+
+
+@mobile_router.get("/adscreen/{target}/serve/{file_path:path}")
+async def serve_adscreen_file(
+    target: str,
+    file_path: str,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Serve individual files from AdScreen ZIP for mobile WebView.
+    Public endpoint (no authentication required).
+    Allows the mobile app WebView to load the AdScreen HTML and its assets
+    directly from the server-side ZIP without needing local extraction.
+    """
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+
+    adscreen = await adscreen_crud.get_adscreen_by_target(db, target, include_zip=True)
+
+    if not adscreen or not adscreen.zip_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No AdScreen configured for this target"
+        )
+
+    # Default to index.html if no path or empty path
+    search_path = file_path.strip("/") if file_path else "index.html"
+    if not search_path:
+        search_path = "index.html"
+
+    try:
+        zip_bytes = io.BytesIO(adscreen.zip_data)
+        with zipfile.ZipFile(zip_bytes, 'r') as zip_ref:
+            file_found = None
+            for name in zip_ref.namelist():
+                # Match by exact name or by basename (case-insensitive)
+                if name.lower() == search_path.lower() or name.lower().endswith("/" + search_path.lower()):
+                    file_found = name
+                    break
+
+            if not file_found:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"File '{search_path}' not found in ZIP"
+                )
+
+            file_content = zip_ref.read(file_found)
+
+            media_type, _ = mimetypes.guess_type(file_found)
+            if not media_type:
+                media_type = "application/octet-stream"
+
+            return Response(content=file_content, media_type=media_type)
+
+    except zipfile.BadZipFile:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Invalid ZIP file"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error extracting file: {str(e)}"
+        )
 
 
 # ==========================================================================
