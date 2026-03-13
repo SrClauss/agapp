@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
 // Permite que o Expo Go complete o redirect de autenticação OAuth
@@ -37,8 +38,20 @@ export function useGoogleAuth() {
   const [response, setResponse] = useState<AuthResponse | null>(null);
   const [isReady, setIsReady] = useState(true);
 
-  // Nota: Não precisamos mais do listener Linking porque AuthSession.openAuthSessionAsync
-  // retorna a URL de callback diretamente
+  useEffect(() => {
+    // Listener para capturar o deep-link de retorno do OAuth
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      console.log('[GoogleAuth] Deep-link recebido:', url);
+      
+      if (url.startsWith(DEEP_LINK_SCHEME)) {
+        handleDeepLink(url);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const handleDeepLink = (url: string) => {
     try {
@@ -79,15 +92,10 @@ export function useGoogleAuth() {
       const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
       console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
       
-      // Usar WebBrowser.openAuthSessionAsync - mantém contexto do app
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, DEEP_LINK_SCHEME);
+      // Abrir navegador do sistema (sem interceptar - o backend vai retornar página HTML com deep-link)
+      const result = await WebBrowser.openBrowserAsync(authUrl);
       
-      console.log('[GoogleAuth] Resultado do AuthSession:', result);
-      
-      if (result.type === 'success' && result.url) {
-        // WebBrowser já capturou a URL de retorno
-        handleDeepLink(result.url);
-      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+      if (result.type === 'cancel' || result.type === 'dismiss') {
         setResponse({ type: result.type });
       }
     } catch (error) {
