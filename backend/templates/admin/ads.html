@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
+<parameter name="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 {% endblock %}
 
@@ -14,7 +14,7 @@
 <div class="mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
   <div>
     <h1 class="h3 mb-1 fw-bold text-gray-800">Gerenciamento de Publicidade</h1>
-    <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel (Sistema MongoDB)</p>
+    <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel</p>
   </div>
   <button class="btn btn-outline-secondary btn-sm" onclick="reloadAllMongoDB()">
     <i class="fas fa-sync-alt me-1"></i>Atualizar tudo
@@ -24,16 +24,12 @@
 <!-- ───────── ALERTS ───────── -->
 <div id="alert-container" class="mb-3"></div>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     NOVO SISTEMA - MONGODB STORAGE
-===================================================================== -->
-
-<!-- ───────── BANNER ADS (MongoDB) ───────── -->
+<!-- ───────── BANNER ADS ───────── -->
 <div class="card shadow-sm mb-4">
   <div class="card-header" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff;">
     <h5 class="mb-0">
       <i class="fas fa-images me-2"></i>
-      Banner Ads (MongoDB Storage)
+      Banner Ads
     </h5>
   </div>
   <div class="card-body">
@@ -98,12 +94,12 @@
   </div>
 </div>
 
-<!-- ───────── ADSCREEN ADS (MongoDB) ───────── -->
+<!-- ───────── ADSCREEN ADS ───────── -->
 <div class="card shadow-sm mb-4">
   <div class="card-header" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff;">
     <h5 class="mb-0">
       <i class="fas fa-file-zipper me-2"></i>
-      AdScreen Ads (MongoDB Storage)
+      AdScreen Ads
     </h5>
   </div>
   <div class="card-body">
@@ -166,544 +162,11 @@
   </div>
 </div>
 
-<hr class="my-5">
-<h4 class="text-muted mb-3">Sistema Antigo (Filesystem - Legado)</h4>
-
-<!-- ───────── GRID 4 SEÇÕES ───────── -->
-<div class="row g-4">
-
-  <!-- ═══════════════════════════════════
-       SEÇÃO 1 — PubliScreen Cliente
-  ═══════════════════════════════════ -->
-  <div class="col-12 col-lg-6">
-    <div class="card shadow-sm h-100" id="card-publi_screen_client">
-      <div class="card-header d-flex align-items-center justify-content-between"
-           style="background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff;">
-        <div>
-          <i class="fas fa-mobile-alt me-2"></i>
-          <strong>PubliScreen — Cliente</strong>
-          <div class="small opacity-75">Tela cheia exibida após login do cliente</div>
-        </div>
-        <span class="badge status-badge" id="badge-publi_screen_client">—</span>
-      </div>
-      <div class="card-body d-flex flex-column gap-3">
-
-        <!-- action buttons -->
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-primary btn-sm"
-                  onclick="openPubliModal('publi_screen_client')">
-            <i class="fas fa-upload me-1"></i>Configurar ZIP
-          </button>
-          <button class="btn btn-outline-danger btn-sm"
-                  onclick="clearLocation('publi_screen_client')">
-            <i class="fas fa-trash me-1"></i>Limpar
-          </button>
-        </div>
-
-        <!-- preview area -->
-        <div class="preview-area" id="preview-publi_screen_client" style="display:none;">
-          <div class="preview-label">
-            <i class="fas fa-eye me-1"></i>Preview
-            <span class="action-pill" id="action-pill-publi_screen_client"></span>
-          </div>
-          <div class="iframe-wrapper">
-            <iframe id="iframe-publi_screen_client"
-                    src=""
-                    class="preview-iframe"
-                    sandbox="allow-scripts allow-same-origin"></iframe>
-          </div>
-        </div>
-
-        <!-- empty state -->
-        <div class="empty-state" id="empty-publi_screen_client">
-          <i class="fas fa-photo-film fa-2x mb-2 text-muted"></i>
-          <div class="text-muted small">Nenhum conteúdo configurado</div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════
-       SEÇÃO 2 — PubliScreen Profissional
-  ═══════════════════════════════════ -->
-  <div class="col-12 col-lg-6">
-    <div class="card shadow-sm h-100" id="card-publi_screen_professional">
-      <div class="card-header d-flex align-items-center justify-content-between"
-           style="background:linear-gradient(135deg,#10b981,#059669); color:#fff;">
-        <div>
-          <i class="fas fa-mobile-alt me-2"></i>
-          <strong>PubliScreen — Profissional</strong>
-          <div class="small opacity-75">Tela cheia exibida após login do profissional</div>
-        </div>
-        <span class="badge status-badge" id="badge-publi_screen_professional">—</span>
-      </div>
-      <div class="card-body d-flex flex-column gap-3">
-
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-success btn-sm"
-                  onclick="openPubliModal('publi_screen_professional')">
-            <i class="fas fa-upload me-1"></i>Configurar ZIP
-          </button>
-          <button class="btn btn-outline-danger btn-sm"
-                  onclick="clearLocation('publi_screen_professional')">
-            <i class="fas fa-trash me-1"></i>Limpar
-          </button>
-        </div>
-
-        <div class="preview-area" id="preview-publi_screen_professional" style="display:none;">
-          <div class="preview-label">
-            <i class="fas fa-eye me-1"></i>Preview
-            <span class="action-pill" id="action-pill-publi_screen_professional"></span>
-          </div>
-          <div class="iframe-wrapper">
-            <iframe id="iframe-publi_screen_professional"
-                    src=""
-                    class="preview-iframe"
-                    sandbox="allow-scripts allow-same-origin"></iframe>
-          </div>
-        </div>
-
-        <div class="empty-state" id="empty-publi_screen_professional">
-          <i class="fas fa-photo-film fa-2x mb-2 text-muted"></i>
-          <div class="text-muted small">Nenhum conteúdo configurado</div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════
-       SEÇÃO 3 — Banner Cliente
-  ═══════════════════════════════════ -->
-  <div class="col-12 col-lg-6">
-    <div class="card shadow-sm h-100" id="card-banner_client_home">
-      <div class="card-header d-flex align-items-center justify-content-between"
-           style="background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff;">
-        <div>
-          <i class="fas fa-rectangle-ad me-2"></i>
-          <strong>Banner — Cliente</strong>
-          <div class="small opacity-75">Banner exibido na home do cliente (mín 2.5:1, ideal 3:1)</div>
-        </div>
-        <span class="badge status-badge" id="badge-banner_client_home">—</span>
-      </div>
-      <div class="card-body d-flex flex-column gap-3">
-
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-info btn-sm text-white"
-                  onclick="openBannerModal('banner_client_home')">
-            <i class="fas fa-image me-1"></i>Configurar Banner
-          </button>
-          <button class="btn btn-outline-danger btn-sm"
-                  onclick="clearLocation('banner_client_home')">
-            <i class="fas fa-trash me-1"></i>Limpar
-          </button>
-        </div>
-
-        <div class="preview-area" id="preview-banner_client_home" style="display:none;">
-          <div class="preview-label">
-            <i class="fas fa-eye me-1"></i>Preview (<span id="count-banner_client_home">0</span> imagens)
-            <span class="action-pill" id="action-pill-banner_client_home"></span>
-          </div>
-          <div class="banner-images-grid" id="grid-banner_client_home"></div>
-        </div>
-
-        <div class="empty-state" id="empty-banner_client_home">
-          <i class="fas fa-image fa-2x mb-2 text-muted"></i>
-          <div class="text-muted small">Nenhum banner configurado</div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════
-       SEÇÃO 4 — Banner Profissional
-  ═══════════════════════════════════ -->
-  <div class="col-12 col-lg-6">
-    <div class="card shadow-sm h-100" id="card-banner_professional_home">
-      <div class="card-header d-flex align-items-center justify-content-between"
-           style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff;">
-        <div>
-          <i class="fas fa-rectangle-ad me-2"></i>
-          <strong>Banner — Profissional</strong>
-          <div class="small opacity-75">Banner exibido na home do profissional (mín 2.5:1, ideal 3:1)</div>
-        </div>
-        <span class="badge status-badge" id="badge-banner_professional_home">—</span>
-      </div>
-      <div class="card-body d-flex flex-column gap-3">
-
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-warning btn-sm"
-                  onclick="openBannerModal('banner_professional_home')">
-            <i class="fas fa-image me-1"></i>Configurar Banner
-          </button>
-          <button class="btn btn-outline-danger btn-sm"
-                  onclick="clearLocation('banner_professional_home')">
-            <i class="fas fa-trash me-1"></i>Limpar
-          </button>
-        </div>
-
-        <div class="preview-area" id="preview-banner_professional_home" style="display:none;">
-          <div class="preview-label">
-            <i class="fas fa-eye me-1"></i>Preview (<span id="count-banner_professional_home">0</span> imagens)
-            <span class="action-pill" id="action-pill-banner_professional_home"></span>
-          </div>
-          <div class="banner-images-grid" id="grid-banner_professional_home"></div>
-        </div>
-
-        <div class="empty-state" id="empty-banner_professional_home">
-          <i class="fas fa-image fa-2x mb-2 text-muted"></i>
-          <div class="text-muted small">Nenhum banner configurado</div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-</div><!-- /row -->
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     MODAL — PubliScreen (upload ZIP + ação)
-═══════════════════════════════════════════════════════════ -->
-<div class="modal fade" id="modalPubliscreen" tabindex="-1" aria-labelledby="modalPubliscreenLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="modalPubliscreenLabel">
-          <i class="fas fa-upload me-2"></i>Configurar PubliScreen
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form id="form-publiscreen" novalidate>
-          <input type="hidden" id="publiscreen-location" value="">
-
-          <!-- ZIP file -->
-          <div class="mb-3">
-            <label class="form-label fw-semibold">
-              <i class="fas fa-file-zipper me-1"></i>Arquivo ZIP <span class="text-danger">*</span>
-            </label>
-            <input type="file" class="form-control" id="publiscreen-zip" accept=".zip" required>
-            <div class="form-text">O ZIP pode conter <code>index.html</code>, <code>style.css</code>, <code>script.js</code> e imagens. Ao menos um arquivo HTML é recomendado. Máx 20 MB.</div>
-          </div>
-
-          <!-- Ação -->
-          <div class="mb-3">
-            <label class="form-label fw-semibold">
-              <i class="fas fa-route me-1"></i>Tipo de ação ao fechar o anúncio
-            </label>
-            <select class="form-select" id="publiscreen-action-type">
-              <option value="none">Sem ação (apenas fechar)</option>
-              <option value="external">Redirecionamento externo (URL)</option>
-              <option value="internal">Redirecionamento interno (Stack)</option>
-            </select>
-          </div>
-
-          <div class="mb-3" id="publiscreen-action-value-group">
-            <label class="form-label fw-semibold" id="publiscreen-action-value-label">URL / Stack</label>
-            <input type="text" class="form-control" id="publiscreen-action-value"
-                   placeholder="Ex: https://..." style="display:none;">
-            <select class="form-select" id="publiscreen-action-value-select" style="display:none;">
-              <option value="">Selecione a tela de destino</option>
-            </select>
-          </div>
-
-          <!-- upload progress -->
-          <div id="publiscreen-progress" style="display:none;">
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated"
-                   style="width:100%">Enviando...</div>
-            </div>
-          </div>
-
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="btn-publiscreen-submit"
-                onclick="submitPubliscreen()">
-          <i class="fas fa-check me-1"></i>OK — Enviar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     MODAL — Banner (upload imagem + ação)
-═══════════════════════════════════════════════════════════ -->
-<div class="modal fade" id="modalBanner" tabindex="-1" aria-labelledby="modalBannerLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-info text-white">
-        <h5 class="modal-title" id="modalBannerLabel">
-          <i class="fas fa-image me-2"></i>Configurar Banner
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form id="form-banner" novalidate>
-          <input type="hidden" id="banner-location" value="">
-
-          <!-- Image file -->
-          <div class="mb-3">
-            <label class="form-label fw-semibold">
-              <i class="fas fa-image me-1"></i>Imagens do Banner <span class="text-danger">*</span>
-            </label>
-            <input type="file" class="form-control" id="banner-image"
-                   accept=".png,.jpg,.jpeg,.gif,.webp,.svg" multiple required>
-            <div class="form-text">
-              Você pode enviar várias imagens de uma vez. Proporção mínima: <strong>2.5:1 (largura ÷ altura)</strong>. Ideal: <strong>3:1</strong>.
-              Formatos: PNG, JPG, JPEG, GIF, WebP, SVG. Máx 10 MB por arquivo.
-            </div>
-          </div>
-
-          <!-- Ação -->
-          <div class="mb-3">
-            <label class="form-label fw-semibold">
-              <i class="fas fa-route me-1"></i>Ação ao clicar no banner
-            </label>
-            <select class="form-select" id="banner-action-type">
-              <option value="none">Sem ação</option>
-              <option value="external">Redirecionamento externo (URL)</option>
-              <option value="internal">Redirecionamento interno (Stack)</option>
-            </select>
-          </div>
-
-          <div class="mb-3" id="banner-action-value-group">
-            <label class="form-label fw-semibold" id="banner-action-value-label">URL / Stack</label>
-            <input type="text" class="form-control" id="banner-action-value"
-                   placeholder="Ex: https://..." style="display:none;">
-            <select class="form-select" id="banner-action-value-select" style="display:none;">
-              <option value="">Selecione a tela de destino</option>
-            </select>
-          </div>
-
-          <!-- preview dentro do modal -->
-          <div id="banner-modal-preview" style="display:none; margin-top:1rem;">
-            <label class="form-label fw-semibold text-muted small">Pré-visualização</label>
-            <img id="banner-modal-img" src="" alt="preview" class="img-fluid rounded border">
-          </div>
-
-          <!-- upload progress -->
-          <div id="banner-progress" style="display:none;">
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated bg-info"
-                   style="width:100%">Enviando...</div>
-            </div>
-          </div>
-
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-info text-white" id="btn-banner-submit"
-                onclick="submitBanner()">
-          <i class="fas fa-check me-1"></i>OK — Enviar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     STYLES
-═══════════════════════════════════════════════════════════ -->
-<style>
-  .card { border:none; border-radius:14px; overflow:hidden; }
-  .card-header { padding:1rem 1.25rem; }
-
-  .status-badge { font-size:.75rem; padding:.35rem .7rem; border-radius:20px; }
-
-  /* Preview area */
-  .preview-area {
-    border-radius:10px;
-    overflow:hidden;
-    background:#0f172a;
-    padding:.5rem;
-  }
-  .preview-label {
-    font-size:.75rem;
-    font-weight:600;
-    color:#94a3b8;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    margin-bottom:.5rem;
-    display:flex;
-    align-items:center;
-    gap:.5rem;
-  }
-  .action-pill {
-    background:#1e293b;
-    border:1px solid #334155;
-    border-radius:20px;
-    padding:.15rem .6rem;
-    font-size:.7rem;
-    color:#60a5fa;
-    font-weight:500;
-    word-break:break-all;
-  }
-
-  /* iframe (publiscreen) */
-  .iframe-wrapper {
-    position:relative;
-    width:100%;
-    padding-bottom:177.78%; /* 9:16 - simula tela de celular */
-    border-radius:8px;
-    overflow:hidden;
-    background:#000;
-  }
-  .preview-iframe {
-    position:absolute;
-    top:0; left:0;
-    width:100%; height:100%;
-    border:none;
-  }
-
-  /* banner image */
-  .preview-banner-img {
-    width:100%;
-    border-radius:8px;
-    display:block;
-    object-fit:cover;
-    max-height:160px;
-  }
-
-  /* banner images grid */
-  .banner-images-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1rem;
-    padding: 0.5rem 0;
-  }
-
-  .banner-image-item {
-    position: relative;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #1e293b;
-    aspect-ratio: 3/1;
-  }
-
-  .banner-image-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .banner-image-item .btn-remove-image {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border-radius: 50%;
-    background: rgba(220, 38, 38, 0.9);
-    border: none;
-    color: white;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  .banner-image-item:hover .btn-remove-image {
-    opacity: 1;
-  }
-
-  .banner-image-item .btn-remove-image:hover {
-    background: rgba(185, 28, 28, 1);
-  }
-
-  /* empty state */
-  .empty-state {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    padding:2rem 1rem;
-    border:2px dashed #e2e8f0;
-    border-radius:10px;
-    color:#94a3b8;
-    text-align:center;
-  }
-</style>
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     JAVASCRIPT
-═══════════════════════════════════════════════════════════ -->
 <script>
-// ── Stack definitions per profile ────────────────────────────
-const STACKS_BY_PROFILE = {
-  client: [
-    { value: 'WelcomeCustomer', label: 'Tela de Boas Vindas (Cliente)', isDefault: true },
-    { value: 'SearchResults', label: 'Resultados de Busca' },
-    { value: 'CreateProject', label: 'Criar Projeto' },
-    { value: 'AllProjects', label: 'Todos os Projetos' },
-    { value: 'Credits', label: 'Meus Créditos' },
-    { value: 'CreditPackages', label: 'Comprar Créditos' },
-    { value: 'Subscriptions', label: 'Assinaturas' },
-    { value: 'Support', label: 'Suporte' },
-    { value: 'ChatList', label: 'Conversas' },
-    { value: 'ContactDetail', label: 'Detalhes de Contato' },
-    { value: 'ProfileEvaluations', label: 'Avaliações de Perfil' }
-  ],
-  professional: [
-    { value: 'WelcomeProfessional', label: 'Tela de Boas Vindas (Profissional)', isDefault: true },
-    { value: 'EditProfessionalSettings', label: 'Minhas Especialidades' },
-    { value: 'ContactedProjects', label: 'Projetos Contatados' },
-    { value: 'ProjectsList', label: 'Lista de Projetos' },
-    { value: 'Credits', label: 'Meus Créditos' },
-    { value: 'CreditPackages', label: 'Comprar Créditos' },
-    { value: 'Subscriptions', label: 'Assinaturas' },
-    { value: 'Support', label: 'Suporte' },
-    { value: 'ChatList', label: 'Conversas' },
-    { value: 'ContactDetail', label: 'Detalhes de Contato' },
-    { value: 'ProfileEvaluations', label: 'Avaliações de Perfil' }
-  ]
-};
+// ── Helper Functions ──────────────────────────────────────────
 
-// Get profile from location name
-function getProfileFromLocation(location) {
-  if (location.includes('client')) return 'client';
-  if (location.includes('professional')) return 'professional';
-  return 'client'; // fallback
-}
-
-// Populate stack select based on profile
-function populateStackSelect(selectId, profile) {
-  const select = document.getElementById(selectId);
-  const stacks = STACKS_BY_PROFILE[profile] || STACKS_BY_PROFILE.client;
-  
-  // Clear existing options except first
-  select.innerHTML = '<option value="">Selecione a tela de destino</option>';
-  
-  // Add stacks
-  stacks.forEach(stack => {
-    const option = document.createElement('option');
-    option.value = stack.value;
-    option.textContent = stack.label;
-    if (stack.isDefault) {
-      option.selected = true;
-      option.textContent += ' (Padrão)';
-    }
-    select.appendChild(option);
-  });
-}
-
-// ── Helpers ──────────────────────────────────────────────────────
 function getToken() {
-  return localStorage.getItem('access_token') || '';
+  return localStorage.getItem('access_token');
 }
 
 function authHeaders() {
@@ -719,396 +182,12 @@ function showAlert(message, type = 'success') {
   setTimeout(() => div.remove(), 7000);
 }
 
-function actionLabel(action) {
-  if (!action || action.type === 'none') return 'Sem ação';
-  if (action.type === 'external') return `↗ Externo: ${action.value}`;
-  if (action.type === 'internal') return `⤷ Stack: ${action.value}`;
-  return action.value || '—';
-}
-
-// ── Load state for a location ────────────────────────────────────
-async function loadState(location) {
-  try {
-    const res = await fetch(`/ads-admin/state/${location}`, {
-      credentials: 'include',
-      headers: authHeaders()
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    applyState(location, data);
-  } catch (e) {
-    console.warn('loadState error', location, e);
-  }
-}
-
-function applyState(location, data) {
-  const badge    = document.getElementById(`badge-${location}`);
-  const preview  = document.getElementById(`preview-${location}`);
-  const empty    = document.getElementById(`empty-${location}`);
-  const pill     = document.getElementById(`action-pill-${location}`);
-
-  if (data.configured) {
-    badge.textContent = 'Configurado';
-    badge.className = 'badge status-badge bg-success';
-    preview.style.display = '';
-    empty.style.display   = 'none';
-    if (pill) pill.textContent = actionLabel(data.action);
-
-    // publiscreen: reload iframe
-    const iframe = document.getElementById(`iframe-${location}`);
-    if (iframe) {
-      iframe.src = `/ads-admin/preview-html/${location}?t=${Date.now()}`;
-    }
-
-    // banner: load ALL images into grid
-    const grid = document.getElementById(`grid-${location}`);
-    const count = document.getElementById(`count-${location}`);
-    if (grid && data.images && data.images.length > 0) {
-      count.textContent = data.images.length;
-      grid.innerHTML = '';
-      data.images.forEach(imgName => {
-        const item = document.createElement('div');
-        item.className = 'banner-image-item';
-        
-        const img = document.createElement('img');
-        img.src = `/ads-admin/assets/${location}/${encodeURIComponent(imgName)}?t=${Date.now()}`;
-        img.alt = imgName;
-        
-        const btnRemove = document.createElement('button');
-        btnRemove.className = 'btn-remove-image';
-        btnRemove.innerHTML = '&times;';
-        btnRemove.title = `Remover ${imgName}`;
-        btnRemove.onclick = () => removeImage(location, imgName);
-        
-        item.appendChild(img);
-        item.appendChild(btnRemove);
-        grid.appendChild(item);
-      });
-    }
-  } else {
-    badge.textContent = 'Vazio';
-    badge.className = 'badge status-badge bg-secondary';
-    preview.style.display = 'none';
-    empty.style.display   = '';
-    if (pill) pill.textContent = '';
-  }
-}
-
-function reloadAll() {
-  ['publi_screen_client','publi_screen_professional','banner_client_home','banner_professional_home']
-    .forEach(loadState);
-}
-
-// ── PubliScreen modal ────────────────────────────────────────────
-let _publiLocation = '';
-
-function openPubliModal(location) {
-  _publiLocation = location;
-  document.getElementById('publiscreen-location').value = location;
-  document.getElementById('publiscreen-zip').value = '';
-  document.getElementById('publiscreen-action-type').value = 'internal'; // Padrão: navegação interna
-  document.getElementById('publiscreen-action-value').value = '';
-  document.getElementById('publiscreen-progress').style.display = 'none';
-  
-  // Populate stack select based on profile
-  const profile = getProfileFromLocation(location);
-  populateStackSelect('publiscreen-action-value-select', profile);
-  
-  updatePubliActionValueGroup();
-  const modal = new bootstrap.Modal(document.getElementById('modalPubliscreen'));
-  modal.show();
-}
-
-function updatePubliActionValueGroup() {
-  const type = document.getElementById('publiscreen-action-type').value;
-  const grp  = document.getElementById('publiscreen-action-value-group');
-  const lbl  = document.getElementById('publiscreen-action-value-label');
-  const inp  = document.getElementById('publiscreen-action-value');
-  const sel  = document.getElementById('publiscreen-action-value-select');
-  
-  if (type === 'none') {
-    grp.style.display = 'none';
-    inp.style.display = 'none';
-    sel.style.display = 'none';
-  } else {
-    grp.style.display = '';
-    if (type === 'external') {
-      lbl.textContent = 'URL de destino';
-      inp.placeholder = 'https://exemplo.com';
-      inp.style.display = '';
-      sel.style.display = 'none';
-    } else { // internal
-      lbl.textContent = 'Tela de destino (Stack)';
-      inp.style.display = 'none';
-      sel.style.display = '';
-    }
-  }
-}
-
-async function submitPubliscreen() {
-  const location    = _publiLocation;
-  const zipInput    = document.getElementById('publiscreen-zip');
-  const actionType  = document.getElementById('publiscreen-action-type').value;
-  const actionValueInput = document.getElementById('publiscreen-action-value').value.trim();
-  const actionValueSelect = document.getElementById('publiscreen-action-value-select').value;
-  const actionValue = (actionType === 'internal') ? actionValueSelect : actionValueInput;
-  const btn         = document.getElementById('btn-publiscreen-submit');
-  const progress    = document.getElementById('publiscreen-progress');
-
-  if (!zipInput.files.length) {
-    showAlert('Selecione um arquivo ZIP.', 'warning');
-    return;
-  }
-
-  if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
-    showAlert('Selecione ou informe o destino para a ação.', 'warning');
-    return;
-  }
-
-  const fd = new FormData();
-  fd.append('file', zipInput.files[0]);
-  fd.append('action_type', actionType);
-  fd.append('action_value', actionValue);
-
-  btn.disabled = true;
-  progress.style.display = '';
-
-  try {
-    const res = await fetch(`/ads-admin/upload-zip/${location}`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: authHeaders(),
-      body: fd
-    });
-
-    const json = await res.json();
-
-    if (!res.ok) {
-      const msg = json.detail || 'Erro no upload';
-      showAlert(`Erro: ${msg}`, 'danger');
-      return;
-    }
-
-    // Success: close modal, show alert, reload state
-    bootstrap.Modal.getInstance(document.getElementById('modalPubliscreen')).hide();
-    showAlert('PubliScreen configurado com sucesso!', 'success');
-
-    // Show browser alert with action info (works outside webview)
-    const actLabel = actionLabel(json.action);
-    alert(`✅ PubliScreen cadastrado!\n\nAção configurada: ${actLabel}`);
-
-    await loadState(location);
-
-  } catch (e) {
-    showAlert('Erro de conexão ao enviar ZIP.', 'danger');
-    console.error(e);
-  } finally {
-    btn.disabled = false;
-    progress.style.display = 'none';
-  }
-}
-
-// ── Banner modal ─────────────────────────────────────────────────
-let _bannerLocation = '';
-
-function openBannerModal(location) {
-  _bannerLocation = location;
-  document.getElementById('banner-location').value = location;
-  document.getElementById('banner-image').value = '';
-  document.getElementById('banner-action-type').value = 'none';
-  document.getElementById('banner-action-value').value = '';
-  document.getElementById('banner-modal-preview').style.display = 'none';
-  document.getElementById('banner-modal-img').src = '';
-  document.getElementById('banner-progress').style.display = 'none';
-  
-  // Populate stack select based on profile
-  const profile = getProfileFromLocation(location);
-  populateStackSelect('banner-action-value-select', profile);
-  
-  updateBannerActionValueGroup();
-  const modal = new bootstrap.Modal(document.getElementById('modalBanner'));
-  modal.show();
-}
-
-function updateBannerActionValueGroup() {
-  const type = document.getElementById('banner-action-type').value;
-  const grp  = document.getElementById('banner-action-value-group');
-  const lbl  = document.getElementById('banner-action-value-label');
-  const inp  = document.getElementById('banner-action-value');
-  const sel  = document.getElementById('banner-action-value-select');
-  
-  if (type === 'none') {
-    grp.style.display = 'none';
-    inp.style.display = 'none';
-    sel.style.display = 'none';
-  } else {
-    grp.style.display = '';
-    if (type === 'external') {
-      lbl.textContent = 'URL de destino';
-      inp.placeholder = 'https://exemplo.com';
-      inp.style.display = '';
-      sel.style.display = 'none';
-    } else { // internal
-      lbl.textContent = 'Tela de destino (Stack)';
-      inp.style.display = 'none';
-      sel.style.display = '';
-    }
-  }
-}
-
-async function submitBanner() {
-  const location    = _bannerLocation;
-  const imgInput    = document.getElementById('banner-image');
-  const actionType  = document.getElementById('banner-action-type').value;
-  const actionValueInput = document.getElementById('banner-action-value').value.trim();
-  const actionValueSelect = document.getElementById('banner-action-value-select').value;
-  const actionValue = (actionType === 'internal') ? actionValueSelect : actionValueInput;
-  const btn         = document.getElementById('btn-banner-submit');
-  const progress    = document.getElementById('banner-progress');
-
-  if (!imgInput.files.length) {
-    showAlert('Selecione ao menos uma imagem para o banner.', 'warning');
-    return;
-  }
-
-  if ((actionType === 'external' || actionType === 'internal') && !actionValue) {
-    showAlert('Selecione ou informe o destino para a ação.', 'warning');
-    return;
-  }
-
-  btn.disabled = true;
-  progress.style.display = '';
-
-  try {
-    const promises = [];
-    for (let i = 0; i < imgInput.files.length; i++) {
-      const fd = new FormData();
-      fd.append('file', imgInput.files[i]);
-      fd.append('action_type', actionType);
-      fd.append('action_value', actionValue);
-      promises.push(fetch(`/ads-admin/upload-banner/${location}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: authHeaders(),
-        body: fd
-      }));
-    }
-
-    const responses = await Promise.all(promises);
-    for (const res of responses) {
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        const detail = json.detail;
-        let msg = 'Erro no upload';
-        if (typeof detail === 'object' && detail.message) {
-          msg = detail.message;
-          if (detail.details && detail.details.suggestion) msg += ` — ${detail.details.suggestion}`;
-        } else if (typeof detail === 'string') {
-          msg = detail;
-        }
-        showAlert(`Erro: ${msg}`, 'danger');
-        return;
-      }
-    }
-
-    // Success: close modal, show alert, reload state
-    bootstrap.Modal.getInstance(document.getElementById('modalBanner')).hide();
-    showAlert('Banner(s) configurado(s) com sucesso!', 'success');
-
-    await loadState(location);
-
-  } catch (e) {
-    showAlert('Erro de conexão ao enviar banner.', 'danger');
-    console.error(e);
-  } finally {
-    btn.disabled = false;
-    progress.style.display = 'none';
-  }
-}
-
-// ── Remove individual image ──────────────────────────────────────
-async function removeImage(location, filename) {
-  if (!confirm(`Remover a imagem "${filename}"?`)) return;
-  
-  try {
-    const res = await fetch(`/ads-admin/delete-file/${location}/${filename}`, {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: authHeaders()
-    });
-    
-    if (!res.ok) {
-      showAlert('Erro ao remover imagem.', 'danger');
-      return;
-    }
-    
-    showAlert(`Imagem ${filename} removida com sucesso.`, 'success');
-    await loadState(location);
-  } catch (e) {
-    showAlert('Erro de conexão ao remover imagem.', 'danger');
-    console.error(e);
-  }
-}
-
-// ── Clear location ───────────────────────────────────────────────
-async function clearLocation(location) {
-  if (!confirm(`Limpar todos os arquivos de "${location}"? Esta ação não pode ser desfeita.`)) return;
-  try {
-    const res = await fetch(`/ads-admin/delete-all/${location}`, {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: authHeaders()
-    });
-    if (!res.ok) {
-      showAlert('Erro ao limpar conteúdo.', 'danger');
-      return;
-    }
-    showAlert(`Conteúdo de ${location} removido.`, 'success');
-    await loadState(location);
-  } catch (e) {
-    showAlert('Erro de conexão ao limpar.', 'danger');
-  }
-}
-
-// ── Init ─────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  // Setup event listeners
-  document.getElementById('publiscreen-action-type').addEventListener('change', updatePubliActionValueGroup);
-  document.getElementById('banner-action-type').addEventListener('change', updateBannerActionValueGroup);
-  
-  // Show local preview as soon as user picks images
-  document.getElementById('banner-image').addEventListener('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      document.getElementById('banner-modal-img').src = e.target.result;
-      document.getElementById('banner-modal-preview').style.display = '';
-    };
-    reader.readAsDataURL(file);
-  });
-  
-  // init action-value group visibility
-  updatePubliActionValueGroup();
-  updateBannerActionValueGroup();
-  // load current state for all 4 locations
-  reloadAll();
-  
-  // Load MongoDB ads state on page load
-  loadBannerStateMongoDB();
-  loadAdScreenStateMongoDB();
-});
-
-// ═══════════════════════════════════════════════════════════════
-// NEW MONGODB SYSTEM FUNCTIONS
-// ═══════════════════════════════════════════════════════════════
-
 function reloadAllMongoDB() {
   loadBannerStateMongoDB();
   loadAdScreenStateMongoDB();
 }
 
-// ── Banner MongoDB Functions ──────────────────────────────────
+// ── Banner Functions ──────────────────────────────────────────
 
 async function uploadBannerMongoDB() {
   const target = document.getElementById('banner-target').value;
@@ -1261,7 +340,7 @@ async function clearBannerMongoDB() {
     }
     
     const result = await res.json();
-    showAlert(`${result.message} - Nova versão: v${result.version}`, 'success');
+    showAlert(`${result.message}`, 'success');
     await loadBannerStateMongoDB();
   } catch (e) {
     showAlert('Erro de conexão: ' + e.message, 'danger');
@@ -1269,7 +348,7 @@ async function clearBannerMongoDB() {
   }
 }
 
-// ── AdScreen MongoDB Functions ────────────────────────────────
+// ── AdScreen Functions ────────────────────────────────────────
 
 async function uploadAdScreenMongoDB() {
   const target = document.getElementById('adscreen-target').value;
@@ -1334,7 +413,7 @@ async function loadAdScreenStateMongoDB() {
       infoDiv.style.display = '';
       document.getElementById('adscreen-version').textContent = `v${data.version}`;
       document.getElementById('adscreen-filename').textContent = data.zip_filename;
-      document.getElementById('adscreen-size').textContent = `${data.zip_size_mb} MB`;
+      document.getElementById('adscreen-size').textContent = `${(data.zip_size / 1024 / 1024).toFixed(2)} MB`;
       document.getElementById('adscreen-updated-at').textContent = 
         new Date(data.updated_at).toLocaleString('pt-BR');
     } else {
@@ -1364,7 +443,7 @@ async function clearAdScreenMongoDB() {
     }
     
     const result = await res.json();
-    showAlert(`${result.message} - Nova versão: v${result.version}`, 'success');
+    showAlert(`${result.message}`, 'success');
     await loadAdScreenStateMongoDB();
   } catch (e) {
     showAlert('Erro de conexão: ' + e.message, 'danger');
@@ -1372,10 +451,15 @@ async function clearAdScreenMongoDB() {
   }
 }
 
-// Update state when target changes
+// ── Event Listeners ───────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('banner-target')?.addEventListener('change', loadBannerStateMongoDB);
   document.getElementById('adscreen-target')?.addEventListener('change', loadAdScreenStateMongoDB);
+  
+  // Load initial state
+  loadBannerStateMongoDB();
+  loadAdScreenStateMongoDB();
 });
 
 </script>
