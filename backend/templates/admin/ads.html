@@ -33,6 +33,7 @@
                 <small>Tela cheia exibida após login do cliente</small>
             </div>
             <div class="card-body">
+                <!-- File upload (static/legacy) -->
                 <form id="form-publi-client" class="upload-form" data-ad-type="publi_client">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Arquivos do Anúncio</label>
@@ -59,10 +60,23 @@
                 </div>
 
                 <div class="mt-3 text-center">
-                    <!-- JS-enhanced button (shown when JS enabled) -->
                     <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="publi_client">
                         <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
                     </button>
+                </div>
+
+                <!-- ZIP package (DB-backed) -->
+                <hr class="my-3">
+                <div class="p-3 rounded" style="background:#eef2ff;">
+                    <label class="form-label fw-bold"><i class="fas fa-file-archive me-1"></i>Pacote ZIP (HTML/CSS/JS/Imagens)</label>
+                    <input type="file" id="zip-publi-client" class="form-control mb-2" accept=".zip">
+                    <div class="form-text mb-2">Envie um <strong>.zip</strong> com <code>index.html</code> e demais recursos. Substitui o arquivo HTML estático do ad.</div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="uploadZipPubliScreen('client', 'zip-publi-client', this)">
+                            <i class="fas fa-cloud-upload-alt me-1"></i>Enviar ZIP
+                        </button>
+                        <span id="zip-publi-client-status" class="text-muted small"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -76,6 +90,7 @@
                 <small>Tela cheia exibida após login do profissional</small>
             </div>
             <div class="card-body">
+                <!-- File upload (static/legacy) -->
                 <form id="form-publi-professional" class="upload-form" data-ad-type="publi_professional">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Arquivos do Anúncio</label>
@@ -102,10 +117,23 @@
                 </div>
 
                 <div class="mt-3 text-center">
-                    <!-- JS-enhanced button (shown when JS enabled) -->
                     <button type="button" class="btn btn-danger btn-sm w-100 clear-dir-btn" data-ad-type="publi_professional">
                         <i class="fas fa-trash-alt me-1"></i>Limpar Todos os Arquivos
                     </button>
+                </div>
+
+                <!-- ZIP package (DB-backed) -->
+                <hr class="my-3">
+                <div class="p-3 rounded" style="background:#ecfdf5;">
+                    <label class="form-label fw-bold"><i class="fas fa-file-archive me-1"></i>Pacote ZIP (HTML/CSS/JS/Imagens)</label>
+                    <input type="file" id="zip-publi-professional" class="form-control mb-2" accept=".zip">
+                    <div class="form-text mb-2">Envie um <strong>.zip</strong> com <code>index.html</code> e demais recursos. Substitui o arquivo HTML estático do ad.</div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-success btn-sm" onclick="uploadZipPubliScreen('professional', 'zip-publi-professional', this)">
+                            <i class="fas fa-cloud-upload-alt me-1"></i>Enviar ZIP
+                        </button>
+                        <span id="zip-publi-professional-status" class="text-muted small"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -206,52 +234,7 @@
     </div>
 </div>
 
-    <!-- PubliScreen Ads Section -->
-    <div class="col-12">
-        <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-window-maximize me-2"></i>PubliScreen Ads</h5>
-                <small>HTML + pressables</small>
-            </div>
-            <div class="card-body">
-                <form id="form-publi-screen" class="mb-3" onsubmit="return false;">
-                    <div class="mb-3">
-                        <label class="form-label">Alias</label>
-                        <input type="text" id="publi-alias" class="form-control" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Target</label>
-                        <select id="publi-target" class="form-select">
-                            <option value="client">cliente</option>
-                            <option value="professional">profissional</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">HTML</label>
-                        <textarea id="publi-html" class="form-control" rows="6" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Base64 (imagem de fundo opcional)</label>
-                        <textarea id="publi-base64" class="form-control" rows="3" placeholder="data:image/png;base64,..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Pacote (.zip)</label>
-                        <input type="file" id="publi-package" class="form-control" accept=".zip" />
-                        <div class="form-text">Zip com html/css/js/imagens; será armazenado como base64.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Redirect ao fechar</label>
-                        <input type="url" id="publi-onclose" class="form-control" placeholder="https://app.example.com/home" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Pressables (JSON array)</label>
-                        <textarea id="publi-pressables" class="form-control" rows="3" placeholder='[{"id":"botao","onPress_type":"external_link","onPress_link":"https://..."}]'></textarea>
-                    </div>
-                    <button type="button" class="btn btn-primary" id="publi-save-btn">Salvar PubliScreen</button>
-                </form>
-            </div>
-        </div>
-    </div>
+
 
 
 <!-- Modal for banner action configuration -->
@@ -807,46 +790,48 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFiles('banner_professional');
 });
 
-// publiscreen save handler
-(function(){
-    const btn = document.getElementById('publi-save-btn');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-        const alias = document.getElementById('publi-alias').value;
-        const target = document.getElementById('publi-target').value;
-        const html = document.getElementById('publi-html').value;
-        const base64 = document.getElementById('publi-base64').value;
-        const onCloseRedirect = document.getElementById('publi-onclose').value;
-        const pressables = document.getElementById('publi-pressables').value;
-        const packageInput = document.getElementById('publi-package');
-        const form = new FormData();
-        form.append('alias', alias);
-        form.append('target', target);
-        form.append('html', html);
-        form.append('base64', base64);
-        form.append('onClose_redirect', onCloseRedirect);
-        form.append('pressables', pressables);
-        if (packageInput && packageInput.files && packageInput.files[0]) {
-            form.append('package', packageInput.files[0]);
-        }
-        try {
-            const token = localStorage.getItem('access_token');
-            const resp = await fetch('/ads-admin/publi_screen', {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                body: form
-            });
-            if (!resp.ok) throw new Error('failed');
-            showAlert('PubliScreen salvo');
-        } catch (err) {
-            console.error(err);
-            showAlert('Erro ao salvar PubliScreen', 'danger');
-        }
-    });
-})();
+// Zip upload handler for publiscreen (client / professional)
+async function uploadZipPubliScreen(target, inputId, btn) {
+    const fileInput = document.getElementById(inputId);
+    const statusEl = document.getElementById(inputId + '-status');
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        showAlert('Selecione um arquivo .zip', 'warning');
+        return;
+    }
+    const alias = target === 'client' ? 'publi_client' : 'publi_professional';
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando...';
+    if (statusEl) statusEl.textContent = '';
+
+    const form = new FormData();
+    form.append('alias', alias);
+    form.append('target', target);
+    form.append('html', '');
+    form.append('pressables', '[]');
+    form.append('package', fileInput.files[0]);
+
+    try {
+        const token = localStorage.getItem('access_token');
+        const resp = await fetch('/ads-admin/publi_screen', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+            body: form
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        showAlert(`Pacote ZIP enviado com sucesso para PubliScreen ${target === 'client' ? 'Cliente' : 'Profissional'}!`, 'success');
+        if (statusEl) statusEl.textContent = '✓ ZIP gravado no banco';
+        fileInput.value = '';
+    } catch (err) {
+        console.error(err);
+        showAlert('Erro ao enviar ZIP: ' + err.message, 'danger');
+        if (statusEl) statusEl.textContent = '✗ Erro';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
 </script>
 
 <!-- Preview Modal -->
