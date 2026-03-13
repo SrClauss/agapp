@@ -30,10 +30,10 @@ export function useGoogleAuth() {
   const [authResult, setAuthResult] = useState<GoogleAuthResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Gerar redirect URI automaticamente
+  // Usar proxy do Expo para gerar redirect URI compatível com Google OAuth
+  // Isso gera: https://auth.expo.io/@clausemberg/agapp
   const redirectUri = AuthSession.makeRedirectUri({
-    scheme: 'com.agilizapro.agapp',
-    path: 'auth/callback'
+    useProxy: true,
   });
 
   console.log('[GoogleAuth] Redirect URI:', redirectUri);
@@ -44,6 +44,7 @@ export function useGoogleAuth() {
       clientId: '36227471485-8bogr7vvdga110v3c9ha29gu3khom83c.apps.googleusercontent.com',
       scopes: ['openid', 'email', 'profile'],
       redirectUri,
+      usePKCE: false, // Google não requer PKCE
     },
     discovery
   );
