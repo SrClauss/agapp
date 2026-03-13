@@ -173,26 +173,27 @@ async def google_login(google_data: GoogleLoginRequest, db: AsyncIOMotorDatabase
 
 
 @router.get("/google/start")
-async def google_oauth_start(request: Request, next: str | None = None):
+async def google_oauth_start(request: Request, redirect_uri: str | None = None):
     """Redirecta o usuário para a tela de consentimento do Google.
 
-    Optionally accepts a `next` query param (URL) that will be passed through
-    via the OAuth `state` parameter and used as redirect target after callback.
+    Accepts a `redirect_uri` query param that specifies where Google should redirect after auth.
+    For Expo apps, this should be https://auth.expo.io/@username/slug
     """
     client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
         raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID não configurado no backend.")
 
-    # Build redirect_uri to our callback
-    # Force HTTPS since we're behind nginx proxy
-    redirect_uri = "https://agilizapro.cloud/auth/google/callback"
-
+    # Use provided redirect_uri or default to backend callback
+    final_redirect_uri = redirect_uri or "https://agilizapro.cloud/auth/google/callback"
+    
     scope = "openid email profile"
-    state = urllib.parse.quote_plus(next or "")
+    # Store the original redirect_uri in state so we know where it came from
+    state = urllib.parse.quote_plus(final_redirect_uri)
+    
     params = {
         "response_type": "code",
         "client_id": client_id,
-        "redirect_uri": redirect_uri,
+        "redirect_uri": final_redirect_uri,
         "scope": scope,
         "access_type": "offline",
         "include_granted_scopes": "true",
@@ -207,8 +208,7 @@ async def google_oauth_start(request: Request, next: str | None = None):
 async def google_oauth_callback(request: Request, code: str | None = None, state: str | None = None, db: AsyncIOMotorDatabase = Depends(get_database)):
     """Recebe o `code` do Google, troca por tokens no backend, cria/atualiza usuário e emite JWTs.
 
-    If a `state` URL was provided on /google/start, returns an HTML page that triggers
-    a deep-link to the mobile app with the tokens. Otherwise returns JSON.
+    The `state` parameter contains the redirect_uri that was used in /google/start.
     """
     if not code:
         raise HTTPException(status_code=400, detail="Missing code in callback")
@@ -219,8 +219,10 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         raise HTTPException(status_code=500, detail="GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET not configured")
 
     try:
-        # Determine redirect_uri same as in start - force HTTPS
-        redirect_uri = "https://agilizapro.cloud/auth/google/callback"
+        # Extract redirect_uri from state (it was the redirect_uri used in /start)
+        redirect_uri = urllib.parse.unquote_plus(state) if state else "https://agilizapro.cloud/auth/google/callback"
+        
+        print(f"[OAuth Callback] Using redirect_uri: {redirect_uri}")
 
         token_endpoint = "https://oauth2.googleapis.com/token"
         async with httpx.AsyncClient() as client:
@@ -254,7 +256,7 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         if not google_email:
             raise HTTPException(status_code=400, detail="Google token inválido")
 
-        # Upsert user (reuse existing flow)
+        # Upsert user
         existing = await get_user_by_email(db, google_email)
         if existing:
             user = existing
@@ -271,31 +273,24 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
         access_token = create_access_token(subject=str(user.id))
         refresh_token = create_refresh_token(subject=str(user.id))
 
-        # If state is a deep-link scheme, redirect directly to it with tokens
-        if state:
-            try:
-                target = urllib.parse.unquote_plus(state)
-                # Build deep-link with tokens in query params (not fragment - easier for mobile to capture)
-                params = urllib.parse.urlencode({
-                    "access_token": access_token, 
-                    "refresh_token": refresh_token, 
-                    "token_type": "bearer"
-                })
-                deep_link = f"{target}?{params}"
-                
-                print(f"[OAuth] Redirecting to deep-link: {deep_link}")
-                # Direct redirect - openAuthSessionAsync will capture this
-                return RedirectResponse(url=deep_link)
-            except Exception as e:
-                print(f"Error building deep-link redirect: {e}")
-                pass
+        # If redirect_uri is Expo Auth Proxy, append tokens as query params
+        if "auth.expo.io" in redirect_uri:
+            params = urllib.parse.urlencode({
+                "access_token": access_token, 
+                "refresh_token": refresh_token, 
+                "token_type": "bearer"
+            })
+            final_url = f"{redirect_uri}?{params}"
+            print(f"[OAuth Callback] Redirecting to Expo with tokens: {final_url}")
+            return RedirectResponse(url=final_url)
 
-        # Otherwise return JSON with tokens
+        # Otherwise return JSON
         return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
 
     except HTTPException:
         raise
     except Exception as e:
+        print(f"[OAuth Callback] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

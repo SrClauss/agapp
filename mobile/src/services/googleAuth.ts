@@ -92,8 +92,8 @@ export function useGoogleAuth() {
   const signIn = async () => {
     try {
       setResponse(null);
-      // URL do backend com redirect para o proxy Expo
-      const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(REDIRECT_URL)}`;
+      // Pass the Expo Auth Proxy URL as redirect_uri
+      const authUrl = `${BACKEND_URL}/auth/google/start?redirect_uri=${encodeURIComponent(REDIRECT_URL)}`;
       console.log('[GoogleAuth] Iniciando OAuth via:', authUrl);
       
       // openAuthSessionAsync captura o redirect automaticamente
