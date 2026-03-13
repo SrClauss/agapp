@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse, HTMLResponse, Response
 from typing import List, Optional
 import base64
 import logging
+import mimetypes
 from datetime import datetime, timezone
 from pathlib import Path
 from PIL import Image
@@ -739,7 +740,6 @@ async def preview_adscreen_file(
             file_content = zip_ref.read(file_found)
             
             # Determine media type based on extension
-            import mimetypes
             media_type, _ = mimetypes.guess_type(file_found)
             if not media_type:
                 media_type = "application/octet-stream"
@@ -952,7 +952,6 @@ async def serve_adscreen_file(
 
             file_content = zip_ref.read(file_found)
 
-            import mimetypes
             media_type, _ = mimetypes.guess_type(file_found)
             if not media_type:
                 media_type = "application/octet-stream"

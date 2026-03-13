@@ -134,8 +134,7 @@ export default function AdScreen() {
         const stackName = message?.action?.onPress_stack;
         if (stackName) {
           try {
-            // @ts-ignore - dynamic navigation
-            navigation.navigate(stackName);
+            (navigation as any).navigate(stackName);
           } catch (err) {
             console.error('[AdScreen] Error navigating to stack:', stackName, err);
           }

@@ -77,10 +77,8 @@ export function BannerAd({ adType, minHeight = 100, maxHeight = 200, onPress }: 
         })}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item, idx) => `${item.filename}-${idx}`}
-        onMomentumScrollEnd={(ev) => {
-          const offsetX = ev.nativeEvent.contentOffset.x;
-          const visibleWidth = ev.nativeEvent.layoutMeasurement?.width || containerWidth;
-          Math.round(offsetX / visibleWidth);
+        onMomentumScrollEnd={() => {
+          // scroll end - no index tracking needed
         }}
         renderItem={({ item, index: itemIndex }) => {
           return (
