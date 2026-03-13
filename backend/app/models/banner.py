@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
 from datetime import datetime
+from uuid import uuid4
 
 
 class Banner(BaseModel):
@@ -10,8 +11,8 @@ class Banner(BaseModel):
     continue to live as files stored under the `ads` directory.
     """
 
-    id: Optional[str] = Field(alias="_id")
-    alias: str
+    id: Optional[str] = Field(default=None, alias="_id")
+    alias: Optional[str] = Field(default_factory=lambda: f"banner_{uuid4().hex[:8]}")
     target: Literal["client", "professional"]
 
     # image encoded as base64; we only support one image per banner right now

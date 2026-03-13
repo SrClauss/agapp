@@ -16,7 +16,6 @@
     <div class="mt-2">
         <button class="btn btn-outline-primary btn-sm" onclick="location.href='/ads-admin/publi-screen'">PubliScreen Ads</button>
     </div>
-    <div class="mt-2"><span class="badge bg-success">ADS ADMIN UI: versão 362c8b4 ✓</span></div>
 </div>
 <!-- debug status removed -->
 
@@ -42,6 +41,9 @@
                         <button type="button" class="btn btn-primary btn-sm" onclick="uploadZipPubliScreen('client', 'zip-publi-client', this)">
                             <i class="fas fa-cloud-upload-alt me-1"></i>Enviar ZIP
                         </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openPreviewLocation('publi_client')">
+                            <i class="fas fa-eye me-1"></i>Preview
+                        </button>
                         <span id="zip-publi-client-status" class="text-muted small"></span>
                     </div>
                 </div>
@@ -65,6 +67,9 @@
                     <div class="d-flex gap-2 align-items-center">
                         <button type="button" class="btn btn-success btn-sm" onclick="uploadZipPubliScreen('professional', 'zip-publi-professional', this)">
                             <i class="fas fa-cloud-upload-alt me-1"></i>Enviar ZIP
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openPreviewLocation('publi_professional')">
+                            <i class="fas fa-eye me-1"></i>Preview
                         </button>
                         <span id="zip-publi-professional-status" class="text-muted small"></span>
                     </div>
@@ -757,6 +762,9 @@ async function uploadZipPubliScreen(target, inputId, btn) {
         showAlert(`Pacote ZIP enviado com sucesso para PubliScreen ${target === 'client' ? 'Cliente' : 'Profissional'}!`, 'success');
         if (statusEl) statusEl.textContent = '✓ ZIP gravado no banco';
         fileInput.value = '';
+        // Exibir pré-visualização imediatamente após o upload
+        const previewType = target === 'client' ? 'publi_client' : 'publi_professional';
+        openPreviewLocation(previewType);
     } catch (err) {
         console.error(err);
         showAlert('Erro ao enviar ZIP: ' + err.message, 'danger');
