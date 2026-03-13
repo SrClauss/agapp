@@ -41,9 +41,14 @@ export function useGoogleAuth() {
     try {
       setResponse(null);
 
-      const redirectUri = Linking.createURL('auth/callback');
+      const generatedRedirectUri = Linking.createURL('auth/callback');
+      const redirectUri = generatedRedirectUri.startsWith(`${BACKEND_URL}/auth/google/callback`)
+        ? 'com.agilizapro.agapp://auth/callback'
+        : generatedRedirectUri;
       const authUrl = `${BACKEND_URL}/auth/google/start?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
+      console.log('[GoogleAuth] redirectUri gerada:', generatedRedirectUri);
+      console.log('[GoogleAuth] redirectUri final:', redirectUri);
       console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
 
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);

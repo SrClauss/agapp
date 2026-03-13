@@ -310,6 +310,26 @@ async def google_oauth_callback(request: Request, code: str | None = None, state
     a deep-link to the mobile app with the tokens. Otherwise returns JSON.
     """
     if not code:
+        token_param = request.query_params.get("token")
+        if token_param:
+            html_content = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>Login concluído</title>
+</head>
+<body style=\"font-family: system-ui, sans-serif; text-align:center; padding:40px;\">
+    <h2>Login concluído</h2>
+    <p>Você pode fechar esta janela.</p>
+</body>
+</html>"""
+            return HTMLResponse(content=html_content)
+
+        error_param = request.query_params.get("error")
+        if error_param:
+            raise HTTPException(status_code=400, detail=f"Google OAuth error: {error_param}")
+
         raise HTTPException(status_code=400, detail="Missing code in callback")
 
     client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID")
