@@ -92,8 +92,8 @@ export function useGoogleAuth() {
       const authUrl = `${BACKEND_URL}/auth/google/start?next=${encodeURIComponent(DEEP_LINK_SCHEME)}`;
       console.log('[GoogleAuth] Abrindo URL do backend:', authUrl);
       
-      // Abrir navegador do sistema
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, DEEP_LINK_SCHEME);
+      // Abrir navegador do sistema (sem interceptar - o backend vai retornar página HTML com deep-link)
+      const result = await WebBrowser.openBrowserAsync(authUrl);
       
       if (result.type === 'cancel' || result.type === 'dismiss') {
         setResponse({ type: result.type });
