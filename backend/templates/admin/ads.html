@@ -14,15 +14,160 @@
 <div class="mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
   <div>
     <h1 class="h3 mb-1 fw-bold text-gray-800">Gerenciamento de Publicidade</h1>
-    <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel</p>
+    <p class="text-muted mb-0">Gerencie anúncios exibidos no aplicativo móvel (Sistema MongoDB)</p>
   </div>
-  <button class="btn btn-outline-secondary btn-sm" onclick="reloadAll()">
+  <button class="btn btn-outline-secondary btn-sm" onclick="reloadAllMongoDB()">
     <i class="fas fa-sync-alt me-1"></i>Atualizar tudo
   </button>
 </div>
 
 <!-- ───────── ALERTS ───────── -->
 <div id="alert-container" class="mb-3"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NOVO SISTEMA - MONGODB STORAGE
+===================================================================== -->
+
+<!-- ───────── BANNER ADS (MongoDB) ───────── -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff;">
+    <h5 class="mb-0">
+      <i class="fas fa-images me-2"></i>
+      Banner Ads (MongoDB Storage)
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6 col-lg-3 mb-3">
+        <label class="form-label fw-semibold">Perfil</label>
+        <select class="form-select" id="banner-target">
+          <option value="client">Cliente</option>
+          <option value="professional">Profissional</option>
+        </select>
+      </div>
+      <div class="col-md-6 col-lg-3 mb-3">
+        <label class="form-label fw-semibold">Ação ao clicar</label>
+        <select class="form-select" id="banner-action-type">
+          <option value="none">Nenhuma</option>
+          <option value="external">Link Externo</option>
+          <option value="internal">Navegação Interna</option>
+        </select>
+      </div>
+      <div class="col-md-12 col-lg-6 mb-3">
+        <label class="form-label fw-semibold">Valor da ação</label>
+        <input type="text" class="form-control" id="banner-action-value" 
+               placeholder="URL ou nome da tela (ex: HomeStack)">
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Imagens do Banner</label>
+      <input type="file" class="form-control" id="banner-images" 
+             accept=".png,.jpg,.jpeg,.gif,.webp,.svg" multiple>
+      <div class="form-text">
+        Múltiplas imagens, Base64 no MongoDB. Proporção mín: 2.5:1. Máx 10MB por arquivo.
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-3">
+      <button class="btn btn-warning" onclick="uploadBannerMongoDB()">
+        <i class="fas fa-upload me-1"></i>Upload Imagens
+      </button>
+      <button class="btn btn-outline-info" onclick="loadBannerStateMongoDB()">
+        <i class="fas fa-sync me-1"></i>Carregar Estado
+      </button>
+      <button class="btn btn-outline-danger" onclick="clearBannerMongoDB()">
+        <i class="fas fa-trash me-1"></i>Limpar Tudo
+      </button>
+    </div>
+
+    <!-- Banner Info -->
+    <div class="alert alert-info" id="banner-info" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center">
+        <strong>Banner Info:</strong>
+        <span class="badge bg-primary" id="banner-version">v0</span>
+      </div>
+      <div class="mt-2">
+        <strong>Total de imagens:</strong> <span id="banner-total-images">0</span><br>
+        <strong>Atualizado:</strong> <span id="banner-updated-at">—</span>
+      </div>
+    </div>
+
+    <!-- Banner Images Grid -->
+    <div id="banner-images-grid" class="row g-3"></div>
+  </div>
+</div>
+
+<!-- ───────── ADSCREEN ADS (MongoDB) ───────── -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff;">
+    <h5 class="mb-0">
+      <i class="fas fa-file-zipper me-2"></i>
+      AdScreen Ads (MongoDB Storage)
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6 col-lg-3 mb-3">
+        <label class="form-label fw-semibold">Perfil</label>
+        <select class="form-select" id="adscreen-target">
+          <option value="client">Cliente</option>
+          <option value="professional">Profissional</option>
+        </select>
+      </div>
+      <div class="col-md-6 col-lg-3 mb-3">
+        <label class="form-label fw-semibold">Ação ao clicar</label>
+        <select class="form-select" id="adscreen-action-type">
+          <option value="none">Nenhuma</option>
+          <option value="external">Link Externo</option>
+          <option value="internal">Navegação Interna</option>
+        </select>
+      </div>
+      <div class="col-md-12 col-lg-6 mb-3">
+        <label class="form-label fw-semibold">Valor da ação</label>
+        <input type="text" class="form-control" id="adscreen-action-value" 
+               placeholder="URL ou nome da tela (ex: HomeStack)">
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Arquivo ZIP</label>
+      <input type="file" class="form-control" id="adscreen-zip" 
+             accept=".zip">
+      <div class="form-text">
+        ZIP com HTML/CSS/JS, armazenado como Binary no MongoDB. Máx 20MB.
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-3">
+      <button class="btn btn-purple text-white" onclick="uploadAdScreenMongoDB()" style="background:#8b5cf6;">
+        <i class="fas fa-upload me-1"></i>Upload ZIP
+      </button>
+      <button class="btn btn-outline-info" onclick="loadAdScreenStateMongoDB()">
+        <i class="fas fa-sync me-1"></i>Carregar Estado
+      </button>
+      <button class="btn btn-outline-danger" onclick="clearAdScreenMongoDB()">
+        <i class="fas fa-trash me-1"></i>Limpar
+      </button>
+    </div>
+
+    <!-- AdScreen Info -->
+    <div class="alert alert-info" id="adscreen-info" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center">
+        <strong>AdScreen Info:</strong>
+        <span class="badge bg-primary" id="adscreen-version">v0</span>
+      </div>
+      <div class="mt-2">
+        <strong>Arquivo:</strong> <span id="adscreen-filename">—</span><br>
+        <strong>Tamanho:</strong> <span id="adscreen-size">—</span><br>
+        <strong>Atualizado:</strong> <span id="adscreen-updated-at">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="my-5">
+<h4 class="text-muted mb-3">Sistema Antigo (Filesystem - Legado)</h4>
 
 <!-- ───────── GRID 4 SEÇÕES ───────── -->
 <div class="row g-4">
@@ -948,7 +1093,291 @@ document.addEventListener('DOMContentLoaded', () => {
   updateBannerActionValueGroup();
   // load current state for all 4 locations
   reloadAll();
+  
+  // Load MongoDB ads state on page load
+  loadBannerStateMongoDB();
+  loadAdScreenStateMongoDB();
 });
+
+// ═══════════════════════════════════════════════════════════════
+// NEW MONGODB SYSTEM FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+function reloadAllMongoDB() {
+  loadBannerStateMongoDB();
+  loadAdScreenStateMongoDB();
+}
+
+// ── Banner MongoDB Functions ──────────────────────────────────
+
+async function uploadBannerMongoDB() {
+  const target = document.getElementById('banner-target').value;
+  const actionType = document.getElementById('banner-action-type').value;
+  const actionValue = document.getElementById('banner-action-value').value;
+  const filesInput = document.getElementById('banner-images');
+  
+  if (!filesInput.files.length) {
+    showAlert('Selecione ao menos uma imagem', 'warning');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('target', target);
+  formData.append('action_type', actionType);
+  formData.append('action_value', actionValue);
+  
+  for (let file of filesInput.files) {
+    formData.append('files', file);
+  }
+  
+  try {
+    const res = await fetch('/ads-admin/banner/upload', {
+      method: 'POST',
+      credentials: 'include',
+      headers: authHeaders(),
+      body: formData
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      showAlert(error.detail || 'Erro ao fazer upload', 'danger');
+      return;
+    }
+    
+    const result = await res.json();
+    showAlert(`${result.message} - Nova versão: v${result.version}`, 'success');
+    filesInput.value = '';
+    await loadBannerStateMongoDB();
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'danger');
+    console.error(e);
+  }
+}
+
+async function loadBannerStateMongoDB() {
+  const target = document.getElementById('banner-target').value;
+  
+  try {
+    const res = await fetch(`/ads-admin/banner/${target}`, {
+      credentials: 'include',
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      showAlert('Erro ao carregar banner', 'danger');
+      return;
+    }
+    
+    const data = await res.json();
+    
+    // Update info panel
+    const infoDiv = document.getElementById('banner-info');
+    if (data.is_configured) {
+      infoDiv.style.display = '';
+      document.getElementById('banner-version').textContent = `v${data.version}`;
+      document.getElementById('banner-total-images').textContent = data.images.length;
+      document.getElementById('banner-updated-at').textContent = 
+        new Date(data.updated_at).toLocaleString('pt-BR');
+      
+      // Render images grid
+      const grid = document.getElementById('banner-images-grid');
+      grid.innerHTML = '';
+      
+      data.images.forEach((img, idx) => {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4';
+        
+        col.innerHTML = `
+          <div class="card">
+            <img src="data:${img.mime_type};base64,${img.data}" 
+                 class="card-img-top" alt="${img.filename}"
+                 style="height:150px; object-fit:cover;">
+            <div class="card-body">
+              <p class="card-text small mb-1">
+                <strong>${img.filename}</strong><br>
+                Tamanho: ${(img.size / 1024).toFixed(1)} KB<br>
+                Ação: ${img.action_type}
+              </p>
+              <button class="btn btn-danger btn-sm w-100" 
+                      onclick="deleteBannerImageMongoDB('${target}', '${img.filename}')">
+                <i class="fas fa-trash me-1"></i>Remover
+              </button>
+            </div>
+          </div>
+        `;
+        
+        grid.appendChild(col);
+      });
+    } else {
+      infoDiv.style.display = 'none';
+      document.getElementById('banner-images-grid').innerHTML = 
+        '<div class="col-12 text-muted text-center py-4">Nenhuma imagem configurada</div>';
+    }
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'danger');
+    console.error(e);
+  }
+}
+
+async function deleteBannerImageMongoDB(target, filename) {
+  if (!confirm(`Remover imagem "${filename}"?`)) return;
+  
+  try {
+    const res = await fetch(`/ads-admin/banner/${target}/${encodeURIComponent(filename)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      showAlert('Erro ao remover imagem', 'danger');
+      return;
+    }
+    
+    const result = await res.json();
+    showAlert(`${result.message} - Nova versão: v${result.version}`, 'success');
+    await loadBannerStateMongoDB();
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'danger');
+    console.error(e);
+  }
+}
+
+async function clearBannerMongoDB() {
+  const target = document.getElementById('banner-target').value;
+  
+  if (!confirm(`Limpar TODAS as imagens do banner ${target}?`)) return;
+  
+  try {
+    const res = await fetch(`/ads-admin/banner/${target}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      showAlert('Erro ao limpar banner', 'danger');
+      return;
+    }
+    
+    const result = await res.json();
+    showAlert(`${result.message} - Nova versão: v${result.version}`, 'success');
+    await loadBannerStateMongoDB();
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'danger');
+    console.error(e);
+  }
+}
+
+// ── AdScreen MongoDB Functions ────────────────────────────────
+
+async function uploadAdScreenMongoDB() {
+  const target = document.getElementById('adscreen-target').value;
+  const actionType = document.getElementById('adscreen-action-type').value;
+  const actionValue = document.getElementById('adscreen-action-value').value;
+  const fileInput = document.getElementById('adscreen-zip');
+  
+  if (!fileInput.files.length) {
+    showAlert('Selecione um arquivo ZIP', 'warning');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('target', target);
+  formData.append('action_type', actionType);
+  formData.append('action_value', actionValue);
+  formData.append('file', fileInput.files[0]);
+  
+  try {
+    const res = await fetch('/ads-admin/adscreen/upload', {
+      method: 'POST',
+      credentials: 'include',
+      headers: authHeaders(),
+      body: formData
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      showAlert(error.detail || 'Erro ao fazer upload', 'danger');
+      return;
+    }
+    
+    const result = await res.json();
+    showAlert(`${result.message} - Nova versão: v${result.version}`, 'success');
+    fileInput.value = '';
+    await loadAdScreenStateMongoDB();
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'danger');
+    console.error(e);
+  }
+}
+
+async function loadAdScreenStateMongoDB() {
+  const target = document.getElementById('adscreen-target').value;
+  
+  try {
+    const res = await fetch(`/ads-admin/adscreen/${target}`, {
+      credentials: 'include',
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      showAlert('Erro ao carregar adscreen', 'danger');
+      return;
+    }
+    
+    const data = await res.json();
+    
+    // Update info panel
+    const infoDiv = document.getElementById('adscreen-info');
+    if (data.is_configured) {
+      infoDiv.style.display = '';
+      document.getElementById('adscreen-version').textContent = `v${data.version}`;
+      document.getElementById('adscreen-filename').textContent = data.zip_filename;
+      document.getElementById('adscreen-size').textContent = `${data.zip_size_mb} MB`;
+      document.getElementById('adscreen-updated-at').textContent = 
+        new Date(data.updated_at).toLocaleString('pt-BR');
+    } else {
+      infoDiv.style.display = 'none';
+    }
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'danger');
+    console.error(e);
+  }
+}
+
+async function clearAdScreenMongoDB() {
+  const target = document.getElementById('adscreen-target').value;
+  
+  if (!confirm(`Limpar o AdScreen ${target}?`)) return;
+  
+  try {
+    const res = await fetch(`/ads-admin/adscreen/${target}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      showAlert('Erro ao limpar adscreen', 'danger');
+      return;
+    }
+    
+    const result = await res.json();
+    showAlert(`${result.message} - Nova versão: v${result.version}`, 'success');
+    await loadAdScreenStateMongoDB();
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'danger');
+    console.error(e);
+  }
+}
+
+// Update state when target changes
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('banner-target')?.addEventListener('change', loadBannerStateMongoDB);
+  document.getElementById('adscreen-target')?.addEventListener('change', loadAdScreenStateMongoDB);
+});
+
 </script>
 
 {% endblock %}

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Request, Query
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
-from typing import Literal
+from typing import Literal, List, Optional
 from pathlib import Path
 import base64
 import json
@@ -14,7 +14,11 @@ import io
 import logging
 
 from app.core.security import get_current_user, get_current_user_from_request
+from app.core.database import get_database
 from app.models.user import User
+from app.crud import banner_ad as banner_crud
+from app.crud import adscreen_ad as adscreen_crud
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter()
 admin_router = APIRouter()
@@ -1417,3 +1421,511 @@ async def track_ad_impression(
     impression_logger.info(json.dumps(impression_data))
     
     return None
+
+
+# ============================================================================
+# NEW ADMIN ENDPOINTS - BANNER ADS (MongoDB Storage)
+# ============================================================================
+
+@admin_router.post("/banner/upload")
+async def upload_banner_images(
+    target: str = Form(...),
+    files: List[UploadFile] = File(...),
+    action_type: str = Form("none"),
+    action_value: str = Form(""),
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Upload multiple images to banner (stored as Base64 in MongoDB).
+    Automatically increments version on each image added.
+    """
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can upload banner images"
+        )
+    
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    # Ensure banner exists
+    await banner_crud.get_or_create_banner(db, target, current_user.id)
+    
+    uploaded_images = []
+    
+    for file in files:
+        # Validate file type
+        fname = file.filename or ""
+        ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+        if ext not in ("png", "jpg", "jpeg", "gif", "webp", "svg"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid image format: {fname}. Accepted: PNG, JPG, JPEG, GIF, WebP, SVG"
+            )
+        
+        # Read file content
+        content = await file.read()
+        
+        # Check size
+        if len(content) > MAX_BANNER_SIZE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Image {fname} is too large (max 10 MB)"
+            )
+        
+        # Validate dimensions for non-SVG
+        if ext != "svg":
+            width, height, aspect_ratio = validate_image_dimensions(content)
+            validate_minimum_aspect_ratio(width, height)
+        
+        # Convert to Base64
+        image_base64 = base64.b64encode(content).decode('utf-8')
+        
+        # Determine MIME type
+        mime_map = {
+            "png": "image/png",
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "gif": "image/gif",
+            "webp": "image/webp",
+            "svg": "image/svg+xml"
+        }
+        mime_type = mime_map.get(ext, "image/png")
+        
+        # Add to database (increments version automatically)
+        result = await banner_crud.add_image_to_banner(
+            db,
+            target,
+            image_base64,
+            fname,
+            mime_type,
+            len(content),
+            action_type,
+            action_value if action_value else None,
+            len(uploaded_images),  # order
+            current_user.id
+        )
+        
+        if result:
+            uploaded_images.append(fname)
+    
+    # Get updated banner
+    banner = await banner_crud.get_banner_by_target(db, target)
+    
+    return {
+        "message": f"{len(uploaded_images)} image(s) uploaded successfully",
+        "uploaded_files": uploaded_images,
+        "version": banner.version if banner else 1,
+        "total_images": len(banner.images) if banner else 0
+    }
+
+
+@admin_router.delete("/banner/{target}/{filename}")
+async def delete_banner_image(
+    target: str,
+    filename: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Remove specific image from banner and increment version"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can delete banner images"
+        )
+    
+    result = await banner_crud.remove_image_from_banner(db, target, filename, current_user.id)
+    
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Banner or image not found"
+        )
+    
+    return {
+        "message": f"Image {filename} deleted successfully",
+        "version": result.version,
+        "remaining_images": len(result.images)
+    }
+
+
+@admin_router.get("/banner/{target}")
+async def get_banner_admin(
+    target: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Get full banner data including Base64 images (admin only)"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can access banner data"
+        )
+    
+    banner = await banner_crud.get_banner_by_target(db, target)
+    
+    if not banner:
+        return {
+            "target": target,
+            "images": [],
+            "version": 0,
+            "is_configured": False
+        }
+    
+    return {
+        "target": banner.target,
+        "images": [img.dict() for img in banner.images],
+        "version": banner.version,
+        "is_configured": len(banner.images) > 0,
+        "updated_at": banner.updated_at.isoformat()
+    }
+
+
+@admin_router.delete("/banner/{target}")
+async def clear_banner(
+    target: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Clear all images from banner"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can clear banners"
+        )
+    
+    result = await banner_crud.clear_banner(db, target, current_user.id)
+    
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Banner not found"
+        )
+    
+    return {
+        "message": f"All images cleared from {target} banner",
+        "version": result.version
+    }
+
+
+# ============================================================================
+# NEW ADMIN ENDPOINTS - ADSCREEN ADS (MongoDB Storage)
+# ============================================================================
+
+@admin_router.post("/adscreen/upload")
+async def upload_adscreen_zip(
+    target: str = Form(...),
+    file: UploadFile = File(...),
+    action_type: str = Form("none"),
+    action_value: str = Form(""),
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Upload ZIP file for adscreen (stored as Binary in MongoDB).
+    Automatically increments version.
+    """
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can upload adscreen"
+        )
+    
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    # Validate ZIP file
+    fname = file.filename or ""
+    if not fname.lower().endswith(".zip"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only ZIP files are accepted"
+        )
+    
+    # Read file content
+    content = await file.read()
+    
+    # Check size
+    if len(content) > MAX_ZIP_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="ZIP file is too large (max 20 MB)"
+        )
+    
+    # Validate it's a valid ZIP
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as zf:
+            zf.testzip()
+    except zipfile.BadZipFile:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or corrupted ZIP file"
+        )
+    
+    # Ensure adscreen exists
+    await adscreen_crud.get_or_create_adscreen(db, target, current_user.id)
+    
+    # Update adscreen (increments version automatically)
+    result = await adscreen_crud.update_adscreen(
+        db,
+        target,
+        content,
+        fname,
+        action_type,
+        action_value if action_value else None,
+        current_user.id
+    )
+    
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update adscreen"
+        )
+    
+    return {
+        "message": "AdScreen ZIP uploaded successfully",
+        "filename": result.zip_filename,
+        "size": result.zip_size,
+        "version": result.version,
+        "action": {
+            "type": result.action_type,
+            "value": result.action_value
+        }
+    }
+
+
+@admin_router.get("/adscreen/{target}")
+async def get_adscreen_admin(
+    target: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Get adscreen info WITHOUT zip_data (too heavy)"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can access adscreen data"
+        )
+    
+    adscreen = await adscreen_crud.get_adscreen_by_target(db, target, include_zip=False)
+    
+    if not adscreen:
+        return {
+            "target": target,
+            "zip_filename": "",
+            "zip_size": 0,
+            "version": 0,
+            "is_configured": False
+        }
+    
+    return {
+        "target": adscreen.target,
+        "zip_filename": adscreen.zip_filename,
+        "zip_size": adscreen.zip_size,
+        "zip_size_mb": round(adscreen.zip_size / (1024 * 1024), 2),
+        "version": adscreen.version,
+        "action": {
+            "type": adscreen.action_type,
+            "value": adscreen.action_value
+        },
+        "is_configured": adscreen.zip_size > 0,
+        "updated_at": adscreen.updated_at.isoformat()
+    }
+
+
+@admin_router.delete("/adscreen/{target}")
+async def clear_adscreen(
+    target: str,
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Clear adscreen ZIP"""
+    if "admin" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can clear adscreen"
+        )
+    
+    result = await adscreen_crud.clear_adscreen(db, target, current_user.id)
+    
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="AdScreen not found"
+        )
+    
+    return {
+        "message": f"AdScreen cleared for {target}",
+        "version": result.version
+    }
+
+
+# ============================================================================
+# MOBILE ENDPOINTS - BANNER SYNC (Public with version check)
+# ============================================================================
+
+@mobile_router.get("/banner/{target}/version")
+async def check_banner_version(
+    target: str,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Check banner version for sync (mobile)"""
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    version_info = await banner_crud.get_banner_version(db, target)
+    
+    if not version_info:
+        return {
+            "version": 0,
+            "updated_at": None,
+            "exists": False
+        }
+    
+    return {
+        "version": version_info.get("version", 0),
+        "updated_at": version_info.get("updated_at").isoformat() if version_info.get("updated_at") else None,
+        "exists": True
+    }
+
+
+@mobile_router.get("/banner/{target}")
+async def sync_banner(
+    target: str,
+    current_version: Optional[int] = Query(None),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Sync banner with mobile.
+    If current_version < server version, returns full banner data.
+    Otherwise returns up_to_date flag.
+    """
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    banner = await banner_crud.get_banner_by_target(db, target)
+    
+    if not banner:
+        return {
+            "version": 0,
+            "up_to_date": True,
+            "images": []
+        }
+    
+    # Check if client needs update
+    if current_version is None or current_version < banner.version:
+        return {
+            "version": banner.version,
+            "images": [
+                {
+                    "filename": img.filename,
+                    "data": img.data,  # Base64
+                    "mime_type": img.mime_type,
+                    "size": img.size,
+                    "action_type": img.action_type,
+                    "action_value": img.action_value,
+                    "order": img.order
+                }
+                for img in banner.images
+            ],
+            "updated_at": banner.updated_at.isoformat(),
+            "up_to_date": False
+        }
+    
+    return {
+        "version": banner.version,
+        "up_to_date": True
+    }
+
+
+# ============================================================================
+# MOBILE ENDPOINTS - ADSCREEN SYNC (Public with version check)
+# ============================================================================
+
+@mobile_router.get("/adscreen/{target}/version")
+async def check_adscreen_version(
+    target: str,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Check adscreen version for sync (mobile)"""
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    version_info = await adscreen_crud.get_adscreen_version(db, target)
+    
+    if not version_info:
+        return {
+            "version": 0,
+            "updated_at": None,
+            "exists": False
+        }
+    
+    return {
+        "version": version_info.get("version", 0),
+        "updated_at": version_info.get("updated_at").isoformat() if version_info.get("updated_at") else None,
+        "exists": True
+    }
+
+
+@mobile_router.get("/adscreen/{target}")
+async def sync_adscreen(
+    target: str,
+    current_version: Optional[int] = Query(None),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Sync adscreen with mobile.
+    If current_version < server version, returns ZIP as Base64.
+    Otherwise returns up_to_date flag.
+    """
+    if target not in ["client", "professional"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target must be 'client' or 'professional'"
+        )
+    
+    adscreen = await adscreen_crud.get_adscreen_by_target(db, target, include_zip=True)
+    
+    if not adscreen or not adscreen.zip_data:
+        return {
+            "version": 0,
+            "up_to_date": True,
+            "zip_data": None
+        }
+    
+    # Check if client needs update
+    if current_version is None or current_version < adscreen.version:
+        # Convert binary to Base64 for transmission
+        zip_base64 = base64.b64encode(adscreen.zip_data).decode('utf-8')
+        
+        return {
+            "version": adscreen.version,
+            "zip_data": zip_base64,
+            "zip_filename": adscreen.zip_filename,
+            "zip_size": adscreen.zip_size,
+            "action_type": adscreen.action_type,
+            "action_value": adscreen.action_value,
+            "updated_at": adscreen.updated_at.isoformat(),
+            "up_to_date": False
+        }
+    
+    return {
+        "version": adscreen.version,
+        "up_to_date": True
+    }
