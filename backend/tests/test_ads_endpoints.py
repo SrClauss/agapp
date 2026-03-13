@@ -55,11 +55,11 @@ async def test_mobile_publi_screen_db_roundtrip(monkeypatch):
     await db.publi_screen_ads.delete_many({})
 
     from app.models.publi_screen_ad import PubliScreenAd
+    fake_zip_bytes = b"PK\x03\x04fake zip content"
     pub_obj = PubliScreenAd(
         alias="publi_client",
         target="client",
-        base64="data:image/png;base64,BBB",
-        zip_base64="UEsDBAoAAAAAA...fakezip...",  # dummy base64
+        zip_blob=fake_zip_bytes,
         onClose_redirect="https://closing.example",
         pressables=[{"left":10,"top":10,"width":50,"height":50,"onPress_type":"external_link","onPress_link":"https://press.example"}],
         is_active=True
@@ -74,8 +74,8 @@ async def test_mobile_publi_screen_db_roundtrip(monkeypatch):
         r2 = await ac.get("/system-admin/api/public/ads/publi_client")
         assert r2.status_code == 200
         data = r2.json()
-        assert data.get("base64") == "data:image/png;base64,BBB"
-        assert data.get("zip_base64") == "UEsDBAoAAAAAA...fakezip..."
+        import base64 as b64mod
+        assert data.get("zip_base64") == b64mod.b64encode(fake_zip_bytes).decode('utf-8')
         assert data.get("onClose_redirect") == "https://closing.example"
         assert isinstance(data.get("pressables"), list)
         assert data.get("target") == "client"

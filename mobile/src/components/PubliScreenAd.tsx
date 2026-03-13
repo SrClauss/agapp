@@ -146,39 +146,8 @@ export function PubliScreenAd({ userType, onClose, autoShow = true }: PubliScree
       return generatedHtml || '';
     }
 
-    // If we have a base64 image, generate the HTML wrapper with pressables overlay.
-    const pressableDivs = (ad.pressables || [])
-      .map(p => {
-        const left = p.left || 0;
-        const top = p.top || 0;
-        const width = p.width || 0;
-        const height = p.height || 0;
-        return `
-          <a href="#" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type:'press', id:'${p.id}'})); return false;" 
-             style="position:absolute; left:${left}%; top:${top}%; width:${width}%; height:${height}%; display:block;" 
-             aria-label="pressable"></a>`;
-      })
-      .join('');
-
-    const closeButton = `
-      <button onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type:'close'}));" 
-        style="position:absolute; top:10px; right:10px; width:40px; height:40px; border-radius:20px; border:none; background:rgba(0,0,0,0.5); color:white; font-size:22px;">✕</button>
-    `;
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <style>html, body { margin:0; padding:0; height:100%; overflow:hidden; }</style>
-      </head>
-      <body>
-        <img src="${ad.base64}" style="width:100%; height:100%; object-fit:cover; display:block;" />
-        ${pressableDivs}
-        ${closeButton}
-      </body>
-      </html>
-    `;
+    // Sem conteúdo disponível
+    return '';
   };
 
   // watch for zip_base64 and generate html once

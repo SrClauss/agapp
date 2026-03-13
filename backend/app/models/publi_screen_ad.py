@@ -43,8 +43,7 @@ class PubliScreenAd(BaseModel):
     alias: str
     target: Literal["client", "professional"]
     html: Optional[str] = None
-    base64: Optional[str] = None
-    zip_base64: Optional[str] = None  # zipped folder (html/css/js/images) encoded in base64
+    zip_blob: Optional[bytes] = None  # Armazena o ZIP como blob binário
     onClose_redirect: Optional[str] = None
     pressables: List[Pressable] = []
     is_active: bool = True
@@ -52,6 +51,11 @@ class PubliScreenAd(BaseModel):
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    def etag(self) -> str:
+        """ETag derivado do updated_at — muda sempre que o ZIP for atualizado."""
+        import hashlib
+        return hashlib.md5(self.updated_at.isoformat().encode()).hexdigest()
 
     _check_html = validator('html', allow_reuse=True)(_validate_html_structure)
 
