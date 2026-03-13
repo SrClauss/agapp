@@ -1929,3 +1929,11 @@ async def sync_adscreen(
         "version": adscreen.version,
         "up_to_date": True
     }
+
+
+# ============================================================================
+# INCLUDE SUBROUTERS
+# ============================================================================
+
+router.include_router(admin_router, prefix="/ads-admin", tags=["ads-admin-mongo"])
+router.include_router(mobile_router, prefix="/ads-mobile", tags=["ads-mobile-mongo"])
