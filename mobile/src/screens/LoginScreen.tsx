@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Text, KeyboardAvoidingView, Platform, ImageBackground, Image, View, StyleSheet } from 'react-native';
 import { Button, TextInput, HelperText } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { loginWithEmail, loginWithGoogle, fetchCurrentUser } from '../api/auth';
 import { useGoogleAuth } from '../services/googleAuth';
@@ -106,7 +106,7 @@ export default function LoginScreen() {
       : user.roles.includes('professional')
       ? 'WelcomeProfessional'
       : 'WelcomeCustomer';
-    navigation.navigate(destination as never);
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: destination }] }));
   };
 
   const onEmailLogin = async () => {

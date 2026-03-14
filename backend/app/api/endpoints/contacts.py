@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import List, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 import json
 from app.core.database import get_database
@@ -14,14 +14,27 @@ router = APIRouter()
 
 @router.get("/contacts/history", response_model=List[Dict[str, Any]])
 async def get_contact_history(
+    user_type: Optional[str] = Query(None, description="Filter by role: 'professional' or 'client'"),
     current_user: User = Depends(get_current_user),
     db: Any = Depends(get_database),
 ):
-    """Get contact history for the current user (as professional or client)."""
+    """Get contact history for the current user (as professional or client).
+    
+    Use the `user_type` query parameter to restrict results to a specific role:
+    - `professional`: only contacts where the current user is the professional
+    - `client`: only contacts where the current user is the client
+    - (omitted): all contacts for the current user
+    """
     user_id = str(current_user.id)
-    contacts = await db.contacts.find(
-        {"$or": [{"professional_id": user_id}, {"client_id": user_id}]}
-    ).sort("updated_at", -1).to_list(length=100)
+
+    if user_type == "professional":
+        query = {"professional_id": user_id}
+    elif user_type == "client":
+        query = {"client_id": user_id}
+    else:
+        query = {"$or": [{"professional_id": user_id}, {"client_id": user_id}]}
+
+    contacts = await db.contacts.find(query).sort("updated_at", -1).to_list(length=100)
 
     for c in contacts:
         c["id"] = c.pop("_id", c.get("id", ""))

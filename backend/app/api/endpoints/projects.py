@@ -512,6 +512,10 @@ async def create_contact_on_project(
     if "professional" not in current_user.roles:
         raise HTTPException(status_code=403, detail="Only professionals can create contacts")
 
+    # Prevent professional from contacting a project they created as a client
+    if str(current_user.id) == str(project.client_id):
+        raise HTTPException(status_code=403, detail="You cannot contact a project you created")
+
     # Idempotency: reject duplicate requests within the same session
     idempotency_key = request.headers.get("X-Idempotency-Key")
     if idempotency_key:
@@ -912,6 +916,10 @@ async def evaluate_professional(
     }
     
     await db.evaluations.insert_one(eval_doc)
+    # Also save to the dedicated client_evaluations collection
+    client_eval_doc = dict(eval_doc)
+    client_eval_doc["_id"] = str(new_ulid())
+    await db.client_evaluations.insert_one(client_eval_doc)
     
     # Add to professional's evaluations and recalculate average
     professional = await db.users.find_one({"_id": evaluation.professional_id})
