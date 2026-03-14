@@ -41,19 +41,29 @@ export default function CreditsPackageScreen() {
     try {
       setPurchasing(pkg.id);
       const result = await createCreditPackagePayment(pkg.id, 'PIX');
-      const url = result.invoice_url || result.invoiceUrl;
-      if (url) {
-        const supported = await Linking.canOpenURL(url);
+      
+      // Checkout URL do Asaas
+      const checkoutUrl = result.invoice_url || result.invoiceUrl;
+      
+      if (checkoutUrl) {
+        console.log('Abrindo Checkout do Asaas:', checkoutUrl);
+        const supported = await Linking.canOpenURL(checkoutUrl);
         if (supported) {
-          await Linking.openURL(url);
+          await Linking.openURL(checkoutUrl);
         } else {
-          Alert.alert('Erro', 'Não foi possível abrir o link de pagamento.');
+          Alert.alert('Erro', 'Não foi possível abrir o Checkout. Verifique as permissões do navegador.');
         }
       } else {
-        Alert.alert('Pagamento criado', 'Seu pagamento foi iniciado. Verifique seu e-mail para continuar.');
+        Alert.alert(
+          'Pagamento Criado',
+          'Seu pagamento foi iniciado. Verifique seu e-mail para acessar o link de pagamento.',
+          [{ text: 'OK' }]
+        );
       }
     } catch (e: any) {
-      Alert.alert('Erro', e?.message || 'Erro ao criar pagamento. Tente novamente.');
+      console.error('Erro ao criar pagamento:', e);
+      const errorMessage = e?.response?.data?.detail || e?.message || 'Erro ao criar pagamento. Tente novamente.';
+      Alert.alert('Erro no Pagamento', errorMessage);
     } finally {
       setPurchasing(null);
     }

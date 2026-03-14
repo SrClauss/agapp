@@ -38,11 +38,16 @@ export const getUserCreditTransactions = async (): Promise<CreditTransaction[]> 
 };
 
 export const createCreditPackagePayment = async (packageId: string, billingType: string) => {
-  const response = await client.post('/api/payments/credits', {
-    package_id: packageId,
-    billing_type: billingType,
-  });
-  return response.data;
+  try {
+    const response = await client.post('/api/payments/credits', {
+      package_id: packageId,
+      billing_type: billingType,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro na API de pagamento:', error?.response?.data);
+    throw error;
+  }
 };
 
 export const getFeaturedPricing = async () => {

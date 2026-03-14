@@ -3,8 +3,8 @@ Endpoints de pagamento para usuários (via Asaas)
 """
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime, timedelta, timezone
 
 from app.core.database import get_database
@@ -21,20 +21,20 @@ router = APIRouter(prefix="/api/payments", tags=["payments"])
 # ==================== SCHEMAS ====================
 
 class SubscriptionPaymentRequest(BaseModel):
-    plan_id: str
-    billing_type: str  # PIX or CREDIT_CARD
-    cycle_months: int = 1  # 1, 3, 6, or 12 months
+    plan_id: str = Field(..., min_length=1)
+    billing_type: Literal["PIX", "CREDIT_CARD"]
+    cycle_months: int = Field(1, ge=1, le=12)
 
 
 class CreditPackagePaymentRequest(BaseModel):
-    package_id: str
-    billing_type: str  # PIX or CREDIT_CARD
+    package_id: str = Field(..., min_length=1)
+    billing_type: Literal["PIX", "CREDIT_CARD"]
 
 
 class FeaturedProjectPaymentRequest(BaseModel):
-    project_id: str
-    duration_days: int  # 7, 15, or 30
-    billing_type: str  # PIX or CREDIT_CARD
+    project_id: str = Field(..., min_length=1)
+    duration_days: int = Field(..., ge=1, le=90)
+    billing_type: Literal["PIX", "CREDIT_CARD"]
 
 
 class PaymentResponse(BaseModel):
@@ -257,6 +257,10 @@ async def create_credit_package_payment(
 
     if not package.is_active:
         raise HTTPException(status_code=400, detail="Pacote não está ativo")
+    
+    # Validar preço do pacote
+    if package.price <= 0:
+        raise HTTPException(status_code=400, detail="Pacote inválido: preço deve ser maior que zero")
 
     # Criar ou buscar cliente no Asaas
     customer_id = await asaas_service.get_or_create_customer(current_user)
