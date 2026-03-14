@@ -139,7 +139,6 @@ export const ChatModal: React.FC<ChatModalProps> = ({
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isMyMessage = item.sender_id === userId;
-    
     return (
       <View
         style={[

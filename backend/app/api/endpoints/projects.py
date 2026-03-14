@@ -547,12 +547,28 @@ async def create_contact_on_project(
     new_contact = updated_project.contacts[-1]
     contact_dict = new_contact.dict() if hasattr(new_contact, 'dict') else dict(new_contact)
 
-    # Generate a stable ULID for this embedded contact.
+    # Generate a stable ULID for this contact and persist it in contacts collection.
     contact_ulid = str(new_ulid())
     now_utc = datetime.now(timezone.utc)
 
-    # Store the contact ULID inside the embedded project contact so chat routes
-    # can resolve the contact directly from the project document.
+    contacts_doc = {
+        "_id": contact_ulid,
+        "professional_id": str(current_user.id),
+        "professional_name": current_user.full_name or "",
+        "project_id": project_id,
+        "client_id": str(project.client_id),
+        "client_name": project.client_name or "",
+        "contact_type": contact.get("contact_type", "proposal"),
+        "credits_used": credits_needed,
+        "status": "pending",
+        "contact_details": contact.get("contact_details", {}),
+        "chat": [],
+        "created_at": now_utc,
+        "updated_at": now_utc,
+    }
+    await db.contacts.insert_one(contacts_doc)
+
+    # Keep contact_id also in embedded project contact for navigation compatibility.
     contact_index = len(updated_project.contacts) - 1
     await db.projects.update_one(
         {"_id": project_id},
@@ -649,40 +665,39 @@ async def get_project_contacts(
         raise HTTPException(status_code=403, detail="Only project owner can view contacts")
     
     contacts: List[Dict[str, Any]] = []
-    for i, contact in enumerate(project.contacts):
-        professional_id = str(getattr(contact, "professional_id", None) or (contact.get("professional_id") if hasattr(contact, "get") else ""))
-        professional = getattr(contact, "professional_user", None) or (contact.get("professional_user") if hasattr(contact, "get") else {}) or {}
-        embedded_chat = (
-            getattr(contact, "chat", None)
-            or (contact.get("chat") if hasattr(contact, "get") else None)
-            or []
-        )
-        last_message = embedded_chat[-1] if embedded_chat else None
+    contact_docs = await db.contacts.find({"project_id": project_id}).sort("created_at", -1).to_list(length=500)
+
+    professional_ids = list({str(c.get("professional_id")) for c in contact_docs if c.get("professional_id")})
+    professionals_map: Dict[str, Dict[str, Any]] = {}
+    if professional_ids:
+        async for user_doc in db.users.find(
+            {"_id": {"$in": professional_ids}},
+            {"_id": 1, "avatar_url": 1, "full_name": 1}
+        ):
+            professionals_map[str(user_doc["_id"])] = user_doc
+
+    for c in contact_docs:
+        professional_id = str(c.get("professional_id", ""))
+        chat = c.get("chat", []) or []
+        last_message = chat[-1] if chat else None
         unread_count = sum(
             1
-            for msg in embedded_chat
+            for msg in chat
             if str(msg.get("sender_id")) == professional_id and not msg.get("read_at")
         )
+        professional_user = professionals_map.get(professional_id, {})
 
-        contact_summary = {
-            "id": (
-                getattr(contact, "contact_id", None)
-                or (contact.get("contact_id") if hasattr(contact, "get") else None)
-                or f"{project_id}_{i}"
-            ),
+        contacts.append({
+            "id": str(c.get("_id") or c.get("id") or ""),
             "professional_id": professional_id,
-            "professional_name": getattr(contact, "professional_name", None)
-                or (contact.get("professional_name") if hasattr(contact, "get") else None)
-                or professional.get("full_name", "Profissional"),
-            "professional_avatar": professional.get("avatar_url"),
-            "status": getattr(contact, "status", None) or (contact.get("status") if hasattr(contact, "get") else None),
-            "created_at": getattr(contact, "created_at", None) or (contact.get("created_at") if hasattr(contact, "get") else None),
+            "professional_name": c.get("professional_name") or professional_user.get("full_name", "Profissional"),
+            "professional_avatar": professional_user.get("avatar_url"),
+            "status": c.get("status"),
+            "created_at": c.get("created_at"),
             "last_message": last_message,
             "unread_count": unread_count,
-            "contact_details": getattr(contact, "contact_details", None)
-                or (contact.get("contact_details") if hasattr(contact, "get") else {}),
-        }
-        contacts.append(contact_summary)
+            "contact_details": c.get("contact_details", {}),
+        })
 
     return contacts
 
@@ -934,18 +949,15 @@ async def download_project_messages(
     if str(current_user.id) != project.client_id and str(current_user.id) not in project.liberado_por:
         raise HTTPException(status_code=403, detail="Only project participants can download messages")
     
-    # Chats are stored in project.contacts[*].chat
+    # Chats are stored in root contacts collection
     all_messages = []
-    for contact in project.contacts or []:
-        contact_id = getattr(contact, "contact_id", None) or (contact.get("contact_id") if hasattr(contact, "get") else None)
-        professional_id = getattr(contact, "professional_id", None) or (contact.get("professional_id") if hasattr(contact, "get") else None)
-        client_id = getattr(contact, "client_id", None) or (contact.get("client_id") if hasattr(contact, "get") else None)
-        chat = getattr(contact, "chat", None) or (contact.get("chat") if hasattr(contact, "get") else None) or []
-        for msg in chat:
+    contact_docs = await db.contacts.find({"project_id": project_id}).to_list(length=None)
+    for contact_doc in contact_docs:
+        for msg in contact_doc.get("chat", []) or []:
             msg_copy = dict(msg)
-            msg_copy["contact_id"] = contact_id
-            msg_copy["professional_id"] = professional_id
-            msg_copy["client_id"] = client_id
+            msg_copy["contact_id"] = contact_doc.get("_id")
+            msg_copy["professional_id"] = contact_doc.get("professional_id")
+            msg_copy["client_id"] = contact_doc.get("client_id")
             all_messages.append(msg_copy)
     
     # Get documents for the project

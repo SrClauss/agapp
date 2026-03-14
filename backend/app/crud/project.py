@@ -197,7 +197,7 @@ async def create_contact_in_project(db: AsyncIOMotorDatabase, project_id: str, c
     professional = await db.users.find_one({"_id": professional_id})
     client = await db.users.find_one({"_id": client_id})
     
-    # Criar novo contact (chat embutido no projeto)
+    # Criar novo contact
     contact_dict = {
         "professional_id": professional_id,
         "client_id": client_id,
@@ -205,7 +205,6 @@ async def create_contact_in_project(db: AsyncIOMotorDatabase, project_id: str, c
         "credits_used": credits_used,
         "status": "pending",
         "contact_details": contact_data.get("contact_details", {}),
-        "chat": [],
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
@@ -262,12 +261,9 @@ async def update_contact_in_project(db: AsyncIOMotorDatabase, project_id: str, c
     return await get_project(db, project_id)
 
 async def add_message_to_contact_chat(db: AsyncIOMotorDatabase, project_id: str, contact_index: int, message: Dict[str, Any]) -> Optional[Project]:
-    message["created_at"] = datetime.utcnow()
+    message["timestamp"] = datetime.utcnow()
     await db.projects.update_one(
         {"_id": project_id},
-        {
-            "$push": {f"contacts.{contact_index}.chat": message},
-            "$set": {f"contacts.{contact_index}.updated_at": datetime.utcnow()},
-        }
+        {"$push": {f"contacts.{contact_index}.chats": message}}
     )
     return await get_project(db, project_id)
