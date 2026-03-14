@@ -189,6 +189,7 @@ export default function ContactDetailScreen() {
       await evaluateProject(project.id, { rating, comment, would_recommend: wouldRecommend });
       setEvaluationVisible(false);
       setHasEvaluated(true);
+      hasEvaluatedRef.current = true;
       setSnackbarMessage('Avaliação enviada com sucesso!');
       setSnackbarVisible(true);
     } catch (e: any) {

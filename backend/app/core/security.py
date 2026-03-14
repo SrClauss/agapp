@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Union
 import bcrypt
 import logging
@@ -88,7 +88,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), response: Respon
             payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
             exp = payload.get("exp")
             if exp is not None:
-                seconds_remaining = exp - datetime.utcnow().timestamp()
+                seconds_remaining = exp - datetime.now(timezone.utc).timestamp()
                 if seconds_remaining < 300:  # renew if less than 5 minutes left
                     new_token = create_access_token(subject=str(user.id))
                     response.headers["Authorization"] = f"Bearer {new_token}"
