@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text, FAB, Button } from 'react-native-paper';
 import { colors } from '../theme/colors';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import LocationAvatar from '../components/LocationAvatar';
 import NearbySummary from '../components/NearbySummary';
 import { BannerAd } from '../components/BannerAd';
@@ -35,7 +35,9 @@ export default function WelcomeProfessionalScreen() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigation.navigate('Login' as never);
+      navigation.dispatch(
+        CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] })
+      );
     } catch (err) {
       console.warn('Logout falhou', err);
     }

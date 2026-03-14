@@ -289,6 +289,53 @@ class AsaasService:
         result = await self._make_request("GET", "/payments", params=params)
         return result.get("data", [])
 
+    # ==================== WEBHOOK MANAGEMENT ====================
+
+    async def list_webhooks(self) -> List[Dict[str, Any]]:
+        """
+        Listar webhooks cadastrados no Asaas
+        Documentação: https://docs.asaas.com/reference/listar-webhooks
+        """
+        result = await self._make_request("GET", "/webhooks")
+        return result.get("data", [])
+
+    async def create_webhook(
+        self,
+        name: str,
+        url: str,
+        events: List[str],
+        token: str,
+        enabled: bool = True,
+        send_type: str = "SEQUENTIALLY",
+        interrupted: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Criar novo webhook no Asaas
+        Documentação: https://docs.asaas.com/reference/criar-webhook
+
+        Args:
+            name: Nome identificador do webhook
+            url: URL que receberá as notificações
+            events: Lista de eventos a monitorar (ex: ['PAYMENT_CONFIRMED'])
+            token: Token de autenticação enviado no header do webhook
+            enabled: Se o webhook está ativo
+            send_type: Tipo de envio ('SEQUENTIALLY' ou 'NON_SEQUENTIALLY')
+            interrupted: Se o envio está interrompido
+        """
+        data = {
+            "name": name,
+            "url": url,
+            "email": None,
+            "enabled": enabled,
+            "interrupted": interrupted,
+            "apiVersion": 3,
+            "authToken": token,
+            "sendType": send_type,
+            "events": events,
+        }
+        data = {k: v for k, v in data.items() if v is not None}
+        return await self._make_request("POST", "/webhooks", data=data)
+
     # ==================== WEBHOOK VERIFICATION ====================
 
     def verify_webhook_signature(

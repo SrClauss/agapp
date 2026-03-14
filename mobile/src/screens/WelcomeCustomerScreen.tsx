@@ -6,7 +6,7 @@ import { Button, TextInput } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import LocationAvatar from '../components/LocationAvatar';
 import { getSubcategoriesWithParent, SubcategoryWithParent, getSearchSuggestions, SearchSuggestion } from '../api/categories';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { BannerAd } from '../components/BannerAd';
 import CategoryGrid from '../components/CategoryGrid';
@@ -51,7 +51,9 @@ export default function WelcomeCustomerScreen() {
     try {
       setLoading(true);
       await logout();
-      navigation.navigate('Login' as never);
+      navigation.dispatch(
+        CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] })
+      );
     } catch (err) {
       console.warn('Logout falhou', err);
     } finally {

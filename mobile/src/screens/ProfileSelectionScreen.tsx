@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Text, KeyboardAvoidingView, Platform, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import useAuthStore, { AuthState } from '../stores/authStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -30,9 +30,9 @@ export default function ProfileSelectionScreen() {
       // If error, fall through to navigate normally
     }
 
-    // No ad — navigate to the appropriate screen based on role
+    // No ad — reset navigation stack and navigate to the appropriate welcome screen
     const destination = role === 'client' ? 'WelcomeCustomer' : 'WelcomeProfessional';
-    navigation.navigate(destination as never);
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: destination }] }));
   };
 
   return (

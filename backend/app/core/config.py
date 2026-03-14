@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     asaas_api_key: str
     asaas_environment: str = "sandbox"
     asaas_webhook_token: str = ""
+    asaas_webhook_url: str = "https://agilizapro.net/webhook/asaas"
     turnstile_secret_key: str
     turnstile_site_key: str
     cors_origins: List[str] = ["http://localhost:3000"]

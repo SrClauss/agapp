@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Text, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import useAuthStore from '../stores/authStore';
 import client from '../api/axiosClient';
 import { checkAdScreenVersion } from '../api/adsService';
@@ -35,11 +35,11 @@ export default function AdScreen() {
     if (role) {
       setActiveRole(role);
       if (role === 'client') {
-        navigation.replace('WelcomeCustomer' as never);
+        navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'WelcomeCustomer' }] }));
         return;
       }
       if (role === 'professional') {
-        navigation.replace('WelcomeProfessional' as never);
+        navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'WelcomeProfessional' }] }));
         return;
       }
     }
@@ -48,21 +48,21 @@ export default function AdScreen() {
     const isProfessional = user?.roles?.includes('professional');
 
     if (isClient && isProfessional) {
-      navigation.replace('ProfileSelection' as never);
+      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'ProfileSelection' }] }));
       return;
     }
 
     if (isClient) {
-      navigation.replace('WelcomeCustomer' as never);
+      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'WelcomeCustomer' }] }));
       return;
     }
 
     if (isProfessional) {
-      navigation.replace('ProfileSelection' as never);
+      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'ProfileSelection' }] }));
       return;
     }
 
-    navigation.replace('WelcomeCustomer' as never);
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'WelcomeCustomer' }] }));
   };
 
   const loadAdScreen = async () => {

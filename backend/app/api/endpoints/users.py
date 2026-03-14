@@ -50,6 +50,75 @@ async def get_my_evaluations(
     
     return evaluations
 
+
+@router.get("/{user_id}/evaluations/received", response_model=List[dict])
+async def get_user_evaluations_received(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Retorna avaliações recebidas pelo usuário (como profissional), filtradas por professional_id.
+    """
+    from bson import ObjectId
+
+    evaluations = []
+    async for evaluation in db.client_evaluations.find({"professional_id": user_id}).sort("created_at", -1):
+        client_id = evaluation.get("client_id")
+        client = None
+        if client_id:
+            client = await db.users.find_one({"_id": client_id})
+            if not client and ObjectId.is_valid(client_id):
+                client = await db.users.find_one({"_id": ObjectId(client_id)})
+
+        evaluations.append({
+            "id": str(evaluation["_id"]),
+            "client_id": str(evaluation["client_id"]),
+            "client_name": client.get("full_name") if client else None,
+            "professional_id": str(evaluation["professional_id"]),
+            "project_id": str(evaluation["project_id"]),
+            "rating": evaluation["rating"],
+            "comment": evaluation.get("comment"),
+            "created_at": evaluation["created_at"],
+        })
+
+    return evaluations
+
+
+@router.get("/{user_id}/evaluations/given", response_model=List[dict])
+async def get_user_evaluations_given(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Retorna avaliações feitas pelo usuário (como cliente), filtradas por client_id.
+    """
+    from bson import ObjectId
+
+    evaluations = []
+    async for evaluation in db.client_evaluations.find({"client_id": user_id}).sort("created_at", -1):
+        professional_id = evaluation.get("professional_id")
+        professional = None
+        if professional_id:
+            professional = await db.users.find_one({"_id": professional_id})
+            if not professional and ObjectId.is_valid(professional_id):
+                professional = await db.users.find_one({"_id": ObjectId(professional_id)})
+
+        evaluations.append({
+            "id": str(evaluation["_id"]),
+            "client_id": str(evaluation["client_id"]),
+            "professional_id": str(evaluation["professional_id"]),
+            "professional_name": professional.get("full_name") if professional else None,
+            "project_id": str(evaluation["project_id"]),
+            "rating": evaluation["rating"],
+            "comment": evaluation.get("comment"),
+            "created_at": evaluation["created_at"],
+        })
+
+    return evaluations
+
+
 @router.put("/me", response_model=User)
 async def update_user_me(
     user_update: UserUpdate,

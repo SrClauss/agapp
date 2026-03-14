@@ -279,6 +279,9 @@ async def startup_event():
     await database.lead_events.create_index("contact_id")
     await database.lead_events.create_index("professional_id")
     await database.lead_events.create_index("created_at")
+    await database.client_evaluations.create_index("client_id")
+    await database.client_evaluations.create_index("professional_id")
+    await database.client_evaluations.create_index("project_id")
     # A criação do admin é feita via script de inicialização do container (mongo-init)
     # Ensure system configuration singleton exists
     try:
@@ -286,6 +289,25 @@ async def startup_event():
         await config_crud.get_system_config(database)
     except Exception:
         pass
+
+    # Verificar e criar webhook 'Pagamento Confirmado' no Asaas se necessário
+    try:
+        from app.services.asaas import asaas_service
+        webhooks = await asaas_service.list_webhooks()
+        webhook_exists = any(w.get("name") == "Pagamento Confirmado" for w in webhooks)
+        if not webhook_exists:
+            webhook_token = settings.asaas_webhook_token
+            await asaas_service.create_webhook(
+                name="Pagamento Confirmado",
+                url=settings.asaas_webhook_url,
+                events=["PAYMENT_CONFIRMED"],
+                token=webhook_token,
+            )
+            print("Webhook 'Pagamento Confirmado' criado no Asaas.")
+        else:
+            print("Webhook 'Pagamento Confirmado' já existe no Asaas.")
+    except Exception as e:
+        print(f"Aviso: não foi possível verificar/criar webhook no Asaas: {e}")
 
 @app.get("/")
 async def root():
