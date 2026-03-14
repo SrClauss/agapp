@@ -344,7 +344,7 @@ class AsaasService:
         """
         # Email para receber notificações caso o webhook falhe
         # Usar email padrão do sistema se não fornecido
-        webhook_email = email or "webhooks@agilizapro.net"
+        webhook_email = email or "agilizapro.net@gmail.com"
         
         data = {
             "name": name,
