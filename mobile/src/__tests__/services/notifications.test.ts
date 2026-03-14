@@ -34,7 +34,7 @@ describe('Notifications Service', () => {
     jest.clearAllMocks();
     
     // Default mock setup
-    mockDevice.isDevice = true;
+    Object.defineProperty(mockDevice, 'isDevice', { value: true, writable: true });
     mockNotifications.getPermissionsAsync.mockResolvedValue({
       status: 'granted',
     } as any);
@@ -46,7 +46,7 @@ describe('Notifications Service', () => {
 
   describe('registerForPushNotificationsAsync', () => {
     it('should return null if not a physical device', async () => {
-      mockDevice.isDevice = false;
+      Object.defineProperty(mockDevice, 'isDevice', { value: false, writable: true });
       
       const result = await registerForPushNotificationsAsync();
       
@@ -107,9 +107,9 @@ describe('Notifications Service', () => {
       (useAuthStore.getState as jest.Mock) = jest.fn().mockReturnValue({
         token: 'auth-token-123',
       });
-      mockDevice.deviceName = 'Test Device';
-      mockDevice.osName = 'iOS';
-      mockDevice.osVersion = '17.0';
+      Object.defineProperty(mockDevice, 'deviceName', { value: 'Test Device', writable: true });
+      Object.defineProperty(mockDevice, 'osName', { value: 'iOS', writable: true });
+      Object.defineProperty(mockDevice, 'osVersion', { value: '17.0', writable: true });
       mockAuthApi.registerFcmToken.mockResolvedValue({});
     });
 
@@ -147,8 +147,8 @@ describe('Notifications Service', () => {
     });
 
     it('should handle missing device info', async () => {
-      mockDevice.deviceName = undefined;
-      mockDevice.osName = undefined;
+      Object.defineProperty(mockDevice, 'deviceName', { value: undefined, writable: true });
+      Object.defineProperty(mockDevice, 'osName', { value: undefined, writable: true });
       
       const result = await registerPushTokenOnServer('device-token-123');
       

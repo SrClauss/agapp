@@ -49,6 +49,8 @@ export default function ContactDetailScreen() {
   const flatListRef = useRef<FlatList>(null);
   const wsRef = useRef<any>(null);
   const hasEvaluatedRef = useRef<boolean>(false);
+  const loggedSenderCheckRef = useRef<boolean>(false);
+
 
   const loadContact = useCallback(async () => {
     if (!contactId) return;
@@ -131,13 +133,7 @@ export default function ContactDetailScreen() {
                 // Fallback: adiciona a mensagem diretamente se reload falhar
                 const msg = data.message;
                 if (!msg) return;
-                const newMessage: ChatMessage = {
-                  id: msg.id,
-                  sender_id: msg.sender_id,
-                  sender_name: msg.sender_name,
-                  content: msg.content,
-                  created_at: msg.created_at || new Date().toISOString(),
-                };
+                const newMessage: ChatMessage = msg;
                 setMessages((prev) => {
                   const exists = prev.some((m) => m.id === newMessage.id);
                   if (exists) return prev;
@@ -240,19 +236,20 @@ export default function ContactDetailScreen() {
   };
 
   const renderMessage = ({ item, index }: { item: ChatMessage; index: number }) => {
-    // Normaliza IDs para comparação segura (evita mismatch de case/whitespace)
-    const isMyMessage =
-      !!user?.id &&
-      item.sender_id?.trim().toLowerCase() === user.id.trim().toLowerCase();
+    // Compare directly using UUID strings (should always be UUID strings as expected).
+    const userId = user?.id ?? (user as any)?._id;
+    const isMyMessage = !!userId && item.sender_id === userId;
 
     const showDate =
       index === 0 ||
       new Date(item.created_at).toDateString() !==
         new Date(messages[index - 1].created_at).toDateString();
 
-    // Show sender name on first message in a group from the same sender
+    // Show sender name on the first message in a group from the same sender
     const prevItem = index > 0 ? messages[index - 1] : null;
-    const showSenderName = !isMyMessage && (!prevItem || prevItem.sender_id !== item.sender_id);
+    const prevSenderId = prevItem?.sender_id;
+    const showSenderName = !isMyMessage && (!prevItem || prevSenderId !== item.sender_id);
+
     // Usa sender_name da mensagem se disponível, senão infere do contato
     const displaySenderName = item.sender_name || getOtherName();
 
@@ -275,7 +272,7 @@ export default function ContactDetailScreen() {
               isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
             ]}
           >
-            {showSenderName && (
+            {!isMyMessage && showSenderName && (
               <Text style={styles.senderName}>{displaySenderName}</Text>
             )}
             <Text
@@ -302,6 +299,7 @@ export default function ContactDetailScreen() {
                     item.read_at ? styles.readTickRead : styles.readTickSent,
                   ]}
                 >
+                  
                   {item.read_at ? ' ✓✓' : ' ✓'}
                 </Text>
               )}
@@ -378,7 +376,7 @@ export default function ContactDetailScreen() {
             <Text style={styles.emptyHint}>Envie uma mensagem para iniciar a conversa</Text>
           </View>
         }
-      />
+        />
 
       {/* Message Input */}
       <View style={styles.inputContainer}>
@@ -390,7 +388,7 @@ export default function ContactDetailScreen() {
           multiline
           maxLength={1000}
           disabled={sending}
-        />
+          />
         <IconButton
           icon="send"
           size={24}

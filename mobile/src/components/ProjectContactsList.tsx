@@ -64,17 +64,20 @@ export default function ProjectContactsList({ contacts, onContactPress }: Props)
     </TouchableOpacity>
   );
 
+  if (!contacts?.length) {
+    return (
+      <View style={styles.empty}>
+        <Text>Nenhum profissional entrou em contato ainda.</Text>
+      </View>
+    );
+  }
+
   return (
-    <FlatList
-      data={contacts}
-      keyExtractor={(item) => item.id}
-      renderItem={renderContact}
-      ListEmptyComponent={
-        <View style={styles.empty}>
-          <Text>Nenhum profissional entrou em contato ainda.</Text>
-        </View>
-      }
-    />
+    <View>
+      {contacts.map((item) => (
+        <View key={item.id}>{renderContact({ item })}</View>
+      ))}
+    </View>
   );
 }
 

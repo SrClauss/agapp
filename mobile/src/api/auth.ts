@@ -10,6 +10,13 @@ export interface SignUpData {
   roles?: string[];
 }
 
+function normalizeUser(user: any) {
+  if (!user || typeof user !== 'object') return user;
+  if (!user.id && user._id) user.id = user._id;
+  if (!user._id && user.id) user._id = user.id;
+  return user;
+}
+
 export async function loginWithEmail(email: string, password: string, turnstileToken?: string, authToken?: string) {
   try {
     const params = new URLSearchParams({
@@ -39,9 +46,9 @@ export async function loginWithEmail(email: string, password: string, turnstileT
     // Buscar dados do usuário se não vieram no token
     if (!data.user) {
       const user = await fetchCurrentUser(data.access_token);
-      return { token: data.access_token, user };
+      return { token: data.access_token, user: normalizeUser(user) };
     }
-    return { token: data.access_token, user: data.user };
+    return { token: data.access_token, user: normalizeUser(data.user) };
   } catch (error) {
     const axiosError = error as AxiosError<{ detail?: string }>;
     console.error('[loginWithEmail] Erro:', axiosError.response?.status, axiosError.response?.data);
@@ -77,7 +84,7 @@ export async function loginWithGoogle(idToken: string) {
     console.log('📦 Resposta do backend /auth/google:', JSON.stringify(data, null, 2));
     console.log('🔑 access_token:', data.access_token ? 'Existe ✓' : 'NULL ✗');
     console.log('👤 user:', data.user ? 'Existe ✓' : 'NULL ✗');
-    return { token: data.access_token, user: data.user };
+    return { token: data.access_token, user: normalizeUser(data.user) };
   } catch (error) {
     const axiosError = error as AxiosError<{ detail?: string }>;
     throw new Error(axiosError.response?.data?.detail || 'Google login failed');
@@ -91,7 +98,7 @@ export async function fetchCurrentUser(token: string) {
       headers: { Authorization: `Bearer ${token}` },
     });
     console.log('[fetchCurrentUser] Usuário obtido:', data?.email);
-    return data;
+    return normalizeUser(data);
   } catch (error) {
     const axiosError = error as AxiosError<{ detail?: string }>;
     console.error('[fetchCurrentUser] Erro ao buscar usuário:', axiosError.response?.data || axiosError.message);

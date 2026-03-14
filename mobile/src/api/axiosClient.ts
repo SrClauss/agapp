@@ -69,7 +69,12 @@ axiosRetry(client, {
 client.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
-      console.log('[axios] Requisição para:', config.baseURL + config.url, 'Método:', config.method);
+      console.log(
+        '[axios] Requisição para:',
+        `${config.baseURL ?? ''}${config.url ?? ''}`,
+        'Método:',
+        config.method
+      );
       
       // Get token (may read SecureStore if in-memory missing)
       const token = await getAuthToken();

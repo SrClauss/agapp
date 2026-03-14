@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { Image } from 'react-native';
 import ProjectContactsList from '../../components/ProjectContactsList';
 import { ContactSummary } from '../../api/projects';
 import useChatStore from '../../stores/chatStore';
@@ -169,7 +170,7 @@ describe('ProjectContactsList', () => {
         <ProjectContactsList contacts={mockContacts} />
       );
       
-      const images = UNSAFE_getAllByType('Image');
+      const images = UNSAFE_getAllByType(Image);
       expect(images.length).toBeGreaterThan(0);
     });
 

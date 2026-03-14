@@ -90,7 +90,15 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       setUser: async (user: User | null) => {
-        set({ user });
+         // Normalize user ID fields so we always have both `id` and `_id` available.
+        const normalizedUser = user
+          ? {
+              ...user,
+              id: (user as any).id || (user as any)._id,
+              _id: (user as any)._id || (user as any).id,
+            }
+          : null;
+        set({ user: normalizedUser });
         // Persist explicitly
         try {
           const fullState = get();

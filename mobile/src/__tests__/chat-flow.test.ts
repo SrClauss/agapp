@@ -415,11 +415,11 @@ describe('8. Token renewal loop prevention (axiosClient guard)', () => {
     const SAME_TOKEN = 'mock-token-abc123';
 
     // Simulate what the response interceptor does
-    const currentToken = 'mock-token-abc123';
-    const newToken = SAME_TOKEN;
+    const currentToken: string = 'mock-token-abc123';
+    const newToken: string = 'renewed-token-xyz789';
 
     // The guard condition: only update when different
-    const shouldUpdate = newToken !== currentToken;
+    const shouldUpdate = String(newToken) !== String(currentToken);
     expect(shouldUpdate).toBe(false); // must NOT trigger setToken
   });
 
@@ -427,7 +427,7 @@ describe('8. Token renewal loop prevention (axiosClient guard)', () => {
     const currentToken = 'mock-token-abc123';
     const newToken = 'renewed-token-xyz789';
 
-    const shouldUpdate = newToken !== currentToken;
+    const shouldUpdate = String(newToken) !== String(currentToken);
     expect(shouldUpdate).toBe(true); // should update
   });
 
