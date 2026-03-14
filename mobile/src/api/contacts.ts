@@ -12,6 +12,7 @@ export interface ContactDetails {
 export interface ChatMessage {
   id: string;
   sender_id: string;
+  sender_name?: string;
   content: string;
   created_at: string;
   read_at?: string | null;

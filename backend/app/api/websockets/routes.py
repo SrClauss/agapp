@@ -66,9 +66,11 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     continue
 
                 # Criar mensagem com ULID
+                sender_name = current_user.full_name or current_user.email or str(current_user.id)
                 msg = {
                     "id": str(new_ulid()),
                     "sender_id": str(current_user.id),
+                    "sender_name": sender_name,
                     "content": content,
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "read_at": None,

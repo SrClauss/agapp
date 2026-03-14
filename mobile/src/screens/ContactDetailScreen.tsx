@@ -134,6 +134,7 @@ export default function ContactDetailScreen() {
                 const newMessage: ChatMessage = {
                   id: msg.id,
                   sender_id: msg.sender_id,
+                  sender_name: msg.sender_name,
                   content: msg.content,
                   created_at: msg.created_at || new Date().toISOString(),
                 };
@@ -234,7 +235,11 @@ export default function ContactDetailScreen() {
   };
 
   const renderMessage = ({ item, index }: { item: ChatMessage; index: number }) => {
-    const isMyMessage = item.sender_id === user?.id;
+    // Normaliza IDs para comparação segura (evita mismatch de case/whitespace)
+    const isMyMessage =
+      !!user?.id &&
+      item.sender_id?.trim().toLowerCase() === user.id.trim().toLowerCase();
+
     const showDate =
       index === 0 ||
       new Date(item.created_at).toDateString() !==
@@ -243,6 +248,8 @@ export default function ContactDetailScreen() {
     // Show sender name on first message in a group from the same sender
     const prevItem = index > 0 ? messages[index - 1] : null;
     const showSenderName = !isMyMessage && (!prevItem || prevItem.sender_id !== item.sender_id);
+    // Usa sender_name da mensagem se disponível, senão infere do contato
+    const displaySenderName = item.sender_name || getOtherName();
 
     return (
       <View key={item.id}>
@@ -264,7 +271,7 @@ export default function ContactDetailScreen() {
             ]}
           >
             {showSenderName && (
-              <Text style={styles.senderName}>{getOtherName()}</Text>
+              <Text style={styles.senderName}>{displaySenderName}</Text>
             )}
             <Text
               style={[

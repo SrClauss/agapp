@@ -75,9 +75,12 @@ async def send_contact_message(
     if not content:
         raise HTTPException(status_code=400, detail="Message content cannot be empty")
 
+    sender_name = current_user.full_name or current_user.email or user_id
+
     msg = {
         "id": str(new_ulid()),
         "sender_id": user_id,
+        "sender_name": sender_name,
         "content": content,
         "created_at": datetime.now(timezone.utc),
         "read_at": None,
