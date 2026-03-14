@@ -3,12 +3,14 @@ import client from './axiosClient';
 export interface CreditPackage {
   id: string;
   name: string;
-  description: string;
-  credits_amount: number;
+  description?: string;
+  credits: number;
+  bonus_credits: number;
   price: number;
-  currency: string;
+  sort_order: number;
+  currency?: string;
   is_active: boolean;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface CreditTransaction {

@@ -299,7 +299,7 @@ async def startup_event():
             webhook_token = settings.asaas_webhook_token
             await asaas_service.create_webhook(
                 name="Pagamento Confirmado",
-                url="https://agilizapro.net/webhook/asaas",
+                url=settings.asaas_webhook_url,
                 events=["PAYMENT_CONFIRMED"],
                 token=webhook_token,
             )

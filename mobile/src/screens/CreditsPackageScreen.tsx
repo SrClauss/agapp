@@ -5,25 +5,13 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  TouchableOpacity,
   Linking,
   Alert,
 } from 'react-native';
 import { Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import { getCreditPackages, createCreditPackagePayment } from '../api/payments';
+import { getCreditPackages, CreditPackage, createCreditPackagePayment } from '../api/payments';
 import { colors } from '../theme/colors';
-
-interface CreditPackage {
-  id: string;
-  name: string;
-  description?: string;
-  credits: number;
-  bonus_credits: number;
-  price: number;
-  sort_order: number;
-  is_active: boolean;
-}
 
 export default function CreditsPackageScreen() {
   const navigation = useNavigation();
@@ -41,7 +29,7 @@ export default function CreditsPackageScreen() {
       setLoading(true);
       setError(null);
       const data = await getCreditPackages();
-      setPackages(data as unknown as CreditPackage[]);
+      setPackages(data);
     } catch (e: any) {
       setError(e?.message || 'Erro ao carregar pacotes');
     } finally {
@@ -76,12 +64,7 @@ export default function CreditsPackageScreen() {
     const isPurchasing = purchasing === item.id;
 
     return (
-      <TouchableOpacity
-        style={styles.packageCard}
-        onPress={() => handleBuyPackage(item)}
-        disabled={isPurchasing}
-        activeOpacity={0.8}
-      >
+      <View style={styles.packageCard}>
         <View style={styles.packageHeader}>
           <Text style={styles.packageName}>{item.name}</Text>
           <Text style={styles.packagePrice}>R$ {item.price.toFixed(2).replace('.', ',')}</Text>
@@ -107,7 +90,7 @@ export default function CreditsPackageScreen() {
         >
           {isPurchasing ? 'Processando...' : 'Comprar via PIX'}
         </Button>
-      </TouchableOpacity>
+      </View>
     );
   };
 

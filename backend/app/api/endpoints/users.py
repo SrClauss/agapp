@@ -119,6 +119,7 @@ async def get_user_evaluations_given(
     return evaluations
 
 
+@router.put("/me", response_model=User)
 async def update_user_me(
     user_update: UserUpdate,
     current_user: User = Depends(get_current_user),
