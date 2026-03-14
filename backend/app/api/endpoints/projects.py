@@ -20,6 +20,8 @@ from ulid import new as new_ulid
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__)
+
 
 def add_project_badges(projects: List[Project]) -> None:
     """
@@ -857,6 +859,13 @@ async def evaluate_professional(
     """
     Client evaluates professional after project closure.
     """
+    logger.info(
+        "Evaluate request: project_id=%s, client_id=%s, payload=%s",
+        project_id,
+        str(current_user.id),
+        json.dumps(evaluation.dict(), ensure_ascii=False),
+    )
+
     # Get project
     project = await get_project(db, project_id)
     if not project:
@@ -872,8 +881,14 @@ async def evaluate_professional(
     
     # Check if professional was involved
     if evaluation.professional_id not in project.liberado_por:
+        logger.warning(
+            "Evaluation rejected (professional not in project.liberado_por): project_id=%s, professional_id=%s, liberado_por=%s",
+            project_id,
+            evaluation.professional_id,
+            project.liberado_por,
+        )
         raise HTTPException(status_code=400, detail="Professional was not involved in this project")
-    
+
     # Check if evaluation already exists
     existing_eval = await db.evaluations.find_one({
         "project_id": project_id,

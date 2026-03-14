@@ -10,6 +10,7 @@ import { colors } from '../theme/colors';
 import ProjectContactsList from '../components/ProjectContactsList';
 import EvaluationModal from '../components/EvaluationModal';
 import { evaluateProject } from '../api/projects';
+import { normalizeMessageForAlert } from '../utils/helpers';
 
 // Tipagem da rota
 interface Params {
@@ -237,7 +238,7 @@ const ProjectClientDetailScreen: React.FC = () => {
       // Prompt for evaluation
       setTimeout(() => setEvaluationVisible(true), 800);
     } catch (e: any) {
-      Alert.alert('Erro', e?.response?.data?.detail || 'Falha ao concluir projeto.');
+      Alert.alert('Erro', normalizeMessageForAlert(e?.response?.data?.detail) || 'Falha ao concluir projeto.');
     } finally {
       setClosingProject(false);
     }
@@ -245,12 +246,24 @@ const ProjectClientDetailScreen: React.FC = () => {
 
   const handleSubmitEvaluation = async (rating: number, comment: string, wouldRecommend: boolean) => {
     if (!project) return;
+
+    const professionalId = selectedProfessionalId || project.closed_by;
+    if (!professionalId) {
+      Alert.alert('Erro', 'Selecione um profissional vencedor antes de avaliar.');
+      return;
+    }
+
     try {
-      await evaluateProject(project._id, { rating, comment, would_recommend: wouldRecommend });
+      await evaluateProject(project._id, {
+        professional_id: professionalId,
+        rating,
+        comment,
+      });
       setEvaluationVisible(false);
       Alert.alert('Obrigado!', 'Sua avaliação foi enviada com sucesso.');
     } catch (e: any) {
-      Alert.alert('Erro', e?.response?.data?.detail || 'Falha ao enviar avaliação.');
+      const errorDetail = e?.response?.data?.detail ?? e?.response?.data ?? e?.message ?? e;
+      Alert.alert('Erro', normalizeMessageForAlert(errorDetail) || 'Falha ao enviar avaliação.');
     }
   };
 
@@ -280,7 +293,7 @@ const ProjectClientDetailScreen: React.FC = () => {
         Alert.alert('Sucesso', 'Destaque do projeto iniciado! Verifique o status do pagamento.');
       }
     } catch (e: any) {
-      Alert.alert('Erro', e?.response?.data?.detail || 'Falha ao destacar projeto.');
+      Alert.alert('Erro', normalizeMessageForAlert(e?.response?.data?.detail) || 'Falha ao destacar projeto.');
     } finally {
       setFeaturing(false);
     }

@@ -2,6 +2,38 @@
  * General helper utilities
  */
 
+function safeStringify(value: unknown, replacer?: (key: string, value: any) => any, space?: string | number) {
+  const seen = new WeakSet();
+  return JSON.stringify(value, (key, val) => {
+    if (typeof val === 'object' && val !== null) {
+      if (seen.has(val as object)) {
+        return '[Circular]';
+      }
+      seen.add(val as object);
+    }
+    if (replacer) {
+      return replacer(key, val);
+    }
+    return val;
+  }, space);
+}
+
+export function normalizeMessageForAlert(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map((item) => normalizeMessageForAlert(item)).join('\n');
+  if (typeof value === 'object') {
+    // Some APIs send { detail: ... } or { message: ... }
+    const cast = value as any;
+    if (cast.detail !== undefined) return normalizeMessageForAlert(cast.detail);
+    if (cast.message !== undefined) return normalizeMessageForAlert(cast.message);
+    // Fallback to JSON representation (handles circular refs)
+    const json = safeStringify(value, undefined, 2);
+    return json ?? String(value);
+  }
+  return String(value);
+}
+
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number

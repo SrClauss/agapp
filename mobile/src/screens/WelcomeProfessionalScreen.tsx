@@ -16,6 +16,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { ScrollView } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
 
 
 export default function WelcomeProfessionalScreen() {
@@ -78,6 +80,25 @@ export default function WelcomeProfessionalScreen() {
           <View style={styles.sectionContainer}>
             {/* Professional stats card */}
             <ProfessionalStatsCard />
+            <View style={styles.buyCreditsButtonContainer}>
+              <LinearGradient
+                colors={['#ff7f50', '#ff4500']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.buyCreditsButtonGradient}
+              >
+                <Button
+                  mode="contained"
+                  style={[styles.buyCreditsButton, { backgroundColor: 'transparent' }]} // Transparent to show gradient
+                  contentStyle={styles.buyCreditsButtonContent}
+                  labelStyle={styles.buyCreditsButtonLabel}
+                  icon={() => <MaterialIcons name="shopping-cart" size={20} color="white" />} // Add cart icon
+                  onPress={() => (navigation as any).navigate('CreditsPackage')}
+                >
+                  Comprar pacotes de créditos
+                </Button>
+              </LinearGradient>
+            </View>
             <View style={{ marginTop: 10 }}>
               <Button mode="outlined" onPress={() => (navigation as any).navigate('ContactedProjects')}>Projetos que contatei</Button>
               <Button mode="outlined" icon="message-text" onPress={() => (navigation as any).navigate('ChatList')}>Minhas Conversas</Button>
@@ -124,6 +145,23 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     marginTop: 10,
     gap: 10,
+  },
+  buyCreditsButtonContainer: {
+    marginTop: 16,
+  },
+  buyCreditsButton: {
+    width: '100%',
+  },
+  buyCreditsButtonContent: {
+    paddingVertical: 12,
+  },
+  buyCreditsButtonLabel: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  buyCreditsButtonGradient: {
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   sectionContainer: {
     marginTop: 20,

@@ -19,8 +19,7 @@ import WelcomeProfessionalScreen from './src/screens/WelcomeProfessionalScreen';
 import ProjectsListScreen from './src/screens/ProjectsListScreen';
 import ContactDetailScreen from './src/screens/ContactDetailScreen';
 import ProfileEvaluationsScreen from './src/screens/ProfileEvaluationsScreen';
-import CreditsScreen from './src/screens/CreditsScreen';
-import CreditPackagesScreen from './src/screens/CreditPackagesScreen';
+import CreditsPackageScreen from './src/screens/CreditsPackageScreen';
 import SubscriptionsScreen from './src/screens/SubscriptionsScreen';
 import SupportScreen from './src/screens/SupportScreen';
 import ChatListScreen from './src/screens/ChatListScreen';
@@ -211,8 +210,7 @@ export default function App() {
           <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ContactDetail" component={ContactDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ProfileEvaluations" component={ProfileEvaluationsScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Credits" component={CreditsScreen} options={{ title: 'Meus Créditos' }} />
-          <Stack.Screen name="CreditPackages" component={CreditPackagesScreen} options={{ title: 'Comprar Créditos' }} />
+          <Stack.Screen name="CreditsPackage" component={CreditsPackageScreen} options={{ title: 'Pacotes de Créditos' }} />
           <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ title: 'Assinaturas' }} />
           <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Suporte' }} />
           <Stack.Screen name="ChatList" component={ChatListScreen} options={{ title: 'Conversas' }} />
