@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import useAuthStore from './authStore';
 import useLocationStore from './locationStore';
+import { useSettingsStore } from './settingsStore';
 import { Project, getNearbyCombinedProjects } from '../api/projects';
 
 export type ProjectsNearbyState = {

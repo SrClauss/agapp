@@ -56,12 +56,19 @@ export default function NearbySummary() {
     return () => { scale.stop(); opacity.stop(); };
   }, [radarAnim, radarOpacity]);
 
-  // Carregar configurações do servidor quando o componente montar
+  // Carregar configurações do servidor apenas uma vez ao montar (não a cada token renewal).
+  // O token é lido diretamente do store no momento da chamada, portanto não precisa
+  // estar na lista de dependências — incluí-lo causaria um novo fetch a cada renovação
+  // de token (loop infinito de 429s). O ref garante que só carregamos uma vez.
+  const loadedRef = React.useRef(false);
+  const tokenRef = React.useRef(token);
+  tokenRef.current = token;
   useEffect(() => {
-    if (token) {
-      loadFromServer(token);
+    if (tokenRef.current && !loadedRef.current) {
+      loadedRef.current = true;
+      loadFromServer(tokenRef.current);
     }
-  }, [token]);
+  }, []); // mount only — intentional: token read via ref to avoid renewal loop
 
   // Sincronizar tempRadius com o valor do store quando ele mudar
   useEffect(() => {

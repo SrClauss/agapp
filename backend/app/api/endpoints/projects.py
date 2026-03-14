@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 import logging
+import json
 from typing import List, Any, Optional, Literal, Dict
 from pydantic import BaseModel
 from fastapi import Request
@@ -15,6 +16,7 @@ from app.utils.credit_pricing import calculate_contact_cost, get_user_credits, v
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.utils.timezone import ensure_utc
 from bson import ObjectId
+from ulid import new as new_ulid
 
 router = APIRouter()
 
@@ -544,7 +546,38 @@ async def create_contact_on_project(
 
     new_contact = updated_project.contacts[-1]
     contact_dict = new_contact.dict() if hasattr(new_contact, 'dict') else dict(new_contact)
-    contact_dict["id"] = f"{project_id}_{len(updated_project.contacts)-1}"
+
+    # Generate a stable ULID for this contact and persist it in the contacts collection
+    # so that all chat endpoints (/contacts/history, /contacts/{id}/messages, etc.) can
+    # find it via the standard contacts API.
+    contact_ulid = str(new_ulid())
+    now_utc = datetime.now(timezone.utc)
+    contacts_doc = {
+        "_id": contact_ulid,
+        "professional_id": str(current_user.id),
+        "professional_name": current_user.full_name or "",
+        "project_id": project_id,
+        "client_id": str(project.client_id),
+        "client_name": project.client_name or "",
+        "contact_type": contact.get("contact_type", "proposal"),
+        "credits_used": credits_needed,
+        "status": "pending",
+        "contact_details": contact.get("contact_details", {}),
+        "chat": [],
+        "created_at": now_utc,
+        "updated_at": now_utc,
+    }
+    await db.contacts.insert_one(contacts_doc)
+
+    # Also store the contact ULID back into the embedded project contact so that
+    # screens like ContactedProjectsScreen can navigate directly to the chat.
+    contact_index = len(updated_project.contacts) - 1
+    await db.projects.update_one(
+        {"_id": project_id},
+        {"$set": {f"contacts.{contact_index}.contact_id": contact_ulid}},
+    )
+
+    contact_dict["id"] = contact_ulid
     contact_dict["project_id"] = project_id
 
     await record_credit_transaction(

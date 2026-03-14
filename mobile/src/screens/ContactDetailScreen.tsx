@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -48,52 +48,53 @@ export default function ContactDetailScreen() {
   const { user } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
   const wsRef = useRef<any>(null);
+  const hasEvaluatedRef = useRef<boolean>(false);
+
+  const loadContact = useCallback(async () => {
+    if (!contactId) return;
+    setLoading(true);
+    try {
+      const contactData = await getContactDetails(contactId);
+      setContact(contactData);
+      setMessages(contactData.chat || []);
+
+      // Mark messages as read
+      try {
+        await markContactMessagesAsRead(contactId);
+      } catch (e) {
+        console.warn('[ContactDetail] failed to mark messages as read', e);
+      }
+
+      // Load project details
+      try {
+        const projectData = await getProject(contactData.project_id);
+        setProject(projectData);
+
+        // Check if project is closed and prompt for evaluation
+        if (projectData.status === 'closed' && !hasEvaluatedRef.current) {
+          // Give user a moment to see the closed status
+          setTimeout(() => {
+            setEvaluationVisible(true);
+          }, 1500);
+        }
+      } catch (e) {
+        console.warn('[ContactDetail] failed to load project', e);
+      }
+    } catch (e) {
+      console.error('[ContactDetail] failed to load contact', e);
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  }, [contactId, navigation]);
 
   useEffect(() => {
     if (!contactId) {
       navigation.goBack();
       return;
     }
-
-    const loadContact = async () => {
-      setLoading(true);
-      try {
-        const contactData = await getContactDetails(contactId);
-        setContact(contactData);
-        setMessages(contactData.chat || []);
-
-        // Mark messages as read
-        try {
-          await markContactMessagesAsRead(contactId);
-        } catch (e) {
-          console.warn('[ContactDetail] failed to mark messages as read', e);
-        }
-
-        // Load project details
-        try {
-          const projectData = await getProject(contactData.project_id);
-          setProject(projectData);
-
-          // Check if project is closed and prompt for evaluation
-          if (projectData.status === 'closed' && !hasEvaluated) {
-            // Give user a moment to see the closed status
-            setTimeout(() => {
-              setEvaluationVisible(true);
-            }, 1500);
-          }
-        } catch (e) {
-          console.warn('[ContactDetail] failed to load project', e);
-        }
-      } catch (e) {
-        console.error('[ContactDetail] failed to load contact', e);
-        navigation.goBack();
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadContact();
-  }, [contactId, navigation, hasEvaluated]);
+  }, [contactId, navigation, loadContact]);
 
   // Setup WebSocket connection for real-time updates
   useEffect(() => {
@@ -119,22 +120,23 @@ export default function ContactDetailScreen() {
           console.log('[ContactDetail] WebSocket message:', data);
 
           if (data.type === 'new_message' && data.contact_id === contactId) {
-            // Add new message to chat
+            // Add new message to chat (backend sends message nested under data.message)
+            const msg = data.message;
+            if (!msg) return;
             const newMessage: ChatMessage = {
-              id: data.message_id,
-              sender_id: data.sender_id,
-              content: data.content,
-              created_at: data.created_at || new Date().toISOString(),
+              id: msg.id,
+              sender_id: msg.sender_id,
+              content: msg.content,
+              created_at: msg.created_at || new Date().toISOString(),
             };
-            setMessages((prev) => [...prev, newMessage]);
-          } else if (data.type === 'contact_update' && data.contact_id === contactId) {
-            // Reload contact details
-            getContactDetails(contactId)
-              .then((updated) => {
-                setContact(updated);
-                setMessages(updated.chat || []);
-              })
-              .catch((e) => console.warn('[ContactDetail] failed to reload contact', e));
+            setMessages((prev) => {
+              const exists = prev.some((m) => m.id === newMessage.id);
+              if (exists) return prev;
+              return [...prev, newMessage];
+            });
+          } else if (data.type === 'contact_update' && data.contact?.contact_id === contactId) {
+            // Reload contact details (backend sends update nested under data.contact)
+            loadContact();
           }
         } catch (e) {
           console.error('[ContactDetail] failed to parse WebSocket message', e);
@@ -187,6 +189,7 @@ export default function ContactDetailScreen() {
       await evaluateProject(project.id, { rating, comment, would_recommend: wouldRecommend });
       setEvaluationVisible(false);
       setHasEvaluated(true);
+      hasEvaluatedRef.current = true;
       setSnackbarMessage('Avaliação enviada com sucesso!');
       setSnackbarVisible(true);
     } catch (e: any) {

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Union
 import bcrypt
 import logging
@@ -78,12 +78,22 @@ async def get_current_user_from_token(token: str, db: AsyncIOMotorDatabase):
     return user
 
 async def get_current_user(token: str = Depends(oauth2_scheme), response: Response = None, db: AsyncIOMotorDatabase = Depends(get_database)):
-    """Get current user from Authorization header and renew token"""
+    """Get current user from Authorization header. Renews token only when close to expiry."""
     user = await get_current_user_from_token(token, db)
-    # Renew token
-    new_token = create_access_token(subject=str(user.id))
+    # Only renew the token if it expires within the next 5 minutes to avoid
+    # generating a new JWT on every single request (which would cause the
+    # mobile app to enter an infinite token-renewal loop via the axios interceptor).
     if response:
-        response.headers["Authorization"] = f"Bearer {new_token}"
+        try:
+            payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+            exp = payload.get("exp")
+            if exp is not None:
+                seconds_remaining = exp - datetime.now(timezone.utc).timestamp()
+                if seconds_remaining < 300:  # renew if less than 5 minutes left
+                    new_token = create_access_token(subject=str(user.id))
+                    response.headers["Authorization"] = f"Bearer {new_token}"
+        except Exception:
+            pass  # if decode fails, just don't renew
     return user
 
 async def get_current_user_from_request(request: Request, db: AsyncIOMotorDatabase = Depends(get_database)):

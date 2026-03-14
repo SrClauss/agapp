@@ -85,27 +85,36 @@ export default function App() {
     }
   };
 
-  // Setup push notifications
+  // Setup push notifications — runs once when user logs in (token goes from null to a value).
+  // We use a ref to track if notifications have already been registered, so that
+  // token renewals (which change the token string) don't cause repeated re-registrations.
+  const notificationsRegisteredRef = React.useRef(false);
   useEffect(() => {
+    // Only register when we first get a token (login), not on every renewal
+    if (!token) {
+      notificationsRegisteredRef.current = false; // reset on logout
+      return;
+    }
+    if (notificationsRegisteredRef.current) return;
+
     let responseListener: any;
     let receivedListener: any;
 
     const setupNotifications = async () => {
-      if (token) {
-        try {
-          // Register for push notifications
-          const pushToken = await registerForPushNotificationsAsync();
-          if (pushToken) {
-            await registerPushTokenOnServer(pushToken);
-            console.log('[App] Push notifications registered');
-          }
-
-          // Setup notification listeners
-          responseListener = setupNotificationResponseListener();
-          receivedListener = setupNotificationReceivedListener();
-        } catch (error) {
-          console.error('[App] Error setting up notifications:', error);
+      try {
+        // Register for push notifications
+        const pushToken = await registerForPushNotificationsAsync();
+        if (pushToken) {
+          await registerPushTokenOnServer(pushToken);
+          console.log('[App] Push notifications registered');
         }
+
+        // Setup notification listeners
+        responseListener = setupNotificationResponseListener();
+        receivedListener = setupNotificationReceivedListener();
+        notificationsRegisteredRef.current = true;
+      } catch (error) {
+        console.error('[App] Error setting up notifications:', error);
       }
     };
 
@@ -121,9 +130,12 @@ export default function App() {
     };
   }, [token]);
 
-  // Poll for unread message count every 60 seconds when logged in
+  // Poll for unread message count every 60 seconds when logged in.
+  // Use `!!token` (boolean) instead of `token` string so this effect only
+  // re-runs when the user logs in/out, not on every token renewal.
+  const isLoggedIn = !!token;
   useEffect(() => {
-    if (!token) return;
+    if (!isLoggedIn) return;
     let cancelled = false;
 
     const fetchUnreadCount = async () => {
@@ -144,7 +156,7 @@ export default function App() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [token, activeRole]);
+  }, [isLoggedIn, activeRole]);
 
   useEffect(() => {
     async function initializeApp() {

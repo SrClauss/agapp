@@ -70,7 +70,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     "id": str(new_ulid()),
                     "sender_id": str(current_user.id),
                     "content": content,
-                    "created_at": datetime.now(timezone.utc),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 }
 
                 # Adicionar mensagem ao chat do contato
