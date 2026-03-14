@@ -264,9 +264,9 @@
                         <tbody>
                             {% for contact in contacts %}
                             <tr>
-                                <td>{{ contact.message[:50] }}...</td>
+                                <td>{{ (contact.contact_details.message or 'Sem mensagem')[:50] if contact.contact_details else 'Sem mensagem' }}...</td>
                                 <td><span class="badge bg-info">{{ contact.status }}</span></td>
-                                <td>{{ contact.created_at or '-' }}</td>
+                                <td>{{ contact.created_at.strftime('%d/%m/%Y') if contact.created_at else '-' }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
