@@ -293,19 +293,24 @@ async def startup_event():
     # Verificar e criar webhook 'Pagamento Confirmado' no Asaas se necessário
     try:
         from app.services.asaas import asaas_service
-        webhooks = await asaas_service.list_webhooks()
-        webhook_exists = any(w.get("name") == "Pagamento Confirmado" for w in webhooks)
-        if not webhook_exists:
-            webhook_token = settings.asaas_webhook_token
-            await asaas_service.create_webhook(
-                name="Pagamento Confirmado",
-                url=settings.asaas_webhook_url,
-                events=["PAYMENT_CONFIRMED"],
-                token=webhook_token,
-            )
-            print("Webhook 'Pagamento Confirmado' criado no Asaas.")
+
+        webhook_token = settings.asaas_webhook_token
+        if not webhook_token:
+            print("Aviso: ASAAS_WEBHOOK_TOKEN não definido; webhooks não serão criados/verificados.")
         else:
-            print("Webhook 'Pagamento Confirmado' já existe no Asaas.")
+            webhooks = await asaas_service.list_webhooks()
+            print(f"Webhooks existentes no Asaas: {len(webhooks)}")
+            webhook_exists = any(w.get("name") == "Pagamento Confirmado" for w in webhooks)
+            if not webhook_exists:
+                await asaas_service.create_webhook(
+                    name="Pagamento Confirmado",
+                    url=settings.asaas_webhook_url,
+                    events=["PAYMENT_CONFIRMED"],
+                    token=webhook_token,
+                )
+                print("Webhook 'Pagamento Confirmado' criado no Asaas.")
+            else:
+                print("Webhook 'Pagamento Confirmado' já existe no Asaas.")
     except Exception as e:
         print(f"Aviso: não foi possível verificar/criar webhook no Asaas: {e}")
 

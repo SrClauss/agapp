@@ -3,11 +3,14 @@ Serviço de integração com Asaas (Gateway de Pagamento)
 Documentação: https://docs.asaas.com
 """
 import os
+import logging
 import httpx
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 from app.models.user import User
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AsaasService:
@@ -55,9 +58,24 @@ class AsaasService:
                 return response.json()
 
             except httpx.HTTPStatusError as e:
-                error_data = e.response.json() if e.response.content else {}
-                raise Exception(f"Erro na API Asaas: {e.response.status_code} - {error_data}")
+                error_text = None
+                try:
+                    error_text = e.response.json()
+                except Exception:
+                    error_text = e.response.text
+
+                logger.error(
+                    "Asaas API status %s; url=%s; response=%s",
+                    e.response.status_code,
+                    url,
+                    error_text,
+                )
+
+                raise Exception(
+                    f"Erro na API Asaas: {e.response.status_code} - {error_text}"
+                )
             except Exception as e:
+                logger.error("Erro ao comunicar com Asaas: %s", str(e), exc_info=True)
                 raise Exception(f"Erro ao comunicar com Asaas: {str(e)}")
 
     # ==================== CUSTOMER MANAGEMENT ====================

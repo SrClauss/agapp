@@ -29,7 +29,12 @@ export interface CreditTransaction {
 
 export const getCreditPackages = async (): Promise<CreditPackage[]> => {
   const response = await client.get('/api/payments/credit-packages');
-  return response.data;
+  const packages: any[] = response.data || [];
+  // Garantir que cada pacote tenha `id` (pode vir como `_id` do backend)
+  return packages.map((pkg) => ({
+    ...pkg,
+    id: pkg.id || pkg._id,
+  }));
 };
 
 export const getUserCreditTransactions = async (): Promise<CreditTransaction[]> => {
@@ -38,14 +43,22 @@ export const getUserCreditTransactions = async (): Promise<CreditTransaction[]> 
 };
 
 export const createCreditPackagePayment = async (packageId: string, billingType: string) => {
+  const payload = {
+    package_id: packageId,
+    billing_type: billingType,
+  };
+  if (__DEV__) {
+    console.log('[API] createCreditPackagePayment payload:', payload);
+  }
   try {
-    const response = await client.post('/api/payments/credits', {
-      package_id: packageId,
-      billing_type: billingType,
-    });
+    const response = await client.post('/api/payments/credits', payload);
     return response.data;
   } catch (error: any) {
-    console.error('Erro na API de pagamento:', error?.response?.data);
+    const responseData = error?.response?.data;
+    console.error('[API] Erro na API de pagamento:', responseData);
+    if (responseData) {
+      console.error('[API] Erro completo:', JSON.stringify(responseData, null, 2));
+    }
     throw error;
   }
 };

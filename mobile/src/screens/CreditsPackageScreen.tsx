@@ -37,10 +37,11 @@ export default function CreditsPackageScreen() {
     }
   };
 
-  const handleBuyPackage = async (pkg: CreditPackage) => {
+  const handleBuyPackage = async (pkg: CreditPackage & { _id?: string }) => {
     try {
       setPurchasing(pkg.id);
-      const result = await createCreditPackagePayment(pkg.id, 'PIX');
+      const packageId = pkg.id || (pkg as any)._id;
+      const result = await createCreditPackagePayment(packageId, 'PIX');
       
       // Checkout URL do Asaas
       const checkoutUrl = result.invoice_url || result.invoiceUrl;
@@ -56,14 +57,29 @@ export default function CreditsPackageScreen() {
       } else {
         Alert.alert(
           'Pagamento Criado',
-          'Seu pagamento foi iniciado. Verifique seu e-mail para acessar o link de pagamento.',
+          'Seu pagamento foi iniciado. Escolha sua forma de pagamento no link enviado ao seu e-mail.',
           [{ text: 'OK' }]
         );
       }
     } catch (e: any) {
       console.error('Erro ao criar pagamento:', e);
-      const errorMessage = e?.response?.data?.detail || e?.message || 'Erro ao criar pagamento. Tente novamente.';
+      const responseData = e?.response?.data;
+      const detail = responseData?.detail
+        ? Array.isArray(responseData.detail)
+          ? responseData.detail.map((d: any) => d.msg || JSON.stringify(d)).join('\n')
+          : String(responseData.detail)
+        : null;
+
+      const errorMessage =
+        detail ||
+        responseData?.message ||
+        e?.message ||
+        'Erro ao criar pagamento. Tente novamente.';
+
       Alert.alert('Erro no Pagamento', errorMessage);
+      if (__DEV__) {
+        console.error('[Pagamento] responseData:', JSON.stringify(responseData, null, 2));
+      }
     } finally {
       setPurchasing(null);
     }
@@ -98,7 +114,7 @@ export default function CreditsPackageScreen() {
           disabled={isPurchasing}
           onPress={() => handleBuyPackage(item)}
         >
-          {isPurchasing ? 'Processando...' : 'Comprar via PIX'}
+          {isPurchasing ? 'Processando...' : 'Comprar'}
         </Button>
       </View>
     );

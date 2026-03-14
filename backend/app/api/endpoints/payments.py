@@ -1,6 +1,9 @@
 """
 Endpoints de pagamento para usuários (via Asaas)
 """
+import logging
+import traceback
+
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field, validator
@@ -17,6 +20,8 @@ from app.crud.project import get_project
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
 
+logger = logging.getLogger(__name__)
+
 
 # ==================== SCHEMAS ====================
 
@@ -28,7 +33,7 @@ class SubscriptionPaymentRequest(BaseModel):
 
 class CreditPackagePaymentRequest(BaseModel):
     package_id: str = Field(..., min_length=1)
-    billing_type: Literal["PIX", "CREDIT_CARD"]
+    billing_type: Optional[Literal["PIX", "CREDIT_CARD"]] = None  # Ignorado, checkout aceita todas as formas
 
 
 class FeaturedProjectPaymentRequest(BaseModel):
@@ -250,57 +255,37 @@ async def create_credit_package_payment(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Criar pagamento de pacote de créditos"""
-    # Buscar pacote
-    package = await config_crud.get_credit_package(db, request.package_id)
-    if not package:
-        raise HTTPException(status_code=404, detail="Pacote não encontrado")
+    try:
+        # Buscar pacote
+        package = await config_crud.get_credit_package(db, request.package_id)
+        if not package:
+            raise HTTPException(status_code=404, detail="Pacote não encontrado")
 
-    if not package.is_active:
-        raise HTTPException(status_code=400, detail="Pacote não está ativo")
-    
-    # Validar preço do pacote
-    if package.price <= 0:
-        raise HTTPException(status_code=400, detail="Pacote inválido: preço deve ser maior que zero")
+        if not package.is_active:
+            raise HTTPException(status_code=400, detail="Pacote não está ativo")
+        
+        # Validar preço do pacote
+        if package.price <= 0:
+            raise HTTPException(status_code=400, detail="Pacote inválido: preço deve ser maior que zero")
 
-    # Criar ou buscar cliente no Asaas
-    customer_id = await asaas_service.get_or_create_customer(current_user)
+        # Criar ou buscar cliente no Asaas
+        customer_id = await asaas_service.get_or_create_customer(current_user)
 
-    # Criar referência externa
-    external_reference = f"credits:{current_user.id}:{package.id}"
+        # Criar referência externa
+        external_reference = f"credits:{current_user.id}:{package.id}"
 
-    # Descrição detalhada
-    description = f"Pacote {package.name} - {package.credits} créditos"
-    if package.bonus_credits > 0:
-        description += f" + {package.bonus_credits} bônus"
+        # Descrição detalhada
+        description = f"Pacote {package.name} - {package.credits} créditos"
+        if package.bonus_credits > 0:
+            description += f" + {package.bonus_credits} bônus"
 
-    # Criar pagamento
-    if request.billing_type == "PIX":
-        result = await asaas_service.create_pix_payment(
-            customer_id=customer_id,
-            value=package.price,
-            description=description,
-            external_reference=external_reference
-        )
-        payment = result["payment"]
-        pix_data = result["pix"]
-
-        return PaymentResponse(
-            payment_id=payment["id"],
-            status=payment["status"],
-            value=package.price,
-            billing_type="PIX",
-            due_date=payment["dueDate"],
-            invoice_url=payment.get("invoiceUrl"),
-            pix_qrcode=pix_data.get("encodedImage"),
-            pix_payload=pix_data.get("payload")
-        )
-
-    elif request.billing_type == "CREDIT_CARD":
+        # Criar cobrança UNDEFINED para permitir todas as formas de pagamento no checkout
+        # O checkout do Asaas vai exibir PIX, Cartão e Boleto automaticamente
         payment = await asaas_service.create_payment(
             customer_id=customer_id,
             value=package.price,
             description=description,
-            billing_type="CREDIT_CARD",
+            billing_type="UNDEFINED",  # Permite todas as formas de pagamento
             external_reference=external_reference
         )
 
@@ -308,13 +293,20 @@ async def create_credit_package_payment(
             payment_id=payment["id"],
             status=payment["status"],
             value=package.price,
-            billing_type="CREDIT_CARD",
+            billing_type="UNDEFINED",
             due_date=payment["dueDate"],
-            invoice_url=payment.get("invoiceUrl")
+            invoice_url=payment.get("invoiceUrl"),
+            pix_qrcode=None,  # Checkout exibirá QR Code quando usuário escolher PIX
+            pix_payload=None
         )
 
-    else:
-        raise HTTPException(status_code=400, detail="Método de pagamento inválido")
+    except HTTPException:
+        # Re-raise HTTP exceptions para manter status corretos
+        raise
+    except Exception as e:
+        logger.exception("Erro ao criar pagamento de pacote de créditos")
+        # Retorna um erro genérico mas o log terá a stack completa
+        raise HTTPException(status_code=500, detail=f"Erro interno ao criar pagamento: {str(e)}")
 
 
 # ==================== FEATURED PROJECT PAYMENTS ====================
