@@ -4,7 +4,7 @@ import { Text, Avatar, Badge, Card } from 'react-native-paper';
 import { ContactSummary } from '../api/projects';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import useChatStore from '../stores/chatStore';
+import { useNavigation } from '@react-navigation/native';
 
 interface Props {
   contacts: ContactSummary[];
@@ -12,13 +12,13 @@ interface Props {
 }
 
 export default function ProjectContactsList({ contacts, onContactPress }: Props) {
-  const { openChat } = useChatStore();
+  const navigation = useNavigation();
 
   const handleContactPress = (contactId: string) => {
     if (onContactPress) {
       onContactPress(contactId);
     } else {
-      openChat(contactId);
+      (navigation as any).navigate('ContactDetail', { contactId });
     }
   };
 

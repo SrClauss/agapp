@@ -154,17 +154,29 @@ export const ChatModal: React.FC<ChatModalProps> = ({
         >
           {item.content}
         </Text>
-        <Text
-          style={[
-            styles.messageTime,
-            isMyMessage ? styles.myMessageTime : styles.theirMessageTime,
-          ]}
-        >
-          {new Date(item.created_at).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
+        <View style={styles.timeRow}>
+          <Text
+            style={[
+              styles.messageTime,
+              isMyMessage ? styles.myMessageTime : styles.theirMessageTime,
+            ]}
+          >
+            {new Date(item.created_at).toLocaleTimeString('pt-BR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+          {isMyMessage && (
+            <Text
+              style={[
+                styles.readTick,
+                item.read_at ? styles.readTickRead : styles.readTickSent,
+              ]}
+            >
+              {item.read_at ? ' ✓✓' : ' ✓'}
+            </Text>
+          )}
+        </View>
       </View>
     );
   };
@@ -204,7 +216,11 @@ export const ChatModal: React.FC<ChatModalProps> = ({
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : (
-          <>
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={0}
+          >
             {otherUser && (
               <ProfileCard
                 name={otherUser.name || 'Usuário'}
@@ -218,42 +234,39 @@ export const ChatModal: React.FC<ChatModalProps> = ({
               renderItem={renderMessage}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.messagesList}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
               onContentSizeChange={() => {
                 flatListRef.current?.scrollToEnd({ animated: true });
               }}
             />
 
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={0}
-            >
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={inputText}
-                  onChangeText={setInputText}
-                  placeholder="Digite sua mensagem..."
-                  placeholderTextColor={colors.textSecondary}
-                  multiline
-                  maxLength={1000}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.sendButton,
-                    (!inputText.trim() || sending) && styles.sendButtonDisabled,
-                  ]}
-                  onPress={handleSend}
-                  disabled={!inputText.trim() || sending}
-                >
-                  {sending ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.sendButtonText}>➤</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </KeyboardAvoidingView>
-          </>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Digite sua mensagem..."
+                placeholderTextColor={colors.textSecondary}
+                multiline
+                maxLength={1000}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!inputText.trim() || sending) && styles.sendButtonDisabled,
+                ]}
+                onPress={handleSend}
+                disabled={!inputText.trim() || sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.sendButtonText}>➤</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         )}
       </SafeAreaView>
     </Modal>
@@ -301,25 +314,30 @@ const styles = StyleSheet.create({
   messageBubble: {
     maxWidth: '75%',
     padding: 12,
-    borderRadius: 16,
+    borderRadius: 18,
     marginBottom: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   myMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: colors.primary,
-    borderBottomRightRadius: 4,
+    backgroundColor: '#DCF8C6',
+    borderBottomRightRadius: 6,
   },
   theirMessage: {
     alignSelf: 'flex-start',
     backgroundColor: '#fff',
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 6,
   },
   messageText: {
     fontSize: 16,
     marginBottom: 4,
   },
   myMessageText: {
-    color: '#fff',
+    color: '#111827',
   },
   theirMessageText: {
     color: colors.text,
@@ -328,7 +346,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   myMessageTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#4B5563',
     textAlign: 'right',
   },
   theirMessageTime: {
@@ -371,5 +389,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  flex: {
+    flex: 1,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  readTick: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  readTickSent: {
+    color: '#9CA3AF',
+  },
+  readTickRead: {
+    color: '#3B82F6',
   },
 });

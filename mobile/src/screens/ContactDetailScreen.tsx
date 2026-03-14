@@ -2,14 +2,14 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   FlatList,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, TextInput, IconButton, Divider, Card, Snackbar } from 'react-native-paper';
+import { Text, TextInput, IconButton, Snackbar } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import {
   getContactDetails,
@@ -120,20 +120,29 @@ export default function ContactDetailScreen() {
           console.log('[ContactDetail] WebSocket message:', data);
 
           if (data.type === 'new_message' && data.contact_id === contactId) {
-            // Add new message to chat (backend sends message nested under data.message)
-            const msg = data.message;
-            if (!msg) return;
-            const newMessage: ChatMessage = {
-              id: msg.id,
-              sender_id: msg.sender_id,
-              content: msg.content,
-              created_at: msg.created_at || new Date().toISOString(),
-            };
-            setMessages((prev) => {
-              const exists = prev.some((m) => m.id === newMessage.id);
-              if (exists) return prev;
-              return [...prev, newMessage];
-            });
+            // Recarrega do servidor para garantir sender_id correto
+            // Evita duplicatas e formato mismatch entre temp e WS
+            getContactDetails(contactId)
+              .then((updated) => {
+                setMessages(updated.chat || []);
+                setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+              })
+              .catch(() => {
+                // Fallback: adiciona a mensagem diretamente se reload falhar
+                const msg = data.message;
+                if (!msg) return;
+                const newMessage: ChatMessage = {
+                  id: msg.id,
+                  sender_id: msg.sender_id,
+                  content: msg.content,
+                  created_at: msg.created_at || new Date().toISOString(),
+                };
+                setMessages((prev) => {
+                  const exists = prev.some((m) => m.id === newMessage.id);
+                  if (exists) return prev;
+                  return [...prev, newMessage];
+                });
+              });
           } else if (data.type === 'contact_update' && data.contact?.contact_id === contactId) {
             // Reload contact details (backend sends update nested under data.contact)
             loadContact();
@@ -154,25 +163,19 @@ export default function ContactDetailScreen() {
   const handleSendMessage = async () => {
     if (!messageText.trim() || sending || !contactId) return;
 
-    const tempMessage: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      sender_id: user?.id || '',
-      content: messageText.trim(),
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, tempMessage]);
+    const textToSend = messageText.trim();
     setMessageText('');
     setSending(true);
 
     try {
-      await sendContactMessage(contactId, tempMessage.content);
-      // Message will be updated via WebSocket or on reload
+      await sendContactMessage(contactId, textToSend);
+      // Recarrega do servidor para garantir sender_id correto e evitar duplicatas com WS
+      const updated = await getContactDetails(contactId);
+      setMessages(updated.chat || []);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e: any) {
       console.error('[ContactDetail] failed to send message', e);
-      // Remove temp message on error
-      setMessages((prev) => prev.filter((m) => m.id !== tempMessage.id));
-      setMessageText(tempMessage.content);
+      setMessageText(textToSend); // Restaura texto em caso de erro
     } finally {
       setSending(false);
     }
@@ -223,12 +226,23 @@ export default function ContactDetailScreen() {
     }
   };
 
+  const getOtherName = (): string => {
+    if (!contact) return 'Outro';
+    return user?.id === contact.professional_id
+      ? contact.client_name || 'Cliente'
+      : contact.professional_name || 'Profissional';
+  };
+
   const renderMessage = ({ item, index }: { item: ChatMessage; index: number }) => {
     const isMyMessage = item.sender_id === user?.id;
     const showDate =
       index === 0 ||
       new Date(item.created_at).toDateString() !==
         new Date(messages[index - 1].created_at).toDateString();
+
+    // Show sender name on first message in a group from the same sender
+    const prevItem = index > 0 ? messages[index - 1] : null;
+    const showSenderName = !isMyMessage && (!prevItem || prevItem.sender_id !== item.sender_id);
 
     return (
       <View key={item.id}>
@@ -249,6 +263,9 @@ export default function ContactDetailScreen() {
               isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
             ]}
           >
+            {showSenderName && (
+              <Text style={styles.senderName}>{getOtherName()}</Text>
+            )}
             <Text
               style={[
                 styles.messageText,
@@ -257,14 +274,26 @@ export default function ContactDetailScreen() {
             >
               {item.content}
             </Text>
-            <Text
-              style={[
-                styles.messageTime,
-                isMyMessage ? styles.myMessageTime : styles.otherMessageTime,
-              ]}
-            >
-              {formatTime(item.created_at)}
-            </Text>
+            <View style={styles.timeRow}>
+              <Text
+                style={[
+                  styles.messageTime,
+                  isMyMessage ? styles.myMessageTime : styles.otherMessageTime,
+                ]}
+              >
+                {formatTime(item.created_at)}
+              </Text>
+              {isMyMessage && (
+                <Text
+                  style={[
+                    styles.readTick,
+                    item.read_at ? styles.readTickRead : styles.readTickSent,
+                  ]}
+                >
+                  {item.read_at ? ' ✓✓' : ' ✓'}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
       </View>
@@ -292,38 +321,44 @@ export default function ContactDetailScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-      {/* Project Info Header */}
-      {project && (
-        <Card style={styles.projectCard}>
-          <Card.Content style={styles.projectCardContent}>
-            <View>
-              <Text variant="titleSmall" style={styles.projectTitle}>
-                {project.title}
-              </Text>
-              <Text variant="bodySmall" style={styles.projectStatus}>
-                Status: {contact.status} • {contact.credits_used} créditos gastos
-              </Text>
-            </View>
-            {wsConnected && (
-              <View style={styles.onlineIndicator}>
-                <View style={styles.onlineDot} />
-                <Text style={styles.onlineText}>Online</Text>
-              </View>
-            )}
-          </Card.Content>
-        </Card>
-      )}
+      {/* WhatsApp-style header */}
+      <View style={styles.chatHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+        <View style={styles.chatHeaderInfo}>
+          <Text style={styles.chatHeaderName} numberOfLines={1}>
+            {contact
+              ? user?.id === contact.professional_id
+                ? contact.client_name || 'Cliente'
+                : contact.professional_name || 'Profissional'
+              : ''}
+          </Text>
+          {project && (
+            <Text style={styles.chatHeaderSub} numberOfLines={1}>
+              {project.title}
+            </Text>
+          )}
+        </View>
+        {wsConnected && (
+          <View style={styles.onlineIndicator}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.onlineText}>online</Text>
+          </View>
+        )}
+      </View>
 
-      {/* Messages List */}
       <FlatList
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messagesList}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -383,7 +418,36 @@ export default function ContactDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#ECE5DD',
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#075E54',
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 4,
+  },
+  backIcon: {
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  chatHeaderInfo: {
+    flex: 1,
+  },
+  chatHeaderName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  chatHeaderSub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 1,
   },
   container: {
     flex: 1,
@@ -396,25 +460,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#6B7280',
-  },
-  projectCard: {
-    margin: 0,
-    borderRadius: 0,
-    elevation: 2,
-  },
-  projectCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  projectTitle: {
-    fontWeight: '600',
-    color: '#111827',
-  },
-  projectStatus: {
-    marginTop: 4,
     color: '#6B7280',
   },
   onlineIndicator: {
@@ -459,37 +504,43 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   messageBubble: {
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
   myMessageBubble: {
-    backgroundColor: '#3B82F6',
-    borderBottomRightRadius: 4,
+    backgroundColor: '#DCF8C6',
+    borderBottomRightRadius: 6,
   },
   otherMessageBubble: {
     backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 6,
   },
   messageText: {
     fontSize: 15,
     lineHeight: 20,
   },
+  senderName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#075E54',
+    marginBottom: 2,
+  },
   myMessageText: {
-    color: '#FFFFFF',
+    color: '#111827',
   },
   otherMessageText: {
     color: '#111827',
   },
   messageTime: {
     fontSize: 11,
-    marginTop: 4,
   },
   myMessageTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#4B5563',
     textAlign: 'right',
   },
   otherMessageTime: {
@@ -524,5 +575,21 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     marginRight: 8,
     backgroundColor: '#F3F4F6',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 4,
+  },
+  readTick: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  readTickSent: {
+    color: '#9CA3AF',
+  },
+  readTickRead: {
+    color: '#3B82F6',
   },
 });

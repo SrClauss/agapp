@@ -6,7 +6,6 @@ import { getProject, Project } from '../api/projects';
 import { getCreditsByProfessional } from '../api/professional';
 import { getContactCostPreview, createContactForProject, getContactHistory, CostPreview } from '../api/contacts';
 import useAuthStore from '../stores/authStore';
-import useChatStore from '../stores/chatStore';
 import { maskName, maskPhone } from '../utils/format';
 import ConfirmContactModal from '../components/ConfirmContactModal';
 import { ProfileCard } from '../components/ProfileCard';
@@ -38,7 +37,6 @@ export default function ProjectProfessionalsDetailScreen() {
   const [hasExistingContact, setHasExistingContact] = useState<boolean>(false);
 
   const { user, setUser } = useAuthStore();
-  const { openChat } = useChatStore();
 
   // Refs for debounce mechanism to prevent multiple rapid button presses
   const lastContactPressTime = useRef<number>(0);
@@ -82,7 +80,7 @@ export default function ProjectProfessionalsDetailScreen() {
       if (foundContactId) {
         setExistingContactId(foundContactId);
         setHasExistingContact(true);
-        openChat(foundContactId);
+        (navigation as any).navigate('ContactDetail', { contactId: foundContactId });
         return;
       }
 
@@ -99,7 +97,7 @@ export default function ProjectProfessionalsDetailScreen() {
         setHasExistingContact(true);
         setSnackbarMessage('Conversa criada com sucesso!');
         setSnackbarVisible(true);
-        openChat(newContactId);
+        (navigation as any).navigate('ContactDetail', { contactId: newContactId });
         return;
       }
 
@@ -113,7 +111,7 @@ export default function ProjectProfessionalsDetailScreen() {
           if (foundContactId) {
             setExistingContactId(foundContactId);
             setHasExistingContact(true);
-            openChat(foundContactId);
+            (navigation as any).navigate('ContactDetail', { contactId: foundContactId });
             return;
           }
         } catch (innerError) {
@@ -130,7 +128,7 @@ export default function ProjectProfessionalsDetailScreen() {
       setSnackbarMessage('Erro ao abrir conversa. Tente novamente.');
       setSnackbarVisible(true);
     }
-  }, [findExistingContactId, getResolvedProjectId, openChat]);
+  }, [findExistingContactId, getResolvedProjectId]);
 
   useEffect(() => {
     let mounted = true;
@@ -310,9 +308,9 @@ export default function ProjectProfessionalsDetailScreen() {
       setSnackbarVisible(true);
 
       console.log('[ProjectProfessionalsDetail] Opening chat with new contact...');
-      // Open chat with new contact
+      // Navigate to chat with new contact
       if (contactId) {
-        openChat(contactId);
+        (navigation as any).navigate('ContactDetail', { contactId });
       }
     } catch (e: any) {
       console.error('[ProjectProfessionalsDetail] failed to create contact', {
@@ -336,7 +334,7 @@ export default function ProjectProfessionalsDetailScreen() {
             if (foundContactId) {
               setExistingContactId(foundContactId);
               setHasExistingContact(true);
-              openChat(foundContactId);
+              (navigation as any).navigate('ContactDetail', { contactId: foundContactId });
             } else {
               await ensureContactAndOpenChat();
             }
@@ -387,7 +385,7 @@ export default function ProjectProfessionalsDetailScreen() {
       setCreating(false);
       isCreatingRef.current = false;
     }
-  }, [projectId, creating, user, setUser, openChat, findExistingContactId, ensureContactAndOpenChat]);
+  }, [projectId, creating, user, setUser, navigation, findExistingContactId, ensureContactAndOpenChat]);
   
   
   useEffect(() => {

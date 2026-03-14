@@ -26,11 +26,9 @@ import SupportScreen from './src/screens/SupportScreen';
 import ChatListScreen from './src/screens/ChatListScreen';
 import { theme } from './src/theme';
 import { useAuthStore } from './src/stores/authStore';
-import useChatStore from './src/stores/chatStore';
 import useNotificationStore from './src/stores/notificationStore';
 import { getRouteForRoles } from './src/utils/roles';
 import { fetchCurrentUser } from './src/api/auth';
-import { ChatModal } from './src/components/ChatModal';
 import { 
   registerForPushNotificationsAsync, 
   registerPushTokenOnServer,
@@ -45,7 +43,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState<string>('Login');
   const { token, setUser, isHydrated, activeRole } = useAuthStore();
-  const { isChatOpen, activeContactId, closeChat } = useChatStore();
   const { setCount: setUnreadCount } = useNotificationStore();
 
   const checkAuth = async () => {
@@ -222,15 +219,6 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style="auto" />
-      
-      {/* Global Chat Modal */}
-      {isChatOpen && activeContactId && (
-        <ChatModal
-          visible={isChatOpen}
-          onClose={closeChat}
-          contactId={activeContactId}
-        />
-      )}
     </PaperProvider>
   );
 }

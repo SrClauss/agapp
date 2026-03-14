@@ -54,10 +54,14 @@ export default function LocationAvatar({ backgroundUri }: Props) {
   }, [locationText, locationLoading, fetchLocation]);
 
   const openNotifications = () => {
+    if (!user) {
+      try { navigation.navigate('Login' as never); } catch (err) {}
+      return;
+    }
     try {
-      navigation.navigate('Notifications' as never);
+      navigation.navigate('ChatList' as never);
     } catch (err) {
-      navigation.navigate('Profile' as never);
+      navigation.navigate('WelcomeCustomer' as never);
     }
   };
 
