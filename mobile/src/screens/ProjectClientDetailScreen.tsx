@@ -255,9 +255,9 @@ const ProjectClientDetailScreen: React.FC = () => {
 
     try {
       await evaluateProject(project._id, {
-        professional_id: professionalId,
         rating,
         comment,
+        would_recommend: wouldRecommend,
       });
       setEvaluationVisible(false);
       Alert.alert('Obrigado!', 'Sua avaliação foi enviada com sucesso.');

@@ -132,3 +132,62 @@
 5. **Considerações**:
    - Por enquanto, não abordar assinaturas.
    - Garantir que a experiência do usuário seja fluida e intuitiva.
+
+---
+
+# Edição de Pacotes de Créditos (Sistema Admin)
+
+**Objetivo:** Permitir que administradores editem os pacotes de créditos existentes através do painel administrativo.
+
+## Funcionalidades de Edição:
+
+1. **Botão de Editar**:
+   - Cada pacote listado na tabela de "Pacotes de Créditos" deve ter um botão de edição (ícone de lápis).
+   - Ao clicar no botão de edição, um modal/formulário deve ser aberto com os dados do pacote.
+
+2. **Campos Editáveis**:
+   - **Nome**: Nome do pacote (ex: "Pacote Básico", "Pacote Prata", "Pacote Ouro").
+   - **Descrição**: Descrição curta do pacote (opcional).
+   - **Créditos**: Quantidade de créditos que o pacote oferece.
+   - **Bônus**: Créditos extras/bônus (pode ser 0).
+   - **Preço**: Valor em R$ do pacote.
+   - **Status**: Ativo/Inativo (toggle para habilitar/desabilitar o pacote).
+   - **Ordem**: Posição em que o pacote aparece na listagem (para ordenação).
+
+3. **Validações**:
+   - Nome: obrigatório, mínimo 3 caracteres.
+   - Créditos: obrigatório, valor inteiro positivo maior que 0.
+   - Bônus: opcional, valor inteiro não-negativo (padrão 0).
+   - Preço: obrigatório, valor decimal positivo (formato: R$ 100,00).
+   - Ordem: opcional, valor inteiro não-negativo para ordenação.
+   - Impedir edição de pacotes que estão em uso ativo por assinaturas (se aplicável).
+
+4. **Endpoint Backend**:
+   - Criar endpoint `PUT /api/v1/credits-packages/{package_id}` para atualizar pacote.
+   - O endpoint deve:
+     - Validar permissões de administrador.
+     - Validar os campos recebidos.
+     - Atualizar o registro no banco de dados.
+     - Retornar o pacote atualizado ou erro.
+   
+5. **Interface do Modal de Edição**:
+   - Formulário com campos para edição dos dados.
+   - Botões "Salvar" e "Cancelar".
+   - Feedback visual de loading durante o salvamento.
+   - Mensagem de sucesso ou erro após a operação.
+   - Atualização automática da tabela após edição bem-sucedida.
+
+6. **Histórico de Alterações** (Opcional/Futuro):
+   - Registrar logs de alterações nos pacotes (quem alterou, quando, quais campos).
+   - Útil para auditoria e controle.
+
+7. **Considerações de Segurança**:
+   - Apenas usuários com perfil de administrador podem editar pacotes.
+   - Validar no backend se o usuário tem permissão `is_admin = true`.
+   - Prevenir injeção de valores negativos ou inválidos.
+
+8. **Experiência do Usuário**:
+   - Formulário intuitivo e responsivo.
+   - Validação em tempo real dos campos.
+   - Confirmação antes de salvar alterações críticas (como desativar pacote popular).
+   - Loading state claro durante operações assíncronas.
