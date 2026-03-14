@@ -111,7 +111,8 @@ async def get_all_credit_packages(
     active_only: bool = False
 ) -> List[CreditPackage]:
     """Listar todos os pacotes de créditos"""
-    query = {"is_active": True} if active_only else {}
+    # Sempre excluir pacotes com preço 0
+    query = {"is_active": True, "price": {"$gt": 0}} if active_only else {"price": {"$gt": 0}}
     cursor = db.credit_packages.find(query).sort("sort_order", 1)
     packages = await cursor.to_list(length=None)
     return [CreditPackage(**pkg) for pkg in packages]
