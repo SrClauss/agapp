@@ -56,12 +56,14 @@ export default function NearbySummary() {
     return () => { scale.stop(); opacity.stop(); };
   }, [radarAnim, radarOpacity]);
 
-  // Carregar configurações do servidor quando o componente montar
+  // Carregar configurações do servidor apenas uma vez ao montar (não a cada token renewal)
+  const loadedRef = React.useRef(false);
   useEffect(() => {
-    if (token) {
+    if (token && !loadedRef.current) {
+      loadedRef.current = true;
       loadFromServer(token);
     }
-  }, [token]);
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sincronizar tempRadius com o valor do store quando ele mudar
   useEffect(() => {

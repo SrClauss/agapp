@@ -591,27 +591,26 @@ export default function ProjectProfessionalsDetailScreen() {
         )}
 
         <View style={styles.actionsContainer}>
-          {user && user.roles.includes('professional') && project.status === 'open' && (
+          {user && user.roles.includes('professional') && (
             <>
-              {loadingCostPreview ? (
-                <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
-              ) : costPreview ? (
-                existingContactId ? (
-                  <Button
-                    mode="outlined"
-                    onPress={() => {
-                      if (existingContactId && existingContactId !== 'existing') {
-                        navigation.navigate('ContactDetail', { contactId: existingContactId });
-                      } else {
-                        setSnackbarMessage('Erro ao acessar conversa. Tente novamente.');
-                        setSnackbarVisible(true);
-                      }
-                    }}
-                    style={{ marginBottom: 8 }}
-                  >
-                    Ver Conversa Existente
-                  </Button>
-                ) : (
+              {/* Always show "Ver Conversa" button when there is an existing contact,
+                  regardless of project status (open/in_progress/closed). */}
+              {existingContactId && existingContactId !== 'existing' && (
+                <Button
+                  mode="outlined"
+                  icon="chat"
+                  onPress={() => navigation.navigate('ContactDetail', { contactId: existingContactId })}
+                  style={{ marginBottom: 8 }}
+                >
+                  Ver Conversa
+                </Button>
+              )}
+
+              {/* Only show "Contatar" button when project is open and no contact exists yet */}
+              {project.status === 'open' && !existingContactId && (
+                loadingCostPreview ? (
+                  <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
+                ) : costPreview ? (
                   <Button
                     mode="contained"
                     onPress={handleContactButtonPress}
@@ -623,16 +622,8 @@ export default function ProjectProfessionalsDetailScreen() {
                       ? `Contatar — ${costPreview.credits_cost} créditos`
                       : 'Créditos Insuficientes'}
                   </Button>
-                )
-              ) : null}
-
-              <Button
-                mode="outlined"
-                onPress={handleGetMe}
-                style={{ marginBottom: 8 }}
-              >
-                Debug: Ver Meu Perfil
-              </Button>
+                ) : null
+              )}
             </>
           )}
         </View>

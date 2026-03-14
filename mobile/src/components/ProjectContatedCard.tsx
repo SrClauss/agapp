@@ -1,65 +1,137 @@
-import { Project, getProject, ContactSummary } from "../api/projects";
-import { useEffect, useState } from "react";
-import { Text, Avatar } from "react-native-paper";
-import { View } from "react-native";
+import { Project, ContactSummary } from "../api/projects";
+import { Text, Avatar, Badge, Button } from "react-native-paper";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import useAuthStore from "../stores/authStore";
 
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Aguardando resposta',
+  in_conversation: 'Em conversa',
+  accepted: 'Aceito',
+  rejected: 'Rejeitado',
+  completed: 'Concluído',
+};
 
 export function ProjectContactedCard({ project }: { project: Project }) {
-    const [fullProject, setFullProject] = useState<Project | null>(null);
+    const navigation = useNavigation<any>();
+    const { user } = useAuthStore();
 
-    useEffect(() => {
-        async function loadProject() {
-            try {
-                const data = await getProject(project._id);
-                setFullProject(data);
-            } catch (err) {
-                console.error("Erro ao carregar projeto completo:", err);
-            }
-        }
-        loadProject();
-    }, [project._id]);
-
-    const contacts: ContactSummary[] = (fullProject && (fullProject as any).contacts) || [];
-
-    return (
-      <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
-        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>{fullProject?.title}</Text>
-        <Text>{fullProject?.description}</Text>
-
-        {contacts.length === 0 ? (
-          <Text style={{ marginTop: 8 }}>Nenhum profissional interessado ainda.</Text>
-        ) : (
-          contacts.map((contact, index) => (
-            <View key={contact.id || index} style={{ marginTop: 8, padding: 8, backgroundColor: '#f9f9f9', borderRadius: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {contact.professional_avatar ? (
-                  <Avatar.Image size={40} source={{ uri: contact.professional_avatar }} />
-                ) : (
-                  <Avatar.Text size={40} label={contact.professional_name ? contact.professional_name.charAt(0) : '?'} />
-                )}
-                <View style={{ marginLeft: 12 }}>
-                  <Text style={{ fontWeight: 'bold' }}>{contact.professional_name}</Text>
-                  <Text style={{ color: '#666' }}>{contact.status} • {contact.created_at ? new Date(contact.created_at).toLocaleString() : ''}</Text>
-                </View>
-              </View>
-
-              <Text style={{ marginTop: 8 }}>{contact.contact_details?.message || (contact.contact_details?.proposal_price ? `Proposta: R$${contact.contact_details.proposal_price}` : 'Sem detalhes adicionais.')}</Text>
-
-              {contact.last_message && (
-                <Text style={{ marginTop: 8, marginLeft: 8, color: '#444' }}>Última mensagem — {contact.last_message.sender_id}: {contact.last_message.content}</Text>
-              )}
-
-              {contact.unread_count > 0 && (
-                <Text style={{ marginTop: 4, color: 'red' }}>{contact.unread_count} mensagens não lidas</Text>
-              )}
-            </View>
-          ))
-        )}
-      </View>
+    // From the professional's perspective, show only their own contact on this project
+    const allContacts: ContactSummary[] = (project as any).contacts || [];
+    const myContact = allContacts.find(
+        (c) => c.professional_id === user?.id
     );
 
+    const statusLabel = myContact ? (STATUS_LABELS[myContact.status] ?? myContact.status) : null;
 
+    const handleOpenChat = () => {
+        if (myContact?.id) {
+            navigation.navigate('ContactDetail', { contactId: myContact.id });
+        }
+    };
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={handleOpenChat}
+        activeOpacity={myContact?.id ? 0.7 : 1}
+      >
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1}>{project.title ?? (project as any)._id}</Text>
+            {myContact && myContact.unread_count > 0 && (
+              <Badge style={styles.badge}>{myContact.unread_count > 99 ? '99+' : myContact.unread_count}</Badge>
+            )}
+          </View>
+          {statusLabel && (
+            <Text style={styles.status}>{statusLabel}</Text>
+          )}
+          <Text style={styles.description} numberOfLines={2}>{project.description}</Text>
+        </View>
+
+        {myContact ? (
+          <View style={styles.contactInfo}>
+            {myContact.last_message ? (
+              <Text style={styles.lastMessage} numberOfLines={1}>
+                {myContact.last_message.content}
+              </Text>
+            ) : (
+              <Text style={styles.noMessage}>Nenhuma mensagem ainda. Envie a primeira!</Text>
+            )}
+            <Button
+              mode="contained"
+              compact
+              onPress={handleOpenChat}
+              style={styles.chatButton}
+            >
+              Abrir Conversa
+            </Button>
+          </View>
+        ) : (
+          <Text style={styles.noContact}>Você ainda não contatou este projeto.</Text>
+        )}
+      </TouchableOpacity>
+    );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  header: {
+    marginBottom: 8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 8,
+  },
+  badge: {
+    backgroundColor: '#ef4444',
+  },
+  status: {
+    fontSize: 12,
+    color: '#3B82F6',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  description: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+  },
+  contactInfo: {
+    marginTop: 8,
+  },
+  lastMessage: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+  },
+  noMessage: {
+    fontSize: 13,
+    color: '#999',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  chatButton: {
+    alignSelf: 'flex-start',
+  },
+  noContact: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 4,
+  },
+});
 
 
 

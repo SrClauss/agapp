@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
 from datetime import datetime, timezone
+import json
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.database import get_database
 from app.core.security import get_current_user
 from app.schemas.user import User
 from app.utils.contact_helpers import is_first_user_message
+from app.api.websockets.manager import manager
 from ulid import new as new_ulid
 
 router = APIRouter()
@@ -144,6 +146,18 @@ async def send_contact_message(
     msg_out = dict(msg)
     if isinstance(msg_out.get("created_at"), datetime):
         msg_out["created_at"] = msg_out["created_at"].isoformat()
+
+    # Broadcast via WebSocket to both participants for real-time delivery
+    ws_payload = json.dumps({
+        "type": "new_message",
+        "contact_id": contact_id,
+        "message": msg_out,
+    })
+    for rid in [professional_id, client_id]:
+        try:
+            await manager.send_personal_message(ws_payload, rid)
+        except Exception:
+            pass  # WebSocket delivery is best-effort; push notification is the fallback
 
     return {"message": "Message sent", "message_id": msg_out["id"], "data": msg_out}
 

@@ -26,7 +26,7 @@ export default function WelcomeProfessionalScreen() {
   const projectsAll = useProjectsNearbyStore((s) => s.projectsAll);
   const projectsNonRemote = useProjectsNearbyStore((s) => s.projectsNonRemote);
   const loading = useProjectsNearbyStore((s) => s.loading);
-  const token = useAuthStore((s) => s.token);
+  // token is read inside fetchProjectsNearby via authStore — no need to pass it explicitly
   const logout = useAuthStore((s: AuthState) => s.logout);
   const navigation = useNavigation();
 
@@ -39,23 +39,25 @@ export default function WelcomeProfessionalScreen() {
     }
   };
 
-  // Fetch nearby projects when screen is focused or coords change
+  // Fetch nearby projects when screen is focused or coords change.
+  // NOTE: do NOT include `token` in the deps — `fetchProjectsNearby` already reads
+  // the latest token from authStore internally, so adding `token` here would cause
+  // a re-fetch on every token renewal, creating an infinite loop.
   useFocusEffect(
     useCallback(() => {
       let mounted = true;
       (async () => {
-        // If we have coords, fetch using them; otherwise fetch with token (backend will fallback to professional settings)
         if (coords) {
-          await fetchNearby({ token: token ?? undefined, latitude: coords[1], longitude: coords[0] });
+          await fetchNearby({ latitude: coords[1], longitude: coords[0] });
         } else {
-          await fetchNearby({ token: token ?? undefined });
+          await fetchNearby({});
         }
       })();
 
       return () => {
         mounted = false;
       };
-    }, [coords, token, fetchNearby])
+    }, [coords, fetchNearby])
   );
 
   return (
