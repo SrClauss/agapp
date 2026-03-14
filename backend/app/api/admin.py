@@ -95,16 +95,13 @@ async def admin_dashboard(
     recent_users = await get_users(db, limit=5)
     recent_projects = await get_projects(db, limit=5)
 
-    # recent contacts: unwind and sort
+    # recent contacts: query from root db.contacts collection
     recent_contacts = []
-    pipeline = [
-        {"$match": {"contacts": {"$exists": True, "$ne": []}}},
-        {"$unwind": "$contacts"},
-        {"$sort": {"contacts.created_at": -1}},
-        {"$limit": 5},
-        {"$project": {"project_id": "$_id", "title": "$title", "contact": "$contacts"}}
-    ]
-    async for doc in db.projects.aggregate(pipeline):
+    async for doc in db.contacts.find().sort("created_at", -1).limit(5):
+        doc["id"] = str(doc.pop("_id", ""))
+        # Ensure created_at is a datetime object for template strftime
+        if "created_at" not in doc or doc["created_at"] is None:
+            doc["created_at"] = None
         recent_contacts.append(doc)
 
     recent_subscriptions = await get_subscriptions(db, limit=5)
