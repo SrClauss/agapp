@@ -175,6 +175,13 @@ async def mark_contact_messages_as_read(
     if user_id not in (str(contact.get("professional_id")), str(contact.get("client_id"))):
         raise HTTPException(status_code=403, detail="Not authorized to access this contact")
 
+    # Collect senders whose messages will be marked as read so we can notify them
+    unread_sender_ids = {
+        str(msg.get("sender_id"))
+        for msg in contact.get("chat", [])
+        if str(msg.get("sender_id")) != user_id and not msg.get("read_at")
+    }
+
     now = datetime.now(timezone.utc)
     await db.contacts.update_one(
         {"_id": contact_id},
@@ -191,5 +198,18 @@ async def mark_contact_messages_as_read(
             }
         ],
     )
+
+    # Notify each original sender via WebSocket so their ✔ updates to ✔✔ in real-time
+    ws_payload = json.dumps({
+        "type": "messages_read",
+        "contact_id": contact_id,
+        "read_by": user_id,
+        "read_at": now.isoformat(),
+    })
+    for sender_id in unread_sender_ids:
+        try:
+            await manager.send_personal_message(ws_payload, sender_id)
+        except Exception as e:
+            print(f"[mark-read] failed to notify sender {sender_id}: {e}")
 
     return {"message": "Messages marked as read"}

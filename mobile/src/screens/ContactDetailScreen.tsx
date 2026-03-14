@@ -144,6 +144,11 @@ export default function ContactDetailScreen() {
                   return [...prev, newMessage];
                 });
               });
+          } else if (data.type === 'messages_read' && data.contact_id === contactId) {
+            // The other side read our messages — reload to update ✔ → ✔✔
+            getContactDetails(contactId)
+              .then((updated) => setMessages(updated.chat || []))
+              .catch((e) => console.warn('[ContactDetail] failed to reload after messages_read', e));
           } else if (data.type === 'contact_update' && data.contact?.contact_id === contactId) {
             // Reload contact details (backend sends update nested under data.contact)
             loadContact();
@@ -391,7 +396,7 @@ export default function ContactDetailScreen() {
           size={24}
           onPress={handleSendMessage}
           disabled={!messageText.trim() || sending}
-          iconColor={messageText.trim() && !sending ? '#3B82F6' : '#9CA3AF'}
+          iconColor={messageText.trim() && !sending ? '#075E54' : '#9CA3AF'}
         />
       </View>
 
