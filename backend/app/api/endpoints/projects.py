@@ -667,29 +667,57 @@ async def get_project_contacts(
         raise HTTPException(status_code=403, detail="Only project owner can view contacts")
     
     # Retornar contacts do projeto
-    contacts = []
+    contacts: List[Dict[str, Any]] = []
+
+    # Prefetch contacts collection docs for all known contact_ids
+    contact_ids = [
+        str(getattr(c, "contact_id", None) or getattr(c, "id", None) or (c.get("contact_id") if hasattr(c, "get") else None))
+        for c in project.contacts
+        if (getattr(c, "contact_id", None) or getattr(c, "id", None) or (c.get("contact_id") if hasattr(c, "get") else None))
+    ]
+
+    contact_docs: Dict[str, Dict[str, Any]] = {}
+    if contact_ids:
+        async for doc in db.contacts.find({"_id": {"$in": contact_ids}}):
+            contact_docs[str(doc.get("_id"))] = doc
+
     for i, contact in enumerate(project.contacts):
-        professional = contact.professional_user or {}
-        chat = contact.chats or []
-        unread_count = sum(
-            1 for msg in chat 
-            if str(msg.get("sender_id")) == str(contact.professional_id) 
-            and not msg.get("read_at")
+        professional_id = str(getattr(contact, "professional_id", None) or (contact.get("professional_id") if hasattr(contact, "get") else ""))
+        professional = getattr(contact, "professional_user", None) or (contact.get("professional_user") if hasattr(contact, "get") else {}) or {}
+        contact_id = (
+            str(getattr(contact, "contact_id", None) or (contact.get("contact_id") if hasattr(contact, "get") else None) or getattr(contact, "id", None) or (contact.get("id") if hasattr(contact, "get") else None))
         )
-        
+
+        contact_doc = contact_docs.get(contact_id) if contact_id else None
+        # Fallback: look up by project + professional if contact_id not present
+        if not contact_doc:
+            contact_doc = await db.contacts.find_one({"project_id": project_id, "professional_id": professional_id})
+
+        chat = contact_doc.get("chat", []) if contact_doc else []
+        last_message = chat[-1] if chat else None
+        unread_count = sum(
+            1
+            for msg in chat
+            if str(msg.get("sender_id")) == professional_id and not msg.get("read_at")
+        )
+
         contact_summary = {
-            "id": f"{project_id}_{i}",
-            "professional_id": str(contact.professional_id),
-            "professional_name": contact.professional_name or professional.get("full_name", "Profissional"),
+            "id": contact_doc.get("_id") if contact_doc else (contact_id or f"{project_id}_{i}"),
+            "professional_id": professional_id,
+            "professional_name": getattr(contact, "professional_name", None)
+                or (contact.get("professional_name") if hasattr(contact, "get") else None)
+                or professional.get("full_name", "Profissional"),
             "professional_avatar": professional.get("avatar_url"),
-            "status": contact.status,
-            "created_at": contact.created_at,
-            "last_message": chat[-1] if chat else None,
+            "status": (contact_doc.get("status") if contact_doc else None) or getattr(contact, "status", None) or (contact.get("status") if hasattr(contact, "get") else None),
+            "created_at": getattr(contact, "created_at", None) or (contact.get("created_at") if hasattr(contact, "get") else None),
+            "last_message": last_message,
             "unread_count": unread_count,
-            "contact_details": contact.contact_details
+            "contact_details": (contact_doc.get("contact_details") if contact_doc else None)
+                or getattr(contact, "contact_details", None)
+                or (contact.get("contact_details") if hasattr(contact, "get") else {}),
         }
         contacts.append(contact_summary)
-    
+
     return contacts
 
 @router.put("/{project_id}", response_model=Project)
@@ -940,13 +968,16 @@ async def download_project_messages(
     if str(current_user.id) != project.client_id and str(current_user.id) not in project.liberado_por:
         raise HTTPException(status_code=403, detail="Only project participants can download messages")
     
-    # Get messages from project.chat
-    messages = project.chat or []
-    
-    # Flatten messages from all chats
+    # Chats are stored on the contacts collection (one doc per contact)
     all_messages = []
-    for chat in messages:
-        all_messages.extend(chat.get("messages", []))
+    contact_docs = await db.contacts.find({"project_id": project_id}).to_list(length=None)
+    for contact_doc in contact_docs:
+        for msg in contact_doc.get("chat", []):
+            msg_copy = dict(msg)
+            msg_copy["contact_id"] = contact_doc.get("_id")
+            msg_copy["professional_id"] = contact_doc.get("professional_id")
+            msg_copy["client_id"] = contact_doc.get("client_id")
+            all_messages.append(msg_copy)
     
     # Get documents for the project
     documents = await get_documents_by_project(db, project_id)

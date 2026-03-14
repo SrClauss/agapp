@@ -198,6 +198,7 @@ async def create_contact_in_project(db: AsyncIOMotorDatabase, project_id: str, c
     client = await db.users.find_one({"_id": client_id})
     
     # Criar novo contact
+    # Chats are persisted only in the contacts collection; do not duplicate in the project embed
     contact_dict = {
         "professional_id": professional_id,
         "client_id": client_id,
@@ -205,7 +206,6 @@ async def create_contact_in_project(db: AsyncIOMotorDatabase, project_id: str, c
         "credits_used": credits_used,
         "status": "pending",
         "contact_details": contact_data.get("contact_details", {}),
-        "chats": [],
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }

@@ -14,6 +14,7 @@ import { ProfileCard } from '../components/ProfileCard';
 interface Params {
   projectId?: string;
   project?: Project;
+  contactId?: string;
 }
 
 export default function ProjectProfessionalsDetailScreen() {
@@ -22,6 +23,7 @@ export default function ProjectProfessionalsDetailScreen() {
   const params = (route.params ?? {}) as Params | undefined;
   const projectId = params?.projectId;
   const projectParam = params?.project;
+  const contactParam = params?.contactId;
 
   const [project, setProject] = useState<Project | null>(projectParam || null);
   const [clientInfo, setClientInfo] = useState<any>(null);
@@ -41,6 +43,12 @@ export default function ProjectProfessionalsDetailScreen() {
   const lastContactPressTime = useRef<number>(0);
   const isCreatingRef = useRef<boolean>(false);
   const DEBOUNCE_DELAY = 1000; // 1 second delay between button presses
+
+  useEffect(() => {
+    if (contactParam) {
+      setExistingContactId(contactParam);
+    }
+  }, [contactParam]);
 
   useEffect(() => {
     let mounted = true;
@@ -80,7 +88,7 @@ export default function ProjectProfessionalsDetailScreen() {
             const contacts = await getContactHistory('professional');
             const existingContact = contacts.find(c => c.project_id === projectId);
             if (existingContact) {
-              setExistingContactId(existingContact.id);
+              setExistingContactId((existingContact as any).id || (existingContact as any)._id || null);
             } else {
               setExistingContactId('existing'); // fallback
             }
@@ -196,26 +204,19 @@ export default function ProjectProfessionalsDetailScreen() {
     isCreatingRef.current = true;
 
     try {
-      // Log complete request details for debugging
-      const payload = {
+      console.log('[ProjectProfessionalsDetail] Calling createContactForProject API...');
+      const contact = await createContactForProject(projectId, {
         contact_type: 'proposal',
         contact_details: {
           message,
           proposal_price: proposalPrice,
         },
-      };
-      
-      console.log('[ProjectProfessionalsDetail] Calling createContactForProject API...', {
-        projectId,
-        url: `https://agilizapro.cloud/projects/${projectId}/contacts`,
-        payload,
-        hasToken: !!useAuthStore.getState().token,
       });
-      
-      const contact = await createContactForProject(projectId, payload);
+
+      const contactId = (contact as any).id || (contact as any)._id;
 
       console.log('[ProjectProfessionalsDetail] Contact created successfully', {
-        contactId: contact.id,
+        contactId,
       });
 
       // Refresh user credits
@@ -238,22 +239,18 @@ export default function ProjectProfessionalsDetailScreen() {
 
       console.log('[ProjectProfessionalsDetail] Opening chat with new contact...');
       // Open chat with new contact
-      openChat(contact.id);
+      if (contactId) {
+        openChat(contactId);
+      }
     } catch (e: any) {
-      // Log richer error information to help debugging when backend returns empty bodies
-      const resp = e?.response;
-      const respData = resp?.data ?? resp ?? e;
       console.error('[ProjectProfessionalsDetail] failed to create contact', {
-        error: e?.message || e,
-        status: resp?.status,
-        responseData: respData,
+        error: e,
+        status: e?.response?.status,
+        detail: e?.response?.data?.detail,
       });
-
-      // Show detailed message to user when available
-      const detailStr = resp?.data ? JSON.stringify(resp.data) : e?.message || 'Erro desconhecido';
-
-      if (resp?.status === 400) {
-          const detail = e?.response?.data?.detail || detailStr || '';
+      
+      if (e?.response?.status === 400) {
+        const detail = e?.response?.data?.detail || '';
         
         if (detail.includes('already exists') || detail.includes('Contact already exists')) {
           console.log('[ProjectProfessionalsDetail] Contact already exists error');
@@ -266,8 +263,11 @@ export default function ProjectProfessionalsDetailScreen() {
             const contacts = await getContactHistory('professional');
             const existingContact = contacts.find(c => c.project_id === projectId);
             if (existingContact) {
-              setExistingContactId(existingContact.id);
-              openChat(existingContact.id);
+              const contactId = (existingContact as any).id || (existingContact as any)._id;
+              setExistingContactId(contactId);
+              if (contactId) {
+                openChat(contactId);
+              }
             } else {
               setExistingContactId('existing');
             }
@@ -296,19 +296,11 @@ export default function ProjectProfessionalsDetailScreen() {
           setSnackbarVisible(true);
         }
       } else if (!e?.response) {
-        // Network error - log detailed info
-        console.error('[ProjectProfessionalsDetail] Network error - request did not reach server', {
-          errorMessage: e?.message || 'Unknown',
-          errorCode: e?.code,
-          errorType: e?.constructor?.name,
-          projectId,
-          baseURL: 'https://agilizapro.cloud',
-          fullError: JSON.stringify(e, Object.getOwnPropertyNames(e)),
-        });
-        
+        // Network error
+        console.log('[ProjectProfessionalsDetail] Network error');
         Alert.alert(
           'Erro de Conexão',
-          `Não foi possível criar o contato. ${e?.message || 'Verifique sua conexão'}.`,
+          'Não foi possível criar o contato. Verifique sua conexão e tente novamente.',
           [
             { text: 'OK', style: 'cancel' },
             {
@@ -328,15 +320,7 @@ export default function ProjectProfessionalsDetailScreen() {
     }
   }, [projectId, creating, user, setUser, openChat]);
   
-  const handleGetMe = async () => {
-    console.log("[ProjectProfessionalsDetail] handleGetMe called");
-    try {
-      const me = await require('../api/axiosClient').default.get('users/me');
-      console.log(me.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (projectId) {
@@ -591,26 +575,27 @@ export default function ProjectProfessionalsDetailScreen() {
         )}
 
         <View style={styles.actionsContainer}>
-          {user && user.roles.includes('professional') && (
+          {user && user.roles.includes('professional') && project.status === 'open' && (
             <>
-              {/* Always show "Ver Conversa" button when there is an existing contact,
-                  regardless of project status (open/in_progress/closed). */}
-              {existingContactId && existingContactId !== 'existing' && (
-                <Button
-                  mode="outlined"
-                  icon="chat"
-                  onPress={() => navigation.navigate('ContactDetail', { contactId: existingContactId })}
-                  style={{ marginBottom: 8 }}
-                >
-                  Ver Conversa
-                </Button>
-              )}
-
-              {/* Only show "Contatar" button when project is open and no contact exists yet */}
-              {project.status === 'open' && !existingContactId && (
-                loadingCostPreview ? (
-                  <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
-                ) : costPreview ? (
+              {loadingCostPreview ? (
+                <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
+              ) : costPreview ? (
+                existingContactId ? (
+                  <Button
+                    mode="outlined"
+                    onPress={() => {
+                      if (existingContactId && existingContactId !== 'existing') {
+                        openChat(existingContactId);
+                      } else {
+                        setSnackbarMessage('Erro ao acessar conversa. Tente novamente.');
+                        setSnackbarVisible(true);
+                      }
+                    }}
+                    style={{ marginBottom: 8 }}
+                  >
+                    Ver Conversa Existente
+                  </Button>
+                ) : (
                   <Button
                     mode="contained"
                     onPress={handleContactButtonPress}
@@ -622,8 +607,10 @@ export default function ProjectProfessionalsDetailScreen() {
                       ? `Contatar — ${costPreview.credits_cost} créditos`
                       : 'Créditos Insuficientes'}
                   </Button>
-                ) : null
-              )}
+                )
+              ) : null}
+
+         
             </>
           )}
         </View>
