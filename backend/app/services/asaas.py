@@ -323,6 +323,7 @@ class AsaasService:
         url: str,
         events: List[str],
         token: str,
+        email: Optional[str] = None,
         enabled: bool = True,
         send_type: str = "SEQUENTIALLY",
         interrupted: bool = False,
@@ -336,14 +337,19 @@ class AsaasService:
             url: URL que receberá as notificações
             events: Lista de eventos a monitorar (ex: ['PAYMENT_CONFIRMED'])
             token: Token de autenticação enviado no header do webhook
+            email: Email para receber notificações em caso de falha (opcional)
             enabled: Se o webhook está ativo
             send_type: Tipo de envio ('SEQUENTIALLY' ou 'NON_SEQUENTIALLY')
             interrupted: Se o envio está interrompido
         """
+        # Email para receber notificações caso o webhook falhe
+        # Usar email padrão do sistema se não fornecido
+        webhook_email = email or "webhooks@agilizapro.net"
+        
         data = {
             "name": name,
             "url": url,
-            "email": None,
+            "email": webhook_email,
             "enabled": enabled,
             "interrupted": interrupted,
             "apiVersion": 3,
@@ -351,7 +357,7 @@ class AsaasService:
             "sendType": send_type,
             "events": events,
         }
-        data = {k: v for k, v in data.items() if v is not None}
+        # Não filtrar None aqui pois estamos garantindo que email sempre tem valor
         return await self._make_request("POST", "/webhooks", data=data)
 
     # ==================== WEBHOOK VERIFICATION ====================
