@@ -100,9 +100,14 @@ export function useBannerAds(
     }
 
     if (banner.actionType === 'external') {
-      // Abrir link externo
-      Linking.openURL(banner.actionValue).catch(err => {
-        console.error('[useBannerAds] Error opening URL:', err);
+      // Abrir link externo (garante esquema válido)
+      const rawUrl = banner.actionValue;
+      const url = rawUrl && /^(https?:)?\/\//i.test(rawUrl)
+        ? rawUrl
+        : `https://${rawUrl}`;
+
+      Linking.openURL(url).catch(err => {
+        console.error('[useBannerAds] Error opening URL:', url, err);
       });
       return;
     }

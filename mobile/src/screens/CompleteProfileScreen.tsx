@@ -21,6 +21,7 @@ export default function CompleteProfileScreen() {
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,13 +51,16 @@ export default function CompleteProfileScreen() {
       setPhone(user?.phone || '');
       setRoles(user?.roles || ['client']);
       setFullName(user?.full_name || '');
+      setEmail(user?.email || ''); // Adiciona o e-mail
+      setPassword(''); // Preenche a senha com valor padrão
+      setConfirmPassword(''); // Preenche a confirmação de senha com valor padrão
     }
   }, [user]);
 
   const onCompleteProfile = async () => {
     console.log('🔍 [CompleteProfile] Token:', token ? 'Existe' : 'NULL');
     console.log('🔍 [CompleteProfile] User:', user ? user.email : 'NULL');
-    
+
     if (!token) {
       setError('Token não encontrado. Faça login novamente.');
       return;
@@ -86,12 +90,12 @@ export default function CompleteProfileScreen() {
         full_name: fullName, // Usar o nome editável
         roles,
       };
-      
+
       // Only send CPF if it's not temporary (user actually entered a real CPF)
       if (!isTemporaryCpf) {
         payload.cpf = cpf;
       }
-      
+
       if (password) payload.password = password;
 
       const updatedUser = await completeProfile(token, payload);
@@ -152,6 +156,13 @@ export default function CompleteProfileScreen() {
         />
 
         <TextInput
+          label="E-mail"
+          value={email}
+          editable={false} // Campo somente leitura
+          style={commonStyles.input}
+        />
+
+        <TextInput
           label="CPF"
           value={cpf}
           onChangeText={(text) => setCpf(text.replace(/\D/g, ''))} // Remove qualquer caractere não numérico
@@ -172,18 +183,16 @@ export default function CompleteProfileScreen() {
           label="Senha"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry={!showPassword}
+          secureTextEntry={true} // Campo de senha
           style={commonStyles.input}
-          right={<TextInput.Icon icon={showPassword ? 'eye-off' : 'eye'} onPress={() => setShowPassword(!showPassword)} />}
         />
 
         <TextInput
           label="Confirmar Senha"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          secureTextEntry={!showConfirmPassword}
+          secureTextEntry={true} // Campo de senha
           style={commonStyles.input}
-          right={<TextInput.Icon icon={showConfirmPassword ? 'eye-off' : 'eye'} onPress={() => setShowConfirmPassword(!showConfirmPassword)} />}
         />
         <HelperText type="info">Deixe em branco para manter sua senha atual</HelperText>
 

@@ -69,7 +69,18 @@ export default function NearbySummary() {
     setTempRadiusStr(String(serviceRadiusKm ?? 10));
   }, [serviceRadiusKm]);
 
-  const total = projectsAll?.length ?? 0;
+  
+  // Se houver filtros de subcategorias ativos, calcule o total filtrado localmente
+  function getProjectSub(project: any): string {
+    if (!project.category) return '';
+    if (typeof project.category === 'string') return project.category;
+    return (project.category as { main: string; sub: string }).sub || '';
+  }
+
+  const totalFiltered = React.useMemo(() => {
+    if (!subcategories || subcategories.length === 0) return projectsAll?.length ?? 0;
+    return (projectsAll || []).filter((p) => subcategories.includes(getProjectSub(p))).length;
+  }, [projectsAll, subcategories]);
 
 
   function openRadiusModal() {
@@ -172,7 +183,7 @@ export default function NearbySummary() {
 
           <View style={styles.statColumnRight}>
             <Text style={styles.statLabel}>Encontrado</Text>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{total < 10 ? `0${total}` : total} </Text>
+            <Text style={[styles.statValue, { color: colors.primary }]}>{totalFiltered < 10 ? `0${totalFiltered}` : totalFiltered} </Text>
           </View>
         </View>
 

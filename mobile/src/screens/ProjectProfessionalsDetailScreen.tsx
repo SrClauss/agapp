@@ -196,14 +196,23 @@ export default function ProjectProfessionalsDetailScreen() {
     isCreatingRef.current = true;
 
     try {
-      console.log('[ProjectProfessionalsDetail] Calling createContactForProject API...');
-      const contact = await createContactForProject(projectId, {
+      // Log complete request details for debugging
+      const payload = {
         contact_type: 'proposal',
         contact_details: {
           message,
           proposal_price: proposalPrice,
         },
+      };
+      
+      console.log('[ProjectProfessionalsDetail] Calling createContactForProject API...', {
+        projectId,
+        url: `https://agilizapro.cloud/projects/${projectId}/contacts`,
+        payload,
+        hasToken: !!useAuthStore.getState().token,
       });
+      
+      const contact = await createContactForProject(projectId, payload);
 
       console.log('[ProjectProfessionalsDetail] Contact created successfully', {
         contactId: contact.id,
@@ -231,14 +240,20 @@ export default function ProjectProfessionalsDetailScreen() {
       // Open chat with new contact
       openChat(contact.id);
     } catch (e: any) {
+      // Log richer error information to help debugging when backend returns empty bodies
+      const resp = e?.response;
+      const respData = resp?.data ?? resp ?? e;
       console.error('[ProjectProfessionalsDetail] failed to create contact', {
-        error: e,
-        status: e?.response?.status,
-        detail: e?.response?.data?.detail,
+        error: e?.message || e,
+        status: resp?.status,
+        responseData: respData,
       });
-      
-      if (e?.response?.status === 400) {
-        const detail = e?.response?.data?.detail || '';
+
+      // Show detailed message to user when available
+      const detailStr = resp?.data ? JSON.stringify(resp.data) : e?.message || 'Erro desconhecido';
+
+      if (resp?.status === 400) {
+          const detail = e?.response?.data?.detail || detailStr || '';
         
         if (detail.includes('already exists') || detail.includes('Contact already exists')) {
           console.log('[ProjectProfessionalsDetail] Contact already exists error');
@@ -281,11 +296,19 @@ export default function ProjectProfessionalsDetailScreen() {
           setSnackbarVisible(true);
         }
       } else if (!e?.response) {
-        // Network error
-        console.log('[ProjectProfessionalsDetail] Network error');
+        // Network error - log detailed info
+        console.error('[ProjectProfessionalsDetail] Network error - request did not reach server', {
+          errorMessage: e?.message || 'Unknown',
+          errorCode: e?.code,
+          errorType: e?.constructor?.name,
+          projectId,
+          baseURL: 'https://agilizapro.cloud',
+          fullError: JSON.stringify(e, Object.getOwnPropertyNames(e)),
+        });
+        
         Alert.alert(
           'Erro de Conexão',
-          'Não foi possível criar o contato. Verifique sua conexão e tente novamente.',
+          `Não foi possível criar o contato. ${e?.message || 'Verifique sua conexão'}.`,
           [
             { text: 'OK', style: 'cancel' },
             {

@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Text,
   Button,
@@ -17,6 +19,7 @@ import useSettingsStore from '../stores/settingsStore';
 import { colors } from '../theme/colors';
 
 export default function EditProfessionalSettingsScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const token = useAuthStore((s) => s.token);
   const [available, setAvailable] = useState<Array<{ parent: { id: string; name: string }; name: string }>>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -101,7 +104,7 @@ export default function EditProfessionalSettingsScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.wrapper}>
+    <SafeAreaView style={styles.wrapper} edges={["top", "left", "right", "bottom"]}>
       {/* Header info */}
       <View style={styles.headerRow}>
         <Text variant="bodyMedium" style={styles.subtitle}>
@@ -161,7 +164,7 @@ export default function EditProfessionalSettingsScreen({ navigation }: any) {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + (insets.bottom || 0) }] }>
           {Object.entries(filteredGrouped).map(([parent, subs]) => (
             <View key={parent} style={styles.group}>
               <Text variant="titleSmall" style={styles.groupTitle}>{parent}</Text>
@@ -194,7 +197,7 @@ export default function EditProfessionalSettingsScreen({ navigation }: any) {
       )}
 
       {/* Action buttons */}
-      <View style={styles.actions}>
+      <View style={[styles.actions, { bottom: insets.bottom || 12 }] }>
         <Button mode="outlined" onPress={() => navigation.goBack()} disabled={saving} style={styles.actionBtn}>
           Cancelar
         </Button>
@@ -210,7 +213,7 @@ export default function EditProfessionalSettingsScreen({ navigation }: any) {
       </View>
 
       <Snackbar visible={!!msg} onDismiss={() => setMsg(null)}>{msg}</Snackbar>
-    </View>
+    </SafeAreaView>
   );
 }
 

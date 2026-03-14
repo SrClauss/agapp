@@ -1,3 +1,4 @@
+import 'react-native-get-random-values';
 import client from './axiosClient';
 import useAuthStore from '../stores/authStore';
 import { v4 as uuidv4 } from 'uuid';
@@ -67,12 +68,31 @@ export async function createContactForProject(
   projectId: string,
   contactData: ContactCreate
 ): Promise<Contact> {
+  console.log('[contacts.ts] createContactForProject called', {
+    projectId,
+    contactData,
+    timestamp: new Date().toISOString(),
+  });
+  
   const token = useAuthStore.getState().token;
   const idempotencyKey = uuidv4();
   const headers: Record<string, string> = { 'X-Idempotency-Key': idempotencyKey };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
+  console.log('[contacts.ts] Making POST request', {
+    url: `/projects/${projectId}/contacts`,
+    hasToken: !!token,
+    tokenPreview: token ? `${token.substring(0, 10)}...` : 'none',
+    idempotencyKey,
+  });
+
   const response = await client.post(`/projects/${projectId}/contacts`, contactData, { headers });
+  
+  console.log('[contacts.ts] Request successful', {
+    status: response.status,
+    contactId: response.data?.id,
+  });
+  
   return response.data;
 }
 

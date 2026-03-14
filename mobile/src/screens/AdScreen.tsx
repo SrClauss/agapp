@@ -115,7 +115,7 @@ export default function AdScreen() {
   const handleMessage = (event: any) => {
     const raw: string = event.nativeEvent.data;
 
-    // Handle plain string messages
+    // Handle plain string messages first
     if (raw === 'Onclose' || raw === 'close') {
       handleContinue();
       return;
@@ -130,8 +130,15 @@ export default function AdScreen() {
     try {
       const message = JSON.parse(raw);
 
-      if (message?.type === 'internal') {
-        const stackName = message?.action?.onPress_stack;
+      // Handle close messages sent as JSON
+      if (message?.type === 'Onclose' || message?.type === 'close') {
+        handleContinue();
+        return;
+      }
+
+      if (message?.type === 'internal' || message?.type === 'press') {
+        // Support both legacy action format and the newer "value" shorthand
+        const stackName = message?.value || message?.action?.onPress_stack;
         if (stackName) {
           try {
             (navigation as any).navigate(stackName);
@@ -210,10 +217,6 @@ export default function AdScreen() {
         />
       </View>
 
-      {/* Overlay close button at the top-right corner */}
-      <TouchableOpacity style={styles.closeButton} onPress={handleContinue} accessibilityLabel="Fechar anúncio">
-        <Text style={styles.closeButtonText}>✕</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -235,31 +238,6 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 66,
-    right: 22,
-    width: 34,
-    height: 34,
-    borderRadius: 34 / 2,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 9999,
-    elevation: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    paddingTop: 1,
-    paddingRight: 0,
-  },
-  closeButtonText: {
-    color: '#111',
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 16,
   },
   debugContainer: { flex: 1, padding: 16, justifyContent: 'center', alignItems: 'center' },
   debugTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },

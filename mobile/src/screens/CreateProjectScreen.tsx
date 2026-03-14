@@ -36,7 +36,7 @@ interface CreateProjectProps {
 export default function CreateProjectScreen({ overrideParams }: CreateProjectProps) {
   const navigation = useNavigation();
   const route = useRoute();
-  const params = (overrideParams ?? route.params) as RouteParams;
+  const params = (overrideParams ?? (route.params ?? {})) as RouteParams;
 
   // Form state
   const [title, setTitle] = useState('');
