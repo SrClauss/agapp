@@ -50,9 +50,23 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     await websocket.send_text(json.dumps({"type": "error", "message": "contact_id and content required"}))
                     continue
 
-                # Verificar se contato existe
-                contact = await db.contacts.find_one({"_id": contact_id})
-                if not contact:
+                # Resolver contato embutido no projeto
+                project_doc = await db.projects.find_one(
+                    {"contacts.contact_id": contact_id},
+                    {"contacts": 1, "_id": 1}
+                )
+                if not project_doc:
+                    await websocket.send_text(json.dumps({"type": "error", "message": "Contact not found"}))
+                    continue
+
+                contact = None
+                contact_idx = None
+                for idx, embedded in enumerate(project_doc.get("contacts", [])):
+                    if str(embedded.get("contact_id", "")) == str(contact_id):
+                        contact = embedded
+                        contact_idx = idx
+                        break
+                if contact is None or contact_idx is None:
                     await websocket.send_text(json.dumps({"type": "error", "message": "Contact not found"}))
                     continue
 
@@ -73,22 +87,35 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     "created_at": datetime.now(timezone.utc).isoformat(),
                 }
 
-                # Adicionar mensagem ao chat do contato
-                await db.contacts.update_one(
-                    {"_id": contact_id},
-                    {"$push": {"chat": msg}, "$set": {"updated_at": datetime.now(timezone.utc)}}
+                # Adicionar mensagem ao chat do contato embutido no projeto
+                now = datetime.now(timezone.utc)
+                await db.projects.update_one(
+                    {"_id": project_doc.get("_id")},
+                    {
+                        "$push": {f"contacts.{contact_idx}.chat": msg},
+                        "$set": {f"contacts.{contact_idx}.updated_at": now},
+                    }
                 )
                 
                 # Mark contact as "in_conversation" if it's the first user message
                 from app.utils.contact_helpers import is_first_user_message
                 # Re-fetch contact to get updated messages including the one we just added
-                updated_contact = await db.contacts.find_one({"_id": contact_id})
+                project_after = await db.projects.find_one(
+                    {"_id": project_doc.get("_id")},
+                    {"contacts": 1}
+                )
+                updated_contact = None
+                if project_after:
+                    for embedded in project_after.get("contacts", []):
+                        if str(embedded.get("contact_id", "")) == str(contact_id):
+                            updated_contact = embedded
+                            break
                 if updated_contact:
                     contact_messages = updated_contact.get("chat", [])
                     if is_first_user_message(contact_messages):
-                        await db.contacts.update_one(
-                            {"_id": contact_id},
-                            {"$set": {"status": "in_conversation"}}
+                        await db.projects.update_one(
+                            {"_id": project_doc.get("_id")},
+                            {"$set": {f"contacts.{contact_idx}.status": "in_conversation"}}
                         )
                 
                 # Enviar para os 2 participantes (cliente e profissional)

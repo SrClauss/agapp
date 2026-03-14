@@ -13,6 +13,28 @@ from ulid import new as new_ulid
 router = APIRouter()
 
 
+async def _find_contact_in_projects(db: AsyncIOMotorDatabase, contact_id: str):
+    project_doc = await db.projects.find_one(
+        {"contacts.contact_id": contact_id},
+        {
+            "contacts": 1,
+            "_id": 1,
+            "title": 1,
+            "client_id": 1,
+            "client_name": 1,
+        },
+    )
+    if not project_doc:
+        return None, None, None
+
+    contacts = project_doc.get("contacts", [])
+    for idx, c in enumerate(contacts):
+        if str(c.get("contact_id", "")) == str(contact_id):
+            return project_doc, c, idx
+
+    return project_doc, None, None
+
+
 @router.get("/contacts/history", response_model=List[Dict[str, Any]])
 async def get_contact_history(
     current_user: User = Depends(get_current_user),
@@ -20,18 +42,64 @@ async def get_contact_history(
 ):
     """Get contact history for the current user (as professional or client)."""
     user_id = str(current_user.id)
-    contacts = await db.contacts.find(
-        {"$or": [{"professional_id": user_id}, {"client_id": user_id}]}
-    ).sort("updated_at", -1).to_list(length=100)
+    query = {
+        "$or": [
+            {"contacts.professional_id": user_id},
+            {"contacts.client_id": user_id},
+        ]
+    }
+    projects = await db.projects.find(
+        query,
+        {
+            "contacts": 1,
+            "_id": 1,
+            "title": 1,
+            "client_id": 1,
+            "client_name": 1,
+        },
+    ).to_list(length=200)
 
-    for c in contacts:
-        c["id"] = c.pop("_id", c.get("id", ""))
-        chat = c.get("chat", [])
-        c["unread_count"] = sum(
-            1 for msg in chat
-            if str(msg.get("sender_id", "")) != user_id and not msg.get("read_at")
-        )
-    return contacts
+    contacts: List[Dict[str, Any]] = []
+    for project in projects:
+        for c in project.get("contacts", []):
+            professional_id = str(c.get("professional_id", ""))
+            client_id = str(c.get("client_id", ""))
+            if user_id not in (professional_id, client_id):
+                continue
+
+            chat = c.get("chat", []) or []
+            unread_count = sum(
+                1
+                for msg in chat
+                if str(msg.get("sender_id", "")) != user_id and not msg.get("read_at")
+            )
+
+            contact_id = c.get("contact_id")
+            if not contact_id:
+                # Sem migração: se não existir id antigo, não expõe no histórico
+                continue
+
+            contacts.append(
+                {
+                    "id": contact_id,
+                    "professional_id": professional_id,
+                    "professional_name": c.get("professional_name", ""),
+                    "project_id": project.get("_id"),
+                    "client_id": client_id,
+                    "client_name": c.get("client_name") or project.get("client_name", ""),
+                    "contact_type": c.get("contact_type", "proposal"),
+                    "credits_used": c.get("credits_used", 0),
+                    "status": c.get("status", "pending"),
+                    "contact_details": c.get("contact_details", {}),
+                    "chat": chat,
+                    "created_at": c.get("created_at"),
+                    "updated_at": c.get("updated_at"),
+                    "unread_count": unread_count,
+                }
+            )
+
+    contacts.sort(key=lambda item: item.get("updated_at") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    return contacts[:100]
 
 
 @router.get("/contacts/{contact_id}", response_model=Dict[str, Any])
@@ -41,16 +109,29 @@ async def get_contact_detail(
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     """Get details of a specific contact including the chat history."""
-    contact = await db.contacts.find_one({"_id": contact_id})
-    if not contact:
+    project_doc, contact, _ = await _find_contact_in_projects(db, contact_id)
+    if not contact or not project_doc:
         raise HTTPException(status_code=404, detail="Contact not found")
 
     user_id = str(current_user.id)
     if user_id not in (str(contact.get("professional_id")), str(contact.get("client_id"))):
         raise HTTPException(status_code=403, detail="Not authorized to view this contact")
 
-    contact["id"] = contact.pop("_id", contact.get("id", ""))
-    return contact
+    return {
+        "id": contact.get("contact_id"),
+        "professional_id": str(contact.get("professional_id", "")),
+        "professional_name": contact.get("professional_name", ""),
+        "project_id": project_doc.get("_id"),
+        "client_id": str(contact.get("client_id", "")),
+        "client_name": contact.get("client_name") or project_doc.get("client_name", ""),
+        "contact_type": contact.get("contact_type", "proposal"),
+        "credits_used": contact.get("credits_used", 0),
+        "status": contact.get("status", "pending"),
+        "contact_details": contact.get("contact_details", {}),
+        "chat": contact.get("chat", []),
+        "created_at": contact.get("created_at"),
+        "updated_at": contact.get("updated_at"),
+    }
 
 
 @router.post("/contacts/{contact_id}/messages", response_model=Dict[str, Any])
@@ -61,8 +142,8 @@ async def send_contact_message(
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     """Send a message in a contact chat. Sends a push notification to the other participant."""
-    contact = await db.contacts.find_one({"_id": contact_id})
-    if not contact:
+    project_doc, contact, contact_idx = await _find_contact_in_projects(db, contact_id)
+    if not contact or project_doc is None or contact_idx is None:
         raise HTTPException(status_code=404, detail="Contact not found")
 
     user_id = str(current_user.id)
@@ -83,19 +164,25 @@ async def send_contact_message(
         "created_at": datetime.now(timezone.utc),
     }
 
-    await db.contacts.update_one(
-        {"_id": contact_id},
-        {"$push": {"chat": msg}, "$set": {"updated_at": datetime.now(timezone.utc)}},
+    now = datetime.now(timezone.utc)
+    await db.projects.update_one(
+        {"_id": project_doc.get("_id")},
+        {
+            "$push": {f"contacts.{contact_idx}.chat": msg},
+            "$set": {
+                f"contacts.{contact_idx}.updated_at": now,
+            },
+        },
     )
 
     # Mark contact as "in_conversation" if this is the first user message
-    updated_contact = await db.contacts.find_one({"_id": contact_id})
+    _, updated_contact, _ = await _find_contact_in_projects(db, contact_id)
     if updated_contact:
         contact_messages = updated_contact.get("chat", [])
         if is_first_user_message(contact_messages) and updated_contact.get("status") == "pending":
-            await db.contacts.update_one(
-                {"_id": contact_id},
-                {"$set": {"status": "in_conversation"}},
+            await db.projects.update_one(
+                {"_id": project_doc.get("_id")},
+                {"$set": {f"contacts.{contact_idx}.status": "in_conversation"}},
             )
 
     # Track first_message_at in lead_events (best-effort)
@@ -169,8 +256,8 @@ async def mark_contact_messages_as_read(
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     """Mark all messages in a contact as read for the current user."""
-    contact = await db.contacts.find_one({"_id": contact_id})
-    if not contact:
+    project_doc, contact, contact_idx = await _find_contact_in_projects(db, contact_id)
+    if not contact or project_doc is None or contact_idx is None:
         raise HTTPException(status_code=404, detail="Contact not found")
 
     user_id = str(current_user.id)
@@ -178,20 +265,22 @@ async def mark_contact_messages_as_read(
         raise HTTPException(status_code=403, detail="Not authorized to access this contact")
 
     now = datetime.now(timezone.utc)
-    await db.contacts.update_one(
-        {"_id": contact_id},
-        {
-            "$set": {
-                "chat.$[msg].read_at": now,
-                "updated_at": now,
-            }
-        },
-        array_filters=[
+    messages = contact.get("chat", []) or []
+    changed = False
+    for msg in messages:
+        if str(msg.get("sender_id", "")) != user_id and not msg.get("read_at"):
+            msg["read_at"] = now
+            changed = True
+
+    if changed:
+        await db.projects.update_one(
+            {"_id": project_doc.get("_id")},
             {
-                "msg.sender_id": {"$ne": user_id},
-                "msg.read_at": None,
-            }
-        ],
-    )
+                "$set": {
+                    f"contacts.{contact_idx}.chat": messages,
+                    f"contacts.{contact_idx}.updated_at": now,
+                }
+            },
+        )
 
     return {"message": "Messages marked as read"}

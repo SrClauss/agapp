@@ -35,6 +35,7 @@ export default function ProjectProfessionalsDetailScreen() {
   const [snackbarVisible, setSnackbarVisible] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
   const [existingContactId, setExistingContactId] = useState<string | null>(null);
+  const [hasExistingContact, setHasExistingContact] = useState<boolean>(false);
 
   const { user, setUser } = useAuthStore();
   const { openChat } = useChatStore();
@@ -47,8 +48,89 @@ export default function ProjectProfessionalsDetailScreen() {
   useEffect(() => {
     if (contactParam) {
       setExistingContactId(contactParam);
+      setHasExistingContact(true);
     }
   }, [contactParam]);
+
+  const getResolvedProjectId = useCallback((): string | null => {
+    return projectId || (project as any)?.id || (project as any)?._id || null;
+  }, [projectId, project]);
+
+  const findExistingContactId = useCallback(async (): Promise<string | null> => {
+    const resolvedProjectId = getResolvedProjectId();
+    if (!resolvedProjectId) return null;
+
+    const contacts = await getContactHistory('professional');
+    const existingContact = contacts.find((c) => {
+      const pid = (c as any)?.project_id;
+      return String(pid) === String(resolvedProjectId);
+    });
+
+    return existingContact ? ((existingContact as any).id || (existingContact as any)._id || null) : null;
+  }, [getResolvedProjectId]);
+
+  const ensureContactAndOpenChat = useCallback(async () => {
+    const resolvedProjectId = getResolvedProjectId();
+    if (!resolvedProjectId) {
+      setSnackbarMessage('Projeto inválido para abrir conversa');
+      setSnackbarVisible(true);
+      return;
+    }
+
+    try {
+      const foundContactId = await findExistingContactId();
+      if (foundContactId) {
+        setExistingContactId(foundContactId);
+        setHasExistingContact(true);
+        openChat(foundContactId);
+        return;
+      }
+
+      const contact = await createContactForProject(resolvedProjectId, {
+        contact_type: 'proposal',
+        contact_details: {
+          message: 'Olá! Tenho interesse neste projeto.',
+        },
+      });
+
+      const newContactId = (contact as any).id || (contact as any)._id;
+      if (newContactId) {
+        setExistingContactId(newContactId);
+        setHasExistingContact(true);
+        setSnackbarMessage('Conversa criada com sucesso!');
+        setSnackbarVisible(true);
+        openChat(newContactId);
+        return;
+      }
+
+      setSnackbarMessage('Não foi possível abrir a conversa');
+      setSnackbarVisible(true);
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail || '';
+      if (String(detail).includes('already exists') || String(detail).includes('Contact already exists')) {
+        try {
+          const foundContactId = await findExistingContactId();
+          if (foundContactId) {
+            setExistingContactId(foundContactId);
+            setHasExistingContact(true);
+            openChat(foundContactId);
+            return;
+          }
+        } catch (innerError) {
+          console.warn('[ProjectProfessionalsDetail] failed to resolve existing contact after already-exists', innerError);
+        }
+      }
+
+      if (String(detail).includes('Insufficient credits')) {
+        Alert.alert('Créditos Insuficientes', 'Você não tem créditos suficientes para iniciar esta conversa.');
+        return;
+      }
+
+      console.warn('[ProjectProfessionalsDetail] ensureContactAndOpenChat failed', e);
+      setSnackbarMessage('Erro ao abrir conversa. Tente novamente.');
+      setSnackbarVisible(true);
+    }
+  }, [findExistingContactId, getResolvedProjectId, openChat]);
 
   useEffect(() => {
     let mounted = true;
@@ -81,20 +163,16 @@ export default function ProjectProfessionalsDetailScreen() {
       try {
         const preview = await getContactCostPreview(projectId);
         setCostPreview(preview);
+        setHasExistingContact(preview.reason === 'contact_already_exists');
         
         // If contact already exists, fetch the actual contact ID
         if (preview.reason === 'contact_already_exists') {
           try {
-            const contacts = await getContactHistory('professional');
-            const existingContact = contacts.find(c => c.project_id === projectId);
-            if (existingContact) {
-              setExistingContactId((existingContact as any).id || (existingContact as any)._id || null);
-            } else {
-              setExistingContactId('existing'); // fallback
-            }
+            const foundContactId = await findExistingContactId();
+            setExistingContactId(foundContactId);
           } catch (e) {
             console.warn('[ProjectProfessionalsDetail] failed to fetch existing contact', e);
-            setExistingContactId('existing'); // fallback
+            setExistingContactId(null);
           }
         }
       } catch (e: any) {
@@ -109,7 +187,7 @@ export default function ProjectProfessionalsDetailScreen() {
     };
 
     loadPreview();
-  }, [project, projectId, user]);
+  }, [project, projectId, user, findExistingContactId]);
 
   const handleContactButtonPress = useCallback(() => {
     console.log('[ProjectProfessionalsDetail] handleContactButtonPress called', {
@@ -148,13 +226,7 @@ export default function ProjectProfessionalsDetailScreen() {
       console.log('[ProjectProfessionalsDetail] Opening existing contact chat', {
         existingContactId,
       });
-      // Open existing contact chat
-      if (existingContactId && existingContactId !== 'existing') {
-        openChat(existingContactId);
-      } else {
-        setSnackbarMessage('Você já tem um contato com este projeto');
-        setSnackbarVisible(true);
-      }
+      ensureContactAndOpenChat();
       return;
     }
 
@@ -183,7 +255,7 @@ export default function ProjectProfessionalsDetailScreen() {
 
     console.log('[ProjectProfessionalsDetail] Opening confirm modal');
     setConfirmVisible(true);
-  }, [costPreview, creating, existingContactId, openChat]);
+  }, [costPreview, creating, existingContactId, ensureContactAndOpenChat]);
 
   const handleConfirmContact = useCallback(async (message: string, proposalPrice?: number) => {
     console.log('[ProjectProfessionalsDetail] handleConfirmContact called', {
@@ -260,20 +332,17 @@ export default function ProjectProfessionalsDetailScreen() {
           
           // Try to fetch the existing contact ID and open chat
           try {
-            const contacts = await getContactHistory('professional');
-            const existingContact = contacts.find(c => c.project_id === projectId);
-            if (existingContact) {
-              const contactId = (existingContact as any).id || (existingContact as any)._id;
-              setExistingContactId(contactId);
-              if (contactId) {
-                openChat(contactId);
-              }
+            const foundContactId = await findExistingContactId();
+            if (foundContactId) {
+              setExistingContactId(foundContactId);
+              setHasExistingContact(true);
+              openChat(foundContactId);
             } else {
-              setExistingContactId('existing');
+              await ensureContactAndOpenChat();
             }
           } catch (e) {
             console.warn('[ProjectProfessionalsDetail] failed to fetch existing contact after creation', e);
-            setExistingContactId('existing');
+            await ensureContactAndOpenChat();
           }
         } else if (detail.includes('Insufficient credits')) {
           console.log('[ProjectProfessionalsDetail] Insufficient credits error');
@@ -318,7 +387,7 @@ export default function ProjectProfessionalsDetailScreen() {
       setCreating(false);
       isCreatingRef.current = false;
     }
-  }, [projectId, creating, user, setUser, openChat]);
+  }, [projectId, creating, user, setUser, openChat, findExistingContactId, ensureContactAndOpenChat]);
   
   
   useEffect(() => {
@@ -531,7 +600,7 @@ export default function ProjectProfessionalsDetailScreen() {
         </View>
 
         {/* Client Profile Card - only show if contact exists */}
-        {existingContactId && existingContactId !== 'existing' && clientInfo && (
+        {existingContactId && clientInfo && (
           <View style={styles.cardRounded}>
             <View style={styles.cardContentPadded}>
               <Text style={styles.sectionTitle}>Cliente</Text>
@@ -541,7 +610,7 @@ export default function ProjectProfessionalsDetailScreen() {
                 phone={clientInfo.phone}
                 avatarUrl={clientInfo.avatar_url}
                 role="Cliente"
-                onChatPress={() => openChat(existingContactId)}
+                onChatPress={ensureContactAndOpenChat}
               />
             </View>
           </View>
@@ -580,16 +649,11 @@ export default function ProjectProfessionalsDetailScreen() {
               {loadingCostPreview ? (
                 <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
               ) : costPreview ? (
-                existingContactId ? (
+                (existingContactId || hasExistingContact) ? (
                   <Button
                     mode="outlined"
                     onPress={() => {
-                      if (existingContactId && existingContactId !== 'existing') {
-                        openChat(existingContactId);
-                      } else {
-                        setSnackbarMessage('Erro ao acessar conversa. Tente novamente.');
-                        setSnackbarVisible(true);
-                      }
+                      ensureContactAndOpenChat();
                     }}
                     style={{ marginBottom: 8 }}
                   >

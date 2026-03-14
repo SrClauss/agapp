@@ -64,7 +64,6 @@ class ProjectInDBBase(ProjectBase):
     created_at: datetime
     updated_at: datetime
     liberado_por: List[str] = []  # Array of professional IDs who liberated the project
-    chat: List[Dict[str, Any]] = []  # Array of chats, each {professional_id, messages: []}
     closed_at: Optional[datetime] = None  # When project was closed
     final_budget: Optional[float] = None  # Final agreed budget
     closed_by: Optional[str] = None  # Professional ID who closed the project (last)
