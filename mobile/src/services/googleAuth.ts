@@ -5,7 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 // Permite que o Expo Go complete o redirect de autenticação OAuth
 WebBrowser.maybeCompleteAuthSession();
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://agilizapro.cloud';
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'https://agilizapro.cloud';
 
 interface AuthResponse {
   type: 'success' | 'error' | 'dismiss' | 'cancel';

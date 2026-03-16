@@ -589,15 +589,19 @@ from fastapi import Request
 async def get_turnstile_site_key(request: Request):
     """Retorna a chave pública do Turnstile e a URL hospedada (/turnstile) para uso no cliente"""
     from app.core.config import settings
-    # Construir URL absoluta para a página hospedada /turnstile
-    try:
-        turnstile_url = request.url_for("turnstile_page")
-    except Exception:
-        # Fallback: construir a partir do host
-        base = str(request.base_url).rstrip('/')
-        turnstile_url = f"{base}/turnstile"
-    # Garantir que retornamos uma string (Request.url_for pode retornar um objeto URL em alguns ambientes)
-    turnstile_url = str(turnstile_url)
+    
+    # Forçar HTTPS em produção (quando não é localhost)
+    host = request.headers.get('host', request.url.hostname or 'localhost')
+    is_localhost = 'localhost' in host or '127.0.0.1' in host
+    
+    if is_localhost:
+        scheme = 'http'
+    else:
+        # Em produção, sempre usar HTTPS
+        scheme = 'https'
+    
+    turnstile_url = f"{scheme}://{host}/turnstile"
+    
     # Limpar quebras de linha/acidentes de formatação que podem ocorrer em alguns ambientes
     turnstile_url = turnstile_url.replace("\n", "").replace("\r", "").strip()
 
