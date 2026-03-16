@@ -38,7 +38,20 @@ export function useGoogleAuth() {
   const [isReady, setIsReady] = useState(true);
 
   useEffect(() => {
-    // Listener para capturar o deep-link de retorno do OAuth
+    // Captura deep-link caso o app seja aberto diretamente via intent (cold start).
+    const checkInitialUrl = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        console.log('[GoogleAuth] URL inicial:', initialUrl);
+        if (initialUrl.includes('auth/callback')) {
+          handleDeepLink(initialUrl);
+        }
+      }
+    };
+
+    checkInitialUrl();
+
+    // Listener para capturar o deep-link de retorno do OAuth enquanto o app já está aberto.
     const subscription = Linking.addEventListener('url', ({ url }) => {
       console.log('[GoogleAuth] Deep-link recebido:', url);
       
@@ -56,21 +69,28 @@ export function useGoogleAuth() {
   const handleDeepLink = (url: string) => {
     try {
       console.log('[GoogleAuth] Processando deep-link:', url);
-      
+
       // Parsear tokens da URL (query string ou fragment)
       // Backend envia como: com.agilizapro.agapp://auth/callback?token=xxx&refresh_token=yyy
-      const parsed = Linking.parse(url);
-      const accessToken = parsed.queryParams?.token as string | undefined;
-      const refreshToken = parsed.queryParams?.refresh_token as string | undefined;
-      const tokenType = (parsed.queryParams?.token_type as string | undefined) || 'bearer';
+      const getParams = (input: string) => {
+        const parts = input.split('?');
+        if (parts.length < 2) return {};
+        const query = parts[1].split('#')[0];
+        return Object.fromEntries(new URLSearchParams(query));
+      };
+
+      const queryParams = getParams(url);
+      const accessToken = queryParams['token'];
+      const refreshToken = queryParams['refresh_token'];
+      const tokenType = (queryParams['token_type'] as string | undefined) || 'bearer';
 
       console.log('[GoogleAuth] URL completa:', url);
-      console.log('[GoogleAuth] Query params completo:', JSON.stringify(parsed.queryParams));
-      console.log('[GoogleAuth] Tokens parseados:', { 
-        hasAccessToken: !!accessToken, 
+      console.log('[GoogleAuth] Query params completo:', JSON.stringify(queryParams));
+      console.log('[GoogleAuth] Tokens parseados:', {
+        hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
         tokenType,
-        accessTokenStart: accessToken?.substring(0, 20)
+        accessTokenStart: accessToken?.substring(0, 20),
       });
 
       if (accessToken) {

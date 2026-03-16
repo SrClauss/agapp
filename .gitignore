@@ -44,3 +44,8 @@ Dockerfile_dev
 
 # Examples folder
 examples/
+
+# Local Expo build artifacts
+mobile/.venv/
+mobile/build-*.aab
+mobile/build-*.apk

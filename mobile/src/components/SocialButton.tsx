@@ -13,6 +13,7 @@ type Props = {
   mode?: 'contained' | 'outlined' | 'text';
   style?: any;
   labelStyle?: TextStyle;
+  buttonColor?: string;
 };
 
 export default function SocialButton({
@@ -25,16 +26,18 @@ export default function SocialButton({
   mode = 'outlined',
   style,
   labelStyle,
+  buttonColor,
 }: Props) {
   return (
     <Button
       mode={mode}
       onPress={onPress}
-      loading={loading}
+      loading={false}
       disabled={disabled}
       uppercase={false}
       style={style}
       textColor='#000'
+      buttonColor={buttonColor}
       icon={
         iconName
           ? () => <MaterialCommunityIcons name={iconName} size={20} color={iconColor} />

@@ -33,12 +33,19 @@ export default function LoginScreen() {
 
   // Ref para controlar timeout do WebView (evita usar `window` diretamente)
   const turnstileTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Ref para AbortController (cancelamento de requisições)
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
       if (turnstileTimeoutRef.current) {
         clearTimeout(turnstileTimeoutRef.current);
         turnstileTimeoutRef.current = null;
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);
@@ -109,18 +116,55 @@ export default function LoginScreen() {
     navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: destination }] }));
   };
 
+  const cancelLogin = () => {
+    console.log('[Login] cancelLogin called');
+    
+    // Abortar requisições HTTP em andamento
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Limpar timeout do Turnstile
+    if (turnstileTimeoutRef.current) {
+      clearTimeout(turnstileTimeoutRef.current);
+      turnstileTimeoutRef.current = null;
+    }
+    
+    // Fechar modal do Turnstile
+    setShowTurnstile(false);
+    setWebviewError(null);
+    setTurnstileLoading(false);
+    
+    // Parar processo do Google
+    googleLoginInProgressRef.current = false;
+    
+    // Resetar estados
+    setLoading(false);
+    setError(null);
+    
+    console.log('[Login] Login cancelado pelo usuário');
+  };
+
   const onEmailLogin = async () => {
     console.log('[Login] onEmailLogin start', { email });
     setLoading(true);
     setError(null);
     setTurnstileLoading(true);
+    
+    // Criar novo AbortController para esta requisição
+    abortControllerRef.current = new AbortController();
     try {
       // First, ask backend for site_key and hosted URL (if available)
       const { data } = await client.get('/auth/turnstile-site-key');
       console.log('[Login] got turnstile info', data);
       if (data.turnstile_url) {
         // Defensive: às vezes a URL vem como objeto { _url: 'http://...' } quando serializada
-        const turnstileUrl = typeof data.turnstile_url === 'string' ? data.turnstile_url : (data.turnstile_url && (data.turnstile_url._url || String(data.turnstile_url)));
+        let turnstileUrl = typeof data.turnstile_url === 'string' ? data.turnstile_url : (data.turnstile_url && (data.turnstile_url._url || String(data.turnstile_url)));
+        if (typeof turnstileUrl === 'string') {
+          // Remover quebras de linha ou espaços acidentais no retorno do backend
+          turnstileUrl = turnstileUrl.replace(/\s+/g, '');
+        }
         setTurnstileUri(turnstileUrl);
         console.log('[Login] using hosted turnstile_url', turnstileUrl, 'raw:', data.turnstile_url);
       } else if (data.site_key) {
@@ -292,6 +336,10 @@ export default function LoginScreen() {
     setError(null);
     setLoading(true);
     googleLoginInProgressRef.current = true;
+    
+    // Criar novo AbortController
+    abortControllerRef.current = new AbortController();
+    
     signIn();
   };
 
@@ -334,8 +382,14 @@ export default function LoginScreen() {
 
           {error ? <HelperText type="error" style={styles.errorText}>{error}</HelperText> : null}
 
-          <Button mode="contained" onPress={onEmailLogin} loading={loading} style={styles.button} buttonColor="#6200ee">
-            Entrar
+          <Button 
+            mode="contained" 
+            onPress={loading ? cancelLogin : onEmailLogin} 
+            loading={false}
+            style={styles.button} 
+            buttonColor={loading ? "#b00020" : "#6200ee"}
+          >
+            {loading ? 'Cancelar' : 'Entrar'}
           </Button>
 
           {/* Turnstile small overlay */}
@@ -444,15 +498,15 @@ export default function LoginScreen() {
           </Modal>
 
           <SocialButton
-            label="Continuar com Google"
-            onPress={onGoogleLogin}
-            loading={loading}
-            disabled={!request || loading}
-            iconName="google"
+            label={loading && googleLoginInProgressRef.current ? "Cancelar" : "Continuar com Google"}
+            onPress={loading && googleLoginInProgressRef.current ? cancelLogin : onGoogleLogin}
+            loading={false}
+            disabled={!request || (loading && !googleLoginInProgressRef.current)}
+            iconName={loading && googleLoginInProgressRef.current ? undefined : "google"}
             iconColor="#DB4437"
             mode="contained"
             style={styles.googleButton}
-            
+            buttonColor={loading && googleLoginInProgressRef.current ? "#b00020" : "#ffffffff"}
           />
 
           <Button

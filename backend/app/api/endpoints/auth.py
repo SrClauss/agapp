@@ -598,7 +598,13 @@ async def get_turnstile_site_key(request: Request):
         turnstile_url = f"{base}/turnstile"
     # Garantir que retornamos uma string (Request.url_for pode retornar um objeto URL em alguns ambientes)
     turnstile_url = str(turnstile_url)
-    return {"site_key": settings.turnstile_site_key, "turnstile_url": turnstile_url}
+    # Limpar quebras de linha/acidentes de formatação que podem ocorrer em alguns ambientes
+    turnstile_url = turnstile_url.replace("\n", "").replace("\r", "").strip()
+
+    # Também garantir que a chave não venha com espaços acidentais
+    site_key = str(settings.turnstile_site_key).strip()
+
+    return {"site_key": site_key, "turnstile_url": turnstile_url}
 
 @router.put("/complete-profile", response_model=User)
 async def complete_profile(
