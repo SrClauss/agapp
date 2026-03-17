@@ -9,12 +9,12 @@ import logging
 from datetime import datetime
 from app.core.database import get_database
 from app.core.security import get_current_admin_user, create_access_token, verify_password, get_current_user_from_request
-from app.crud.user import get_users, get_user_by_email, get_user_in_db_by_email, get_user, toggle_user_status, update_user_profile, delete_user, get_user_stats
+from app.crud.user import get_users, get_user_by_email, get_user_in_db_by_email, get_user, toggle_user_status, update_user_profile, delete_user, get_user_stats, create_user
 from app.crud.project import get_projects
 from app.crud.subscription import get_subscriptions
 from app.crud.category import get_categories, get_category, create_category, update_category, delete_category, delete_category_permanent
 from app.models.category import CategoryCreate, CategoryUpdate
-from app.schemas.user import User, Token
+from app.schemas.user import User, Token, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 from typing import Optional, Literal
@@ -605,6 +605,56 @@ async def admin_logout():
         samesite="lax"
     )
     return response
+
+@router.get("/users/new", response_class=HTMLResponse)
+async def admin_user_new_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_from_request),
+):
+    """Página de criação de novo usuário"""
+    return templates.TemplateResponse("admin/user_new.html", {
+        "request": request,
+        "current_user": current_user
+    })
+
+@router.post("/users/new")
+async def admin_user_create(
+    request: Request,
+    full_name: str = Form(...),
+    email: str = Form(...),
+    cpf: str = Form(...),
+    phone: str = Form(None),
+    password: str = Form(...),
+    roles: List[str] = Form(...),
+    current_user: User = Depends(get_current_user_from_request),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Processa a criação de um novo usuário"""
+    existing = await get_user_by_email(db, email)
+    if existing:
+        return templates.TemplateResponse("admin/user_new.html", {
+            "request": request,
+            "current_user": current_user,
+            "error": "Já existe um usuário com este e-mail.",
+            "form_data": {
+                "full_name": full_name,
+                "email": email,
+                "cpf": cpf,
+                "phone": phone,
+                "roles": roles,
+            }
+        })
+
+    user_in = UserCreate(
+        full_name=full_name,
+        email=email,
+        cpf=cpf,
+        phone=phone or None,
+        password=password,
+        roles=roles,
+    )
+    new_user = await create_user(db, user_in)
+    return RedirectResponse(url=f"/system-admin/users/{new_user.id}", status_code=303)
 
 @router.get("/users/{user_id}", response_class=HTMLResponse)
 async def admin_user_detail(
