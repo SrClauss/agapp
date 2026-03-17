@@ -30,9 +30,17 @@ export default function ProfileSelectionScreen() {
       // If error, fall through to navigate normally
     }
 
-    // No ad — reset navigation stack and navigate to the appropriate welcome screen
+    // No ad — reset navigation stack so that the selection screen remains on the back stack
     const destination = role === 'client' ? 'WelcomeCustomer' : 'WelcomeProfessional';
-    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: destination }] }));
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 1,
+        routes: [
+          { name: 'ProfileSelection' },
+          { name: destination },
+        ],
+      })
+    );
   };
 
   return (
@@ -47,7 +55,9 @@ export default function ProfileSelectionScreen() {
       >
         <View style={styles.container}>
           <View style={styles.header}>
-            <Image source={require('../../assets/icon.png')} style={styles.logo} />
+            <View style={styles.roundedBox}>
+              <Image source={require('../../assets/icon.png')} style={styles.logo} />
+            </View>
             <Text style={styles.title}>Selecionar Perfil</Text>
             <Text style={styles.subtitle}>
               Você possui acesso a múltiplos perfis.{'\n'}
@@ -131,8 +141,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.25)',
   },
+roundedBox: {
+    backgroundColor: '#ffffffbb',
+    borderRadius: 30,
+    paddingLeft: 30,
+    paddingRight: 30,
+    paddingTop: 20,
+    paddingBottom: 20,
+},
   logo: {
-    width: 60,
+    width: 50,
     height: 60,
     marginBottom: 12,
     borderRadius: 30,

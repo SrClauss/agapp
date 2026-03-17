@@ -592,15 +592,23 @@ async def get_turnstile_site_key(request: Request):
     
     # Forçar HTTPS em produção (quando não é localhost)
     host = request.headers.get('host', request.url.hostname or 'localhost')
-    is_localhost = 'localhost' in host or '127.0.0.1' in host
+    is_localhost = 'localhost' in host or '127.0.0.1' in host or '0.0.0.0' in host
     
+    # Sempre usar HTTPS em produção, mesmo que o request venha via proxy HTTP
+    # GARANTIR HTTPS para domínios de produção
     if is_localhost:
         scheme = 'http'
+    elif 'agilizapro.cloud' in host or 'agilizapro.net' in host:
+        # Sempre HTTPS para domínios de produção
+        scheme = 'https'
     else:
-        # Em produção, sempre usar HTTPS
+        # Forçar HTTPS por padrão para qualquer outro domínio
         scheme = 'https'
     
     turnstile_url = f"{scheme}://{host}/turnstile"
+    
+    # Log para debug
+    print(f"[turnstile-site-key] host={host}, is_localhost={is_localhost}, scheme={scheme}, url={turnstile_url}")
     
     # Limpar quebras de linha/acidentes de formatação que podem ocorrer em alguns ambientes
     turnstile_url = turnstile_url.replace("\n", "").replace("\r", "").strip()

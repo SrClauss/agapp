@@ -35,11 +35,27 @@ export default function AdScreen() {
     if (role) {
       setActiveRole(role);
       if (role === 'client') {
-        navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'WelcomeCustomer' }] }));
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              { name: 'ProfileSelection' },
+              { name: 'WelcomeCustomer' },
+            ],
+          })
+        );
         return;
       }
       if (role === 'professional') {
-        navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'WelcomeProfessional' }] }));
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              { name: 'ProfileSelection' },
+              { name: 'WelcomeProfessional' },
+            ],
+          })
+        );
         return;
       }
     }

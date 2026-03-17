@@ -107,13 +107,22 @@ export default function LoginScreen() {
       console.error('🚨 Erro ao verificar AdScreen:', error);
     }
 
-    // If no AdScreen or error, go directly to main screen
+    // If no AdScreen or error, go directly to main screen (keep ProfileSelection in history)
     const destination = user.roles.includes('client')
       ? 'WelcomeCustomer'
       : user.roles.includes('professional')
       ? 'WelcomeProfessional'
       : 'WelcomeCustomer';
-    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: destination }] }));
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 1,
+        routes: [
+          { name: 'ProfileSelection' },
+          { name: destination },
+        ],
+      })
+    );
   };
 
   const cancelLogin = () => {
@@ -354,7 +363,10 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.formContainer}>
+
+          <View style={styles.roundedBox}>
           <Image source={require('../../assets/icon.png')} style={styles.logo} />
+           </View>
           <Text style={styles.title}>Agiliza</Text>
           <Text style={styles.subtitle}>Quem você precisa, exatamente onde você está</Text>
 
@@ -474,7 +486,11 @@ export default function LoginScreen() {
 </html>` } }
                       onMessage={onTurnstileMessage}
                       onError={(e) => {
-                        console.error('[Login] WebView onError', e);
+                        try {
+                          console.error('[Login] WebView onError', JSON.stringify(e.nativeEvent, null, 2));
+                        } catch (err) {
+                          console.error('[Login] WebView onError (stringify failed)', e.nativeEvent);
+                        }
                         setWebviewError('Erro ao carregar widget de verificação.');
                       }}
                       onHttpError={(e) => {
@@ -560,10 +576,22 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
+
+  roundedBox: {
+
+    backgroundColor: '#ffffffbb',
+    borderRadius: 30,
+    paddingLeft: 30,
+    paddingRight: 30,
+    paddingTop: 20,
+    paddingBottom: 20,
+
+    
+
+  },
   logo: {
-    width: 84,
-    height: 84,
-    marginBottom: 16,
+    width: 80,
+    height: 100,
   },
   title: {
     fontSize: 24,
